@@ -1,0 +1,78 @@
+# Build outputs
+bin/
+build/
+*.o
+*.d
+*.a
+*.so
+
+# Runtime/generated output
+carved/
+*.log
+*.core
+*.tmp
+*.swp
+
+# Editor/OS files
+.vscode/
+.idea/
+.DS_Store
+
+# Sanitizer/crash artifacts
+asan.log*
+core
+
+# Scratch binary test files in repo root
+/*.bin
+
+# Local logs and temporary archive outputs
+build.log
+*.log
+/*.zip
+testdata/testlogs/
+
+# Generated Java artifacts
+*.class
+
+# Accidental root-level PDF artifacts
+/*.pdf
+
+# Unrelated local artifacts
+*.enc
+*.py
+
+# Scratch files accidentally created in repository root
+/*.txt
+/*.png
+
+# Unrelated local experiment files
+/*.enc
+/*.py
+
+# Root-level CTF/training artifacts and generated challenge files
+/*.jpg
+/*.jpeg
+/*.bmp
+/*.html
+/*.docm
+/*.odg
+/*.lzma
+/*.zlib
+/*.sha256
+/*.json
+/*.blob
+/ctf-tools
+/chall
+/challengefile
+/cipher
+/enc_flag
+/flag
+/format-string-1
+/mergepng
+/rsaquiz*
+/run
+/solver
+/testpie*
+/vuln
+/ziptest/
+/ciphertext3

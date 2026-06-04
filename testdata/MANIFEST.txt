@@ -1,0 +1,14 @@
+testdata/binary/random_64kb.bin: OpenPGP Public Key
+testdata/binary/random_1kb.bin: data
+testdata/binary/fake_elf.bin: ELF, unknown class 102
+testdata/archives/sample.zip: Zip archive data, at least v1.0 to extract, compression method=store
+testdata/text/hello.txt: ASCII text
+testdata/edge/onebyte.txt: ASCII text
+testdata/edge/empty.txt: empty
+testdata/crypto/sha256_input.txt: ASCII text, with no line terminators
+testdata/crypto/md5_input.txt: ASCII text, with no line terminators
+testdata/elf/opus_test_elf: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=1236befeedac5c02c12cedd490e369a5e03c5c4a, for GNU/Linux 3.2.0, with debug_info, not stripped
+testdata/MANIFEST.txt: ASCII text
+testdata/ciphers/plain_attackatdawn.txt: ASCII text
+testdata/ciphers/vigenere_attackatdawn.txt: ASCII text
+testdata/ciphers/caesar_hello.txt: ASCII text

@@ -1,0 +1,4 @@
+K1WI-STEGO-DEMO-2026
+Project: K1Wi Framework
+Module: LYZER
+Classification: Documentation Asset

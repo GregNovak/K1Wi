@@ -1,0 +1,276 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BIN="./bin/opus"
+
+PASS_COUNT=0
+FAIL_COUNT=0
+SKIP_COUNT=0
+
+pass() {
+    PASS_COUNT=$((PASS_COUNT + 1))
+    echo "[PASS] $1"
+}
+
+fail() {
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+    echo "[FAIL] $1"
+    echo
+    echo "============================================================"
+    echo "REGRESSION TEST SUMMARY"
+    echo "============================================================"
+    echo "PASS: $PASS_COUNT"
+    echo "FAIL: $FAIL_COUNT"
+    echo "SKIP: $SKIP_COUNT"
+    exit 1
+}
+
+skip() {
+    SKIP_COUNT=$((SKIP_COUNT + 1))
+    echo "[SKIP] $1"
+}
+
+require_output() {
+    local label="$1"
+    local output="$2"
+    local needle="$3"
+
+    if echo "$output" | grep -Fq "$needle"; then
+        pass "$label"
+    else
+        echo "$output"
+        fail "$label missing expected output: $needle"
+    fi
+}
+
+require_failure_output() {
+    local label="$1"
+    local command="$2"
+    local needle="$3"
+
+    set +e
+    OUT=$(eval "$command" 2>&1)
+    RC=$?
+    set -e
+
+    echo "$OUT"
+
+    if [ "$RC" -eq 0 ]; then
+        fail "$label expected failure but command exited 0"
+    fi
+
+    if echo "$OUT" | grep -Fq "$needle"; then
+        pass "$label"
+    else
+        fail "$label missing expected error output: $needle"
+    fi
+}
+require_failure_output() {
+    local label="$1"
+    local command="$2"
+    local needle="$3"
+
+    set +e
+    OUT=$(eval "$command" 2>&1)
+    RC=$?
+    set -e
+
+    echo "$OUT"
+
+    if [ "$RC" -eq 0 ]; then
+        fail "$label expected failure but command exited 0"
+    fi
+
+    if echo "$OUT" | grep -Fq "$needle"; then
+        pass "$label"
+    else
+        fail "$label missing expected error output: $needle"
+    fi
+}
+echo "============================================================"
+echo "OPUS REGRESSION TESTS"
+echo "============================================================"
+
+if [ ! -x "$BIN" ]; then
+    fail "opus binary not found. Run make first."
+fi
+
+echo
+echo "[TEST] STRING basic text"
+OUT=$($BIN string "hello OPUS")
+echo "$OUT"
+require_output "STRING basic UTF-8 detection" "$OUT" "Detected Type: UTF"
+
+echo
+echo "[TEST] STRING shifted hex private key marker"
+OUT=$($BIN string "R2d2d2d2d2d424547494e2050524956415445204b45592d")
+echo "$OUT"
+require_output "STRING shifted hex private key detection" "$OUT" "Shifted hex encoded private key"
+
+echo
+echo "[TEST] EXTRACT sample zip"
+
+ARCHIVE_SAMPLE="testdata/archives/sample.zip"
+
+if [ -f "$ARCHIVE_SAMPLE" ]; then
+    OUT=$($BIN extract --recursive "$ARCHIVE_SAMPLE" 2>&1)
+    echo "$OUT"
+    require_output "EXTRACT recursive completion" "$OUT" "EXTRACT COMPLETE"
+    require_output "EXTRACT carved file count" "$OUT" "Files  : 2"
+else
+    skip "$ARCHIVE_SAMPLE not found"
+fi
+
+
+
+
+echo
+echo "[TEST] LYZER sample image/file if available"
+
+LYZER_IMG="testdata/lyzer/embedded_zip.jpg"
+
+if [ -f "$LYZER_IMG" ]; then
+    OUT=$($BIN lyzer "$LYZER_IMG" ALL 2>&1)
+    echo "$OUT"
+    require_output "LYZER detects JPEG" "$OUT" "Detected format: JPEG"
+    require_output "LYZER string intelligence" "$OUT" "String Intelligence"
+    require_output "LYZER embedded signatures" "$OUT" "Embedded Signatures"
+else
+    skip "$LYZER_IMG not found"
+fi
+
+echo
+echo "[TEST] ENTROPY sample image"
+
+if [ -f "$LYZER_IMG" ]; then
+    OUT=$($BIN entropy "$LYZER_IMG" 2>&1)
+    echo "$OUT"
+    require_output "ENTROPY reports global entropy" "$OUT" "Global entropy"
+    require_output "ENTROPY reports bits per byte" "$OUT" "bits/byte"
+else
+    skip "$LYZER_IMG not found"
+fi
+    
+echo
+echo "[TEST] ELF self-analysis"
+
+OUT=$($BIN elf ./bin/opus 2>&1)
+echo "$OUT" | head -40
+
+require_output \
+    "ELF reports ELFINFO header" \
+    "$OUT" \
+    "ELFINFO"
+
+require_output \
+    "ELF detects 64-bit binary" \
+    "$OUT" \
+    "64-bit"
+
+echo
+echo "[TEST] PIECALC symbol list"
+
+OUT=$($BIN PIECALC --bin ./bin/opus --list 2>&1)
+echo "$OUT" | head -40
+
+require_output \
+    "PIECALC lists symbols" \
+    "$OUT" \
+    "find_func_offset"
+
+require_output \
+    "PIECALC lists offsets" \
+    "$OUT" \
+    "0x"
+
+echo
+echo "[TEST] RSA factor sample"
+
+set +e
+OUT=$($BIN rsa ./testdata/rsa/rsa_61_53_e17.txt 2>&1)
+RC=$?
+set -e
+
+echo "$OUT"
+
+require_output "RSA factor finds p" "$OUT" "[+] p ="
+require_output "RSA factor finds q" "$OUT" "[+] q ="
+require_output "RSA recovers plaintext" "$OUT" "m = 123"
+
+if [ "$RC" -ne 0 ] && [ "$RC" -ne 1 ]; then
+    fail "RSA exited with unexpected status: $RC"
+fi
+
+pass "RSA factor command completed"
+
+
+echo
+echo "[TEST] HELP"
+
+OUT=$($BIN help 2>&1)
+
+require_output "HELP shows LYZER" "$OUT" "LYZER"
+require_output "HELP shows RSA" "$OUT" "RSA"
+require_output "HELP shows PIECALC" "$OUT" "PIECALC"
+
+echo
+echo "[TEST] VERSION banner"
+
+OUT=$($BIN --version 2>&1)
+echo "$OUT"
+
+require_output "VERSION reports K1Wi" "$OUT" "K1Wi Framework"
+require_output "VERSION reports v0.99 RC1" "$OUT" "v0.99 RC1"
+require_output "VERSION reports K1Wi release" "$OUT" "Release Name: K1Wi"
+
+echo
+echo "[TEST] HELP output"
+
+OUT=$($BIN help 2>&1)
+echo "$OUT"
+
+require_output "HELP shows LYZER" "$OUT" "LYZER"
+require_output "HELP shows RSA" "$OUT" "RSA"
+require_output "HELP shows PIECALC" "$OUT" "PIECALC"
+
+
+require_failure_output \
+    "STRING missing argument fails" \
+    "$BIN string" \
+    "STRING: missing argument"
+
+require_failure_output \
+    "ENTROPY missing file fails" \
+    "$BIN entropy does_not_exist.bin" \
+    "Failed to open"
+
+require_failure_output \
+    "ELF missing file fails" \
+    "$BIN elf does_not_exist.bin" \
+    "ELF: failed to analyze"
+
+require_failure_output \
+    "EXTRACT missing argument fails" \
+    "$BIN extract" \
+    "extract requires a file path"
+
+require_failure_output \
+    "RSA missing argument fails" \
+    "$BIN rsa" \
+    "Usage: opus rsa"
+
+    
+        
+echo
+echo "============================================================"
+echo "REGRESSION TESTS COMPLETE"
+echo "============================================================"
+
+
+echo
+echo "============================================================"
+echo "REGRESSION TEST SUMMARY"
+echo "============================================================"
+echo "PASS: $PASS_COUNT"
+echo "FAIL: $FAIL_COUNT"
+echo "SKIP: $SKIP_COUNT"

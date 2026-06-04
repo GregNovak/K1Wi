@@ -1,0 +1,3 @@
+hello OPUS
+This is a test file.
+CTF{TEST_FLAG}
