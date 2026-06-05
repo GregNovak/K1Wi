@@ -37,6 +37,7 @@ const opus_cmd_t opus_commands[] = {
 
 
     { "ENTROPY",   "Analysis Tools", "Shannon entropy calculator" },
+    { "MAGIC",     "Analysis Tools", "Magic byte detector" },
     { "FREQ",      "Analysis Tools", "Frequency Analysis" },
     { "MONO",      "Analysis Tools", "Monoalphabetic Solver (quadgram hillclimb)" },
     { "DIGRAPH",   "Analysis Tools", "Digraph & Trigraph Analysis" },

@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include "cli.h"
+#include "rsa_factor.h"
+
 
 typedef struct opus_context opus_context;
 
@@ -137,9 +139,6 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     } else if (strcmp(cmd, "ENTROPY") == 0) {
         return cmd_entropy(cli, argc, argv);
 
-    } else if (strcmp(cmd, "CRYPTO") == 0) {
-        return cmd_crypto(cli, argc, argv);
-
     } else if (strcmp(cmd, "ELFINFO") == 0) {
         return cmd_binary(cli, argc, argv);
 
@@ -172,23 +171,27 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
     } else if (strcmp(cmd, "PIECALC") == 0) {
         return cmd_piecalc(NULL, argc, argv);
-    } else if (strcmp(cmd, "RSA") == 0) {
-        return cmd_rsa(argc - cli->arg_start + 1,
-                       argv + cli->arg_start - 1);
-            
-	} else if (strcmp(cmd, "MAGIC") == 0) {
-	    if (cli->arg_start >= argc) {
-		fprintf(stderr, "Usage: opus magic <file>\n");
-		return 1;
-	    }
 
-	    detect_magic(argv[cli->arg_start]);
-	    return 0;
-	   
-	   } else if (strcmp(cmd, "TIME") == 0) {
-	    systemTime();
-	    return 0;
+    } else if (strcmp(cmd, "MAGIC") == 0) {
+        if (cli->arg_start >= argc) {
+            fprintf(stderr, "Usage: opus magic <file>\n");
+            return 1;
+        }
 
+        detect_magic(argv[cli->arg_start]);
+        return 0;
+
+    } else if (strcmp(cmd, "RSA-FACTOR") == 0) {
+        if (cli->arg_start >= argc) {
+            fprintf(stderr, "Usage: opus rsa-factor <rsa_file>\n");
+            return 1;
+        }
+
+        return opus_rsa_factor(argv[cli->arg_start]);
+
+    } else if (strcmp(cmd, "TIME") == 0) {
+        systemTime();
+        return 0;
 	   } else if (strcmp(cmd, "SPLASH") == 0) {
 	    opus_banner();
 	    return 0;

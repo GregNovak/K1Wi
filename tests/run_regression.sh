@@ -187,7 +187,7 @@ echo
 echo "[TEST] RSA factor sample"
 
 set +e
-OUT=$($BIN rsa ./testdata/rsa/rsa_61_53_e17.txt 2>&1)
+OUT=$($BIN RSA-FACTOR ./testdata/rsa/rsa_61_53_e17.txt 2>&1)
 RC=$?
 set -e
 
@@ -255,9 +255,9 @@ require_failure_output \
     "extract requires a file path"
 
 require_failure_output \
-    "RSA missing argument fails" \
-    "$BIN rsa" \
-    "Usage: opus rsa"
+    "RSA-FACTOR missing argument fails" \
+    "$BIN RSA-FACTOR" \
+    "Usage: opus rsa-factor <rsa_file>"
 
     
         

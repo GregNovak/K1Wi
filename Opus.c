@@ -2004,7 +2004,15 @@ else if (strcasecmp(cmd, "STRING") == 0) {
 	    while ((c = getchar()) != '\n' && c != EOF);
 
 	    continue;
-	}
+	} else if (strcmp(cmd, "MAGIC") == 0) {
+	    if (argc < 2) {
+		printf("Usage: MAGIC <file>\n");
+		continue;
+	    }
+
+    detect_magic(argv[1]);
+    continue;
+}
 
 
 	else if (strcmp(cmd, "HELP") == 0) {
