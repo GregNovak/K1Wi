@@ -1,5 +1,5 @@
 /*
----------- Opus v0.9 -----------
+---------- K1Wi v0.99 RC-1 -----------
 
 */
 
@@ -264,8 +264,8 @@ double last_score = 0.0;
 int cmd_vigenere(int argc, char **argv);
 int isStrictDecimalList(const char *s);
 
-
-
+int cmd_piecalc(opus_context *ctx, int argc, char **argv);
+int cmd_version(const OpusCLI *cli, int argc, char **argv);
 
 static void dispatch_forensic(int argc, char **argv)
 {
@@ -1469,9 +1469,8 @@ int opus_repl(void)
             opus_banner();
         }
 	else if (strcmp(cmd, "VERSION") == 0) {
-	printf("Opus Framework v0.9\n");
-	printf("Release Name: K1Wi\n");
-	printf("Integrated Reverse Engineering and Cryptanalysis Framework\n\n");
+        cmd_version(NULL, argc, argv);
+        continue;
 	}
         else if (strcmp(cmd, "M") == 0 || strcmp(cmd, "MENU") == 0) {
             opus_menu();

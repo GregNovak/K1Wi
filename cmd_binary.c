@@ -8,7 +8,7 @@ int cmd_binary(const OpusCLI *cli, int argc, char **argv)
     int argi = cli->arg_start;
 
     if (argi >= argc) {
-        fprintf(stderr, "Usage: opus elf <file>\n");
+        fprintf(stderr, "Usage: opus elfinfo <file>\n");
         return 1;
     }
 

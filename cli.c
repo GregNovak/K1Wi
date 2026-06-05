@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
+#include <ctype.h>
 #include "cli.h"
 
 typedef struct opus_context opus_context;
@@ -10,8 +10,11 @@ int opus_lyzer_file(const char *path, const char *mode);
 int cmd_rsa(int argc, char **argv);
 int cmd_about(opus_context *ctx, int argc, char **argv);
 int cmd_piecalc(opus_context *ctx, int argc, char **argv);
-
-
+int cmd_menu(opus_context *ctx, int argc, char **argv);
+int cmd_exit(opus_context *ctx, int argc, char **argv);
+void detect_magic(const char *filename);
+void systemTime(void);
+void opus_banner(void);
 static void opus_flags_init(OpusFlags *f) {
     f->recursive  = false;
     f->json       = false;
@@ -114,27 +117,35 @@ static bool opus_cli_parse(OpusCLI *cli, int argc, char **argv) {
 }
 
 static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
-    const char *cmd = cli->command;
+    
+       char cmd_buf[128];
 
-    if (strcmp(cmd, "extract") == 0) {
+	snprintf(cmd_buf, sizeof(cmd_buf), "%s", cli->command);
+
+	for (char *p = cmd_buf; *p; ++p) {
+	    *p = (char)toupper((unsigned char)*p);
+	}
+
+	const char *cmd = cmd_buf;
+
+    if (strcmp(cmd, "EXTRACT") == 0) {
         return cmd_extract(cli, argc, argv);
 
-    } else if (strcmp(cmd, "string") == 0) {
+    } else if (strcmp(cmd, "STRING") == 0) {
         return cmd_string(argc - cli->arg_start + 1, argv + cli->arg_start - 1);
 
-    } else if (strcmp(cmd, "entropy") == 0) {
+    } else if (strcmp(cmd, "ENTROPY") == 0) {
         return cmd_entropy(cli, argc, argv);
 
-    } else if (strcmp(cmd, "crypto") == 0) {
+    } else if (strcmp(cmd, "CRYPTO") == 0) {
         return cmd_crypto(cli, argc, argv);
 
-    } else if (strcmp(cmd, "binary") == 0 ||
-           strcmp(cmd, "elf") == 0) {
+    } else if (strcmp(cmd, "ELFINFO") == 0) {
         return cmd_binary(cli, argc, argv);
 
-    } else if (strcmp(cmd, "desig") == 0) {
+    } else if (strcmp(cmd, "DESIG") == 0) {
         return cmd_desig(cli, argc, argv);
-} else if (strcmp(cmd, "lyzer") == 0) {
+} else if (strcmp(cmd, "LYZER") == 0) {
     if (cli->arg_start >= argc) {
         fprintf(stderr, "ERROR: lyzer requires a file path\n");
         fprintf(stderr, "Usage: opus lyzer <file> [H|R|E|C|S|J|D|ALL]\n");
@@ -149,30 +160,49 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     }
 
     return opus_lyzer_file(path, mode);
-    } else if (strcmp(cmd, "wipefs") == 0) {
+    } else if (strcmp(cmd, "WIPEFS") == 0) {
         return cmd_wipefs(cli, argc, argv);
 
-    } else if (strcmp(cmd, "help") == 0) {
+    } else if (strcmp(cmd, "HELP") == 0) {
         return cmd_help(cli, argc, argv);
 
-    } else if (strcmp(cmd, "version") == 0 ||
-               strcmp(cmd, "--version") == 0) {
+    } else if (strcmp(cmd, "VERSION") == 0 ||
+               strcmp(cmd, "--VERSION") == 0) {
         return cmd_version(cli, argc, argv);
 
-    } else if (strcmp(cmd, "piecalc") == 0 ||
-               strcmp(cmd, "PIECALC") == 0) {
+    } else if (strcmp(cmd, "PIECALC") == 0) {
         return cmd_piecalc(NULL, argc, argv);
-    } else if (strcmp(cmd, "rsa") == 0 ||
-               strcmp(cmd, "RSA") == 0) {
+    } else if (strcmp(cmd, "RSA") == 0) {
         return cmd_rsa(argc - cli->arg_start + 1,
                        argv + cli->arg_start - 1);
-        
-    
-	} else if (strcmp(cmd, "about") == 0 ||
-           strcmp(cmd, "ABOUT") == 0) {
-	    return cmd_about(NULL, argc, argv);
-	}
+            
+	} else if (strcmp(cmd, "MAGIC") == 0) {
+	    if (cli->arg_start >= argc) {
+		fprintf(stderr, "Usage: opus magic <file>\n");
+		return 1;
+	    }
 
+	    detect_magic(argv[cli->arg_start]);
+	    return 0;
+	   
+	   } else if (strcmp(cmd, "TIME") == 0) {
+	    systemTime();
+	    return 0;
+
+	   } else if (strcmp(cmd, "SPLASH") == 0) {
+	    opus_banner();
+	    return 0;
+		   	   
+	   } else if (strcmp(cmd, "ABOUT") == 0) {
+	    return cmd_about(NULL, argc, argv);
+
+	  } else if (strcmp(cmd, "MENU") == 0) {
+	    return cmd_menu(NULL, argc, argv);
+
+	} else if (strcmp(cmd, "EXIT") == 0) {
+	    return cmd_exit(NULL, argc, argv);
+	}
+	
 	fprintf(stderr, "ERROR: Unknown command '%s'\n", cmd);
 	fprintf(stderr, "Try: opus help\n");
 	return 1;

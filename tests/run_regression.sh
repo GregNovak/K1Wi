@@ -154,7 +154,7 @@ fi
 echo
 echo "[TEST] ELF self-analysis"
 
-OUT=$($BIN elf ./bin/opus 2>&1)
+OUT=$($BIN elfinfo ./bin/opus 2>&1)
 echo "$OUT" | head -40
 
 require_output \
@@ -245,9 +245,9 @@ require_failure_output \
     "Failed to open"
 
 require_failure_output \
-    "ELF missing file fails" \
-    "$BIN elf does_not_exist.bin" \
-    "ELF: failed to analyze"
+    "ELFINFO missing file fails" \
+    "$BIN elfinfo" \
+    "Usage: opus elfinfo <file>"
 
 require_failure_output \
     "EXTRACT missing argument fails" \

@@ -55,7 +55,7 @@ static const opus_command OPUS_COMMANDS[] = {
     { "RSA",      NULL,  "RSA",        "Factor RSA modulus / analyze keys",    cmd_rsa },
 
     /* Binary / Misc examples */
-    { "ELF",      NULL,  "Binary",     "Inspect ELF header and sections",      cmd_elf },
+    { "ELFINFO",      NULL,  "Binary",     "Inspect ELF header and sections",      cmd_elf },
 
 
     { "PIECALC",  NULL,  "Exploit",    "Calculate PIE base and runtime symbols", cmd_piecalc },
@@ -198,12 +198,12 @@ int cmd_about(opus_context *ctx, int argc, char **argv)
 
     printf("\n");
 
-    printf("Core Features:\n");
-    printf("  - PIE/ELF symbol analysis\n");
-    printf("  - Runtime address resolution\n");
-    printf("  - Symbol proximity analysis\n");
-    printf("  - Raw and JSON automation modes\n");
-    printf("  - Crypto and forensic tooling\n");
+	printf("Core Features:\n");
+	printf("  - Digital forensics and artifact analysis\n");
+	printf("  - Binary reverse engineering (ELF/PIE)\n");
+	printf("  - Image and steganography analysis\n");
+	printf("  - Cryptanalysis and RSA research tools\n");
+	printf("  - Extraction, carving, and automation\n");
 
     printf("\n");
 
