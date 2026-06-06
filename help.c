@@ -39,6 +39,46 @@ static const char *help_search_lines[] = {
     "  SEARCH dump.bin flag --before-hex 20 --after-hex 20\n"
 };
 
+static const char *help_elfinfo_lines[] = {
+    "ELFINFO - ELF Symbol & Section Viewer",
+    "",
+    "Usage:",
+    "  ELFINFO -IN <binary>"
+};
+
+static const char *help_magic_lines[] = {
+    "MAGIC - Magic Byte Detector",
+    "",
+    "Usage:",
+    "  MAGIC <file>"
+};
+
+static const char *help_md5_lines[] = {
+    "MD5 - MD5 Hash Utility",
+    "",
+    "Usage:",
+    "  MD5 <file>",
+    "  MD5 -verify <file> <hash>",
+    "  MD5 -compare <file1> <file2>"
+};
+
+static const char *help_sha256_lines[] = {
+    "SHA256 - SHA-256 Hash Utility",
+    "",
+    "Usage:",
+    "  SHA256 <file>",
+    "  SHA256 -verify <file> <hash>",
+    "  SHA256 -compare <file1> <file2>"
+};
+
+static const char *help_rsa_factor_lines[] = {
+    "RSA-FACTOR - Fermat / Classical Factorization",
+    "",
+    "Usage:",
+    "  RSA-FACTOR <rsa_file>"
+};
+
+
 static const char *help_vigsolve_lines[] = {
     "VIGSOLVE - Vigenere Key Solver (fixed length)",
     "",
@@ -220,7 +260,12 @@ static const help_entry_t help_table[] = {
     { "RSA-KNOWNPQ", help_rsa_knownpq_lines, sizeof(help_rsa_knownpq_lines)/sizeof(char*) },
     { "RSA-SMALL-E", help_rsa_small_e_lines, sizeof(help_rsa_small_e_lines)/sizeof(char*) },
     { "RSA-WIENER",  help_rsa_wiener_lines,  sizeof(help_rsa_wiener_lines)/sizeof(char*) },
-    { "RSA-ECM",     help_rsa_ecm_lines,     sizeof(help_rsa_ecm_lines)/sizeof(char*) }
+    { "RSA-ECM",     help_rsa_ecm_lines,     sizeof(help_rsa_ecm_lines)/sizeof(char*) },
+    { "ELFINFO",     help_elfinfo_lines,     sizeof(help_elfinfo_lines)/sizeof(char*)  },
+    { "MAGIC",       help_magic_lines,       sizeof(help_magic_lines)/sizeof(char*) },
+    { "MD5",         help_md5_lines,         sizeof(help_md5_lines)/sizeof(char*)},
+    { "SHA256",      help_sha256_lines,      sizeof(help_sha256_lines)/sizeof(char*)},
+    { "RSA-FACTOR",  help_rsa_factor_lines,  sizeof(help_rsa_factor_lines)/sizeof(char*)},
 };
 
 static const size_t help_count = sizeof(help_table) / sizeof(help_table[0]);
