@@ -20,6 +20,7 @@
 
 typedef struct opus_context opus_context;
 
+int opus_rsa_knownpq(const char *path, const char *p_str, const char *q_str);
 int cmd_search(int argc, char **argv);
 int opus_cmd_sha256(int argc, char **argv);
 int opus_pie_time_cli(int argc, char **argv);
@@ -342,6 +343,28 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
         return opus_rsa_factor(argv[cli->arg_start]);
 
+   } else if (strcmp(cmd, "RSA-KNOWNPQ") == 0) {
+    if (cli->arg_start + 2 >= argc) {
+        fprintf(stderr, "Usage: opus RSA-KNOWNPQ <rsa_file> <p> <q>\n");
+        return 1;
+    }
+
+    const char *path = argv[cli->arg_start];
+    const char *p_str = argv[cli->arg_start + 1];
+    const char *q_str = argv[cli->arg_start + 2];
+
+    printf("[*] RSA-KNOWNPQ: starting known-pq decryption\n");
+
+    if (opus_rsa_knownpq(path, p_str, q_str)) {
+        printf("rsa-knownpq: success\n");
+        return 0;
+    }
+
+    printf("rsa-knownpq: failed\n");
+    return 1;
+   
+   
+   
     } else if (strcmp(cmd, "TIME") == 0) {
         systemTime();
         return 0;

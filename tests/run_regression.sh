@@ -243,6 +243,15 @@ require_output \
     "SHA256 MATCH"
     
 echo
+echo "[TEST] RSA known p/q sample"
+
+OUT=$($BIN RSA-KNOWNPQ ./testdata/rsa/rsa_61_53_e17.txt 61 53 2>&1)
+echo "$OUT"
+
+require_output "RSA-KNOWNPQ recovers plaintext" "$OUT" "[+] m (int) = 123"
+require_output "RSA-KNOWNPQ command succeeds" "$OUT" "rsa-knownpq: success"    
+    
+echo
 echo "[TEST] READ basic file"
 
 OUT=$($BIN READ testdata/text/hello.txt 2>&1)
