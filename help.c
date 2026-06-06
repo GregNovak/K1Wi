@@ -143,6 +143,37 @@ static const char *help_piecalc_lines[] = {
     "  PIECALC -IN chall -LEAK 0xf010 -GUESS -TARGET main"
 };
 
+static const char *help_pietime_lines[] = {
+    "PIETIME - PIE Runtime Address Analyzer",
+    "",
+    "Usage:",
+    "  PIETIME -IN <binary> -LEAK <addr> -BASE <base>",
+    "",
+    "Description:",
+    "  Analyze a leaked runtime address using a known PIE base.",
+    "  Reports the calculated offset from the base address.",
+    "",
+    "Examples:",
+    "  PIETIME -IN ./bin/opus -LEAK 0x401000 -BASE 0x400000",
+    NULL
+};
+
+
+static const char *help_pietime[] = {
+    "PIETIME - PIE Runtime Address Analyzer",
+    "",
+    "Usage:",
+    "  PIETIME -IN <binary> -LEAK <addr> -BASE <base>",
+    "",
+    "Description:",
+    "  Analyze a leaked runtime address using a known PIE base.",
+    "  Reports the calculated offset and nearest symbol information when available.",
+    "",
+    "Examples:",
+    "  PIETIME -IN ./bin/opus -LEAK 0x401000 -BASE 0x400000",
+    NULL
+};
+
 static const char *help_string_lines[] = {
     "STRING - Universal String Analyzer",
     "",
@@ -250,6 +281,7 @@ static const char *help_rsa_ecm_lines[] = {
 static const help_entry_t help_table[] = {
     { "SEARCH",      help_search_lines,      sizeof(help_search_lines)/sizeof(char*) },
     { "PIECALC",     help_piecalc_lines,     sizeof(help_piecalc_lines)/sizeof(char*) },
+    { "PIETIME",     help_pietime_lines,     sizeof(help_pietime_lines)/sizeof(char*) },
     { "VIGSOLVE",    help_vigsolve_lines,    sizeof(help_vigsolve_lines)/sizeof(char*) },
     { "VIGAN",       help_vigan_lines,       sizeof(help_vigan_lines)/sizeof(char*) },
     { "VIGCRACK",    help_vigcrack_lines,    sizeof(help_vigcrack_lines)/sizeof(char*) },
@@ -266,6 +298,7 @@ static const help_entry_t help_table[] = {
     { "MD5",         help_md5_lines,         sizeof(help_md5_lines)/sizeof(char*)},
     { "SHA256",      help_sha256_lines,      sizeof(help_sha256_lines)/sizeof(char*)},
     { "RSA-FACTOR",  help_rsa_factor_lines,  sizeof(help_rsa_factor_lines)/sizeof(char*)},
+    
 };
 
 static const size_t help_count = sizeof(help_table) / sizeof(help_table[0]);
@@ -310,8 +343,9 @@ void opus_help_specific(const char *cmd)
 
     for (size_t i = 0; i < help_count; i++) {
         if (strcasecmp(cmd, help_table[i].cmd) == 0) {
-            for (size_t j = 0; j < help_table[i].line_count; j++)
-                printf("%s\n", help_table[i].lines[j]);
+            for (size_t j = 0; help_table[i].lines[j] != NULL; j++) {
+    		printf("%s\n", help_table[i].lines[j]);
+		}
             return;
         }
     }
