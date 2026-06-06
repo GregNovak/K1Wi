@@ -61,7 +61,25 @@ static const char *help_md5_lines[] = {
     "  MD5 -verify <file> <hash>",
     "  MD5 -compare <file1> <file2>"
 };
-
+static const char *help_extract_lines[] = {
+    "EXTRACT - Recursive Extraction Engine",
+    "",
+    "Usage:",
+    "  EXTRACT <file>",
+    "  EXTRACT --recursive <file>",
+    "",
+    "Description:",
+    "  Extracts embedded archives, compressed files,",
+    "  and supported container formats.",
+    "",
+    "  Recursive mode continues extraction until",
+    "  no additional content is discovered.",
+    "",
+    "Examples:",
+    "  EXTRACT sample.zip",
+    "  EXTRACT --recursive sample.zip",
+    NULL
+};
 static const char *help_sha256_lines[] = {
     "SHA256 - SHA-256 Hash Utility",
     "",
@@ -198,7 +216,23 @@ static const char *help_string_lines[] = {
     "  STRING 48656c6c6f",
     "  STRING --file dump.bin --decode"
 };
-
+static const char *help_lyzer_lines[] = {
+    "LYZER - Image Forensics and Steganography Analyzer",
+    "",
+    "Usage:",
+    "  LYZER <file>",
+    "  LYZER <file> ALL",
+    "",
+    "Description:",
+    "  Performs image forensics analysis including entropy,",
+    "  embedded signature detection, stego heuristics,",
+    "  string intelligence, and file carving.",
+    "",
+    "Examples:",
+    "  LYZER image.jpg",
+    "  LYZER image.jpg ALL",
+    NULL
+};
 static const char *help_entropy_lines[] = {
     "ENTROPY - Entropy Analysis Utility",
     "",
@@ -280,11 +314,13 @@ static const char *help_rsa_ecm_lines[] = {
    =========================== */
 static const help_entry_t help_table[] = {
     { "SEARCH",      help_search_lines,      sizeof(help_search_lines)/sizeof(char*) },
+    { "LYZER", help_lyzer_lines, sizeof(help_lyzer_lines)/sizeof(char*) },
     { "PIECALC",     help_piecalc_lines,     sizeof(help_piecalc_lines)/sizeof(char*) },
     { "PIETIME",     help_pietime_lines,     sizeof(help_pietime_lines)/sizeof(char*) },
     { "VIGSOLVE",    help_vigsolve_lines,    sizeof(help_vigsolve_lines)/sizeof(char*) },
     { "VIGAN",       help_vigan_lines,       sizeof(help_vigan_lines)/sizeof(char*) },
     { "VIGCRACK",    help_vigcrack_lines,    sizeof(help_vigcrack_lines)/sizeof(char*) },
+    { "EXTRACT",     help_extract_lines,     sizeof(help_extract_lines)/sizeof(char*) },
 
     { "STRING",      help_string_lines,      sizeof(help_string_lines)/sizeof(char*) },
     { "ENTROPY",     help_entropy_lines,     sizeof(help_entropy_lines)/sizeof(char*) },
