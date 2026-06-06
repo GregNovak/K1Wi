@@ -187,6 +187,16 @@ else
     skip "$ARCHIVE_SAMPLE not found"
 fi
 
+echo
+echo "[TEST] SEARCH basic ASCII pattern"
+
+OUT=$($BIN SEARCH testdata/text/hello.txt hello 2>&1)
+echo "$OUT"
+
+require_output \
+    "SEARCH finds ASCII pattern" \
+    "$OUT" \
+    "hello"
 
 echo
 echo "[TEST] MD5 basic hash"
@@ -232,7 +242,16 @@ require_output \
     "$OUT" \
     "SHA256 MATCH"
     
-    
+echo
+echo "[TEST] READ basic file"
+
+OUT=$($BIN READ testdata/text/hello.txt 2>&1)
+echo "$OUT"
+
+require_output \
+    "READ displays file content" \
+    "$OUT" \
+    "CTF{TEST_FLAG}"  
 
 
 echo

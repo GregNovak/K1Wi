@@ -1,3 +1,13 @@
+/*
+ * CLI/Shell parity candidates for v1.0 audit:
+ *   READ
+ *   SEARCH
+ *   RSA-KNOWNPQ
+ *   RSA-SMALL-E
+ *   RSA-WIENER
+ *   RSA-ECM
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
@@ -10,7 +20,8 @@
 
 typedef struct opus_context opus_context;
 
-
+int cmd_search(int argc, char **argv);
+int opus_cmd_sha256(int argc, char **argv);
 int opus_pie_time_cli(int argc, char **argv);
 int opus_lyzer_file(const char *path, const char *mode);
 int cmd_rsa(int argc, char **argv);
@@ -21,6 +32,19 @@ int cmd_exit(opus_context *ctx, int argc, char **argv);
 void detect_magic(const char *filename);
 void systemTime(void);
 void opus_banner(void);
+
+int opus_read_file(const char *path,
+                   bool mode_raw,
+                   bool mode_structured,
+                   bool mode_safe,
+                   size_t limit,
+                   size_t offset,
+                   size_t page_size,
+                   bool ascii,
+                   bool hex,
+                   const char *force_format,
+                   bool verbose,
+                   bool summary);
 static void opus_flags_init(OpusFlags *f) {
     f->recursive  = false;
     f->json       = false;
@@ -266,10 +290,34 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     } else if (strcmp(cmd, "HELP") == 0) {
         return cmd_help(cli, argc, argv);
 
+   } else if (strcmp(cmd, "READ") == 0) {
+       if (cli->arg_start >= argc) {
+        fprintf(stderr, "Usage: opus READ <file>\n");
+        return 1;
+    }
+
+    const char *path = argv[cli->arg_start];
+
+    return opus_read_file(path,
+                          true,      /* raw */
+                          false,     /* structured */
+                          false,     /* safe */
+                          0,         /* limit */
+                          0,         /* offset */
+                          64,        /* page size */
+                          true,      /* ascii */
+                          true,      /* hex */
+                          NULL,      /* force format */
+                          false,     /* verbose */
+                          false);    /* summary */
+
     } else if (strcmp(cmd, "VERSION") == 0 ||
                strcmp(cmd, "--VERSION") == 0) {
         return cmd_version(cli, argc, argv);
 
+   } else if (strcmp(cmd, "SEARCH") == 0) {
+    return cmd_search(argc -1, argv + 1);
+   
     } else if (strcmp(cmd, "PIECALC") == 0) {
         return cmd_piecalc(NULL, argc, argv);
 
