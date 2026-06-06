@@ -1,13 +1,17 @@
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include "cli.h"
 #include "rsa_factor.h"
+#include "md5.h"
 
 
 typedef struct opus_context opus_context;
 
+
+int opus_pie_time_cli(int argc, char **argv);
 int opus_lyzer_file(const char *path, const char *mode);
 int cmd_rsa(int argc, char **argv);
 int cmd_about(opus_context *ctx, int argc, char **argv);
@@ -135,8 +139,105 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
     } else if (strcmp(cmd, "STRING") == 0) {
         return cmd_string(argc - cli->arg_start + 1, argv + cli->arg_start - 1);
+       
+        } else if (strcmp(cmd, "MD5") == 0) {
+        if (cli->arg_start >= argc) {
+            fprintf(stderr, "Usage: opus md5 <file>\n");
+            fprintf(stderr, "       opus md5 -in <file>\n");
+            fprintf(stderr, "       opus md5 -verify <file> <hash>\n");
+            fprintf(stderr, "       opus md5 -compare <file1> <file2>\n");
+            return 1;
+        }
 
-    } else if (strcmp(cmd, "ENTROPY") == 0) {
+        char digest[33];
+
+        if (strcmp(argv[cli->arg_start], "-in") == 0) {
+            if (cli->arg_start + 1 >= argc) {
+                fprintf(stderr, "MD5 -in: need <file>\n");
+                return 1;
+            }
+
+            const char *path = argv[cli->arg_start + 1];
+
+            if (opus_md5_file(path, digest) == true) {
+                printf("MD5(%s) = %s\n", path, digest);
+                return 0;
+            }
+
+            fprintf(stderr, "MD5: failed to read %s\n", path);
+            return 1;
+        }
+
+        if (strcmp(argv[cli->arg_start], "-verify") == 0) {
+            if (cli->arg_start + 2 >= argc) {
+                fprintf(stderr, "MD5 -verify: need <file> <hash>\n");
+                return 1;
+            }
+
+            const char *path = argv[cli->arg_start + 1];
+            const char *expected = argv[cli->arg_start + 2];
+
+            if (opus_md5_file(path, digest) != true) {
+                fprintf(stderr, "MD5: failed to read %s\n", path);
+                return 1;
+            }
+
+            if (strcasecmp(digest, expected) == 0) {
+                printf("MD5 OK\n");
+                return 0;
+            }
+
+            printf("MD5 MISMATCH\n");
+            return 1;
+        }
+
+        if (strcmp(argv[cli->arg_start], "-compare") == 0) {
+            if (cli->arg_start + 2 >= argc) {
+                fprintf(stderr, "MD5 -compare: need <file1> <file2>\n");
+                return 1;
+            }
+
+            char h1[33], h2[33];
+            const char *file1 = argv[cli->arg_start + 1];
+            const char *file2 = argv[cli->arg_start + 2];
+
+            if (opus_md5_file(file1, h1) != true) {
+                fprintf(stderr, "MD5: failed to read %s\n", file1);
+                return 1;
+            }
+
+            if (opus_md5_file(file2, h2) != true) {
+                fprintf(stderr, "MD5: failed to read %s\n", file2);
+                return 1;
+            }
+
+            if (strcasecmp(h1, h2) == 0) {
+                printf("MD5 MATCH\n");
+                return 0;
+            }
+
+            printf("MD5 DIFFER\n");
+            printf("  %s: %s\n", file1, h1);
+            printf("  %s: %s\n", file2, h2);
+            return 1;
+        }
+
+        const char *path = argv[cli->arg_start];
+
+        if (opus_md5_file(path, digest) == true) {
+            printf("MD5(%s) = %s\n", path, digest);
+            return 0;
+        }
+
+        fprintf(stderr, "MD5: failed to read %s\n", path);
+        return 1;
+        
+    }
+    else if (strcmp(cmd, "SHA256") == 0) {
+        return opus_cmd_sha256(argc - cli->arg_start + 1,
+                               argv + cli->arg_start - 1); 
+    }
+    else if (strcmp(cmd, "ENTROPY") == 0) {
         return cmd_entropy(cli, argc, argv);
 
     } else if (strcmp(cmd, "ELFINFO") == 0) {
@@ -172,7 +273,11 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     } else if (strcmp(cmd, "PIECALC") == 0) {
         return cmd_piecalc(NULL, argc, argv);
 
-    } else if (strcmp(cmd, "MAGIC") == 0) {
+    } else if (strcmp(cmd, "PIETIME") == 0) {
+	return opus_pie_time_cli(argc - cli->arg_start,
+		argv + cli->arg_start);
+    }
+    else if (strcmp(cmd, "MAGIC") == 0) {
         if (cli->arg_start >= argc) {
             fprintf(stderr, "Usage: opus magic <file>\n");
             return 1;

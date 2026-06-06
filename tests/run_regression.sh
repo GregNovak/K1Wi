@@ -184,6 +184,63 @@ require_output \
     "0x"
 
 echo
+echo "[TEST] PIETIME basic analysis"
+
+OUT=$($BIN PIETIME -IN ./bin/opus -LEAK 0x401000 -BASE 0x400000 2>&1)
+echo "$OUT" | head -20
+
+require_output "PIETIME reports analysis" "$OUT" "[PIETIME] ANALYSIS"
+require_output "PIETIME reports binary" "$OUT" "binary:"
+require_output "PIETIME reports offset" "$OUT" "offset:"
+
+echo
+echo "[TEST] MD5 basic hash"
+
+OUT=$($BIN md5 testdata/text/hello.txt 2>&1)
+echo "$OUT"
+
+require_output \
+    "MD5 reports digest" \
+    "$OUT" \
+    "MD5("
+    
+echo
+echo "[TEST] MD5 compare"
+
+OUT=$($BIN md5 -compare testdata/text/hello.txt testdata/text/hello.txt 2>&1)
+echo "$OUT"
+
+require_output \
+    "MD5 compare match" \
+    "$OUT" \
+    "MD5 MATCH"
+    
+echo
+echo "[TEST] SHA256 basic hash"
+
+OUT=$($BIN sha256 testdata/text/hello.txt 2>&1)
+echo "$OUT"
+
+require_output \
+    "SHA256 reports digest" \
+    "$OUT" \
+    "SHA256("
+
+echo
+echo "[TEST] SHA256 compare"
+
+OUT=$($BIN sha256 -compare testdata/text/hello.txt testdata/text/hello.txt 2>&1)
+echo "$OUT"
+
+require_output \
+    "SHA256 compare match" \
+    "$OUT" \
+    "SHA256 MATCH"
+    
+    
+
+
+echo
 echo "[TEST] RSA factor sample"
 
 set +e

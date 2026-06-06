@@ -52,7 +52,7 @@ static const opus_command OPUS_COMMANDS[] = {
     /* Cryptanalysis */
     { "VIG",      NULL,  "Crypto",     "Vigenere cipher solver",               cmd_vig },
     { "SUB",      NULL,  "Crypto",     "Substitution cipher solver",           cmd_sub },
-    { "RSA",      NULL,  "RSA",        "Factor RSA modulus / analyze keys",    cmd_rsa },
+    { "RSA-FACTOR", NULL,"RSA",       "Fermat / classical factorization",           cmd_rsa },
 
     /* Binary / Misc examples */
     { "ELFINFO",      NULL,  "Binary",     "Inspect ELF header and sections",      cmd_elf },
