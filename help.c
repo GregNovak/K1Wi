@@ -36,21 +36,24 @@ static const char *help_search_lines[] = {
     "  SEARCH --hex dump.bin 66 6C 61 67",
     "  SEARCH dump.bin --hex 66 6C 61 67",
     "  SEARCH dump.bin --patterns patterns.txt",
-    "  SEARCH dump.bin flag --before-hex 20 --after-hex 20\n"
+    "  SEARCH dump.bin flag --before-hex 20 --after-hex 20\n",
+    NULL
 };
 
 static const char *help_elfinfo_lines[] = {
     "ELFINFO - ELF Symbol & Section Viewer",
     "",
     "Usage:",
-    "  ELFINFO -IN <binary>"
+    "  ELFINFO -IN <binary>",
+    NULL
 };
 
 static const char *help_magic_lines[] = {
     "MAGIC - Magic Byte Detector",
     "",
     "Usage:",
-    "  MAGIC <file>"
+    "  MAGIC <file>",
+    NULL
 };
 
 static const char *help_md5_lines[] = {
@@ -59,7 +62,8 @@ static const char *help_md5_lines[] = {
     "Usage:",
     "  MD5 <file>",
     "  MD5 -verify <file> <hash>",
-    "  MD5 -compare <file1> <file2>"
+    "  MD5 -compare <file1> <file2>",
+    NULL
 };
 static const char *help_extract_lines[] = {
     "EXTRACT - Recursive Extraction Engine",
@@ -86,14 +90,16 @@ static const char *help_sha256_lines[] = {
     "Usage:",
     "  SHA256 <file>",
     "  SHA256 -verify <file> <hash>",
-    "  SHA256 -compare <file1> <file2>"
+    "  SHA256 -compare <file1> <file2>",
+    NULL
 };
 
 static const char *help_rsa_factor_lines[] = {
     "RSA-FACTOR - Fermat / Classical Factorization",
     "",
     "Usage:",
-    "  RSA-FACTOR <rsa_file>"
+    "  RSA-FACTOR <rsa_file>",
+    NULL
 };
 
 
@@ -111,7 +117,8 @@ static const char *help_vigsolve_lines[] = {
     "  -in <file>        Input ciphertext file",
     "  -out <file>       Output plaintext file",
     "  -keylen <n>       Key length to use",
-    "  -alpha <set>      Optional alphabet override (default: A-Z)"
+    "  -alpha <set>      Optional alphabet override (default: A-Z)",
+    NULL
 };
 
 static const char *help_vigan_lines[] = {
@@ -122,7 +129,8 @@ static const char *help_vigan_lines[] = {
     "",
     "Description:",
     "  Computes Index of Coincidence and Friedman estimates to",
-    "  determine likely Vigenere key lengths."
+    "  determine likely Vigenere key lengths.",
+    NULL
 };
 
 static const char *help_vigcrack_lines[] = {
@@ -133,7 +141,8 @@ static const char *help_vigcrack_lines[] = {
     "",
     "Description:",
     "  Attempts full automatic Vigenere solving using IC, frequency",
-    "  analysis, hillclimbing, and refinement."
+    "  analysis, hillclimbing, and refinement.",
+    NULL
 };
 
 static const char *help_piecalc_lines[] = {
@@ -158,7 +167,8 @@ static const char *help_piecalc_lines[] = {
     "Examples:",
     "  PIECALC -IN chall -LEAK 0x5555555553c0 -SYMB main -TARGET check_win",
     "  PIECALC -IN chall -LEAK 0xf010 -SYMB cmd_piecalc -TARGET main",
-    "  PIECALC -IN chall -LEAK 0xf010 -GUESS -TARGET main"
+    "  PIECALC -IN chall -LEAK 0xf010 -GUESS -TARGET main",
+    NULL
 };
 
 static const char *help_pietime_lines[] = {
@@ -214,7 +224,8 @@ static const char *help_string_lines[] = {
     "  STRING SGVsbG8=",
     "  STRING --decode SGVsbG8=",
     "  STRING 48656c6c6f",
-    "  STRING --file dump.bin --decode"
+    "  STRING --file dump.bin --decode",
+    NULL
 };
 static const char *help_lyzer_lines[] = {
     "LYZER - Image Forensics and Steganography Analyzer",
@@ -251,7 +262,8 @@ static const char *help_entropy_lines[] = {
     "Examples:",
     "  ENTROPY sample.bin",
     "  ENTROPY --window sample.bin",
-    "  ENTROPY --heatmap sample.bin"
+    "  ENTROPY --heatmap sample.bin",
+    NULL
 };
 
 static const char *help_rsa_knownpq_lines[] = {
@@ -265,7 +277,8 @@ static const char *help_rsa_knownpq_lines[] = {
     "  derive the private exponent d, and decrypt ciphertext.",
     "",
     "Example:",
-    "  RSA-KNOWNPQ rsa.txt 61 53"
+    "  RSA-KNOWNPQ rsa.txt 61 53", 
+    NULL
 };
 
 static const char *help_rsa_small_e_lines[] = {
@@ -279,7 +292,8 @@ static const char *help_rsa_small_e_lines[] = {
     "  ciphertexts when plaintext^e < n.",
     "",
     "Example:",
-    "  RSA-SMALL-E rsa_small_e3.txt"
+    "  RSA-SMALL-E rsa_small_e3.txt",
+    NULL
 };
 
 static const char *help_rsa_wiener_lines[] = {
@@ -293,7 +307,8 @@ static const char *help_rsa_wiener_lines[] = {
     "  RSA keys with unusually small private exponents.",
     "",
     "Example:",
-    "  RSA-WIENER rsa_weak_d.txt"
+    "  RSA-WIENER rsa_weak_d.txt", 
+    NULL
 };
 
 static const char *help_rsa_ecm_lines[] = {
@@ -307,7 +322,8 @@ static const char *help_rsa_ecm_lines[] = {
     "  Effective against some weak RSA moduli.",
     "",
     "Example:",
-    "  RSA-ECM rsa_values.txt"
+    "  RSA-ECM rsa_values.txt",
+    NULL
 };
 /* ===========================
    HELP TABLE
@@ -321,7 +337,7 @@ static const help_entry_t help_table[] = {
     { "VIGAN",       help_vigan_lines,       sizeof(help_vigan_lines)/sizeof(char*) },
     { "VIGCRACK",    help_vigcrack_lines,    sizeof(help_vigcrack_lines)/sizeof(char*) },
     { "EXTRACT",     help_extract_lines,     sizeof(help_extract_lines)/sizeof(char*) },
-
+    
     { "STRING",      help_string_lines,      sizeof(help_string_lines)/sizeof(char*) },
     { "ENTROPY",     help_entropy_lines,     sizeof(help_entropy_lines)/sizeof(char*) },
 
