@@ -43,28 +43,7 @@ require_output() {
     fi
 }
 
-require_failure_output() {
-    local label="$1"
-    local command="$2"
-    local needle="$3"
 
-    set +e
-    OUT=$(eval "$command" 2>&1)
-    RC=$?
-    set -e
-
-    echo "$OUT"
-
-    if [ "$RC" -eq 0 ]; then
-        fail "$label expected failure but command exited 0"
-    fi
-
-    if echo "$OUT" | grep -Fq "$needle"; then
-        pass "$label"
-    else
-        fail "$label missing expected error output: $needle"
-    fi
-}
 require_failure_output() {
     local label="$1"
     local command="$2"
@@ -192,6 +171,22 @@ echo "$OUT" | head -20
 require_output "PIETIME reports analysis" "$OUT" "[PIETIME] ANALYSIS"
 require_output "PIETIME reports binary" "$OUT" "binary:"
 require_output "PIETIME reports offset" "$OUT" "offset:"
+
+echo
+echo "[TEST] MAGIC sample ZIP"
+
+if [ -f "$ARCHIVE_SAMPLE" ]; then
+    OUT=$($BIN magic "$ARCHIVE_SAMPLE" 2>&1)
+    echo "$OUT"
+
+    require_output \
+        "MAGIC detects ZIP archive" \
+        "$OUT" \
+        "ZIP"
+else
+    skip "$ARCHIVE_SAMPLE not found"
+fi
+
 
 echo
 echo "[TEST] MD5 basic hash"
