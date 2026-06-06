@@ -266,6 +266,25 @@ require_output "HELP shows RSA" "$OUT" "RSA"
 require_output "HELP shows PIECALC" "$OUT" "PIECALC"
 
 echo
+echo "[TEST] Individual HELP pages"
+
+OUT=$($BIN help PIETIME 2>&1)
+echo "$OUT"
+require_output "HELP PIETIME page" "$OUT" "PIETIME - PIE Runtime Address Analyzer"
+
+OUT=$($BIN help LYZER 2>&1)
+echo "$OUT"
+require_output "HELP LYZER page" "$OUT" "LYZER - Image Forensics and Steganography Analyzer"
+
+OUT=$($BIN help EXTRACT 2>&1)
+echo "$OUT"
+require_output "HELP EXTRACT page" "$OUT" "EXTRACT - Recursive Extraction Engine"
+
+OUT=$($BIN help MAGIC 2>&1)
+echo "$OUT"
+require_output "HELP MAGIC page" "$OUT" "MAGIC - Magic Byte Detector"
+
+echo
 echo "[TEST] VERSION banner"
 
 OUT=$($BIN --version 2>&1)
