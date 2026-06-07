@@ -376,7 +376,7 @@ static const size_t help_count = sizeof(help_table) / sizeof(help_table[0]);
    =========================== */
 
 static const char *general_help_lines[] = {
-    "HELP - Opus Help System",
+    "HELP - K1Wi Help System",
     "",
     "Usage:",
     "  HELP <command>",
