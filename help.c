@@ -322,8 +322,23 @@ static const char *help_rsa_ecm_lines[] = {
     "  Effective against some weak RSA moduli.",
     "",
     "Example:",
-    "  RSA-ECM rsa_values.txt",
+    "  RSA-ECM testdata/rsa/rsa_ecm_small_factor.txt",
     NULL
+};
+static const char *help_wipefs_lines[] = {
+    "WIPEFS - Bounded Free-Space Wipe",
+    "",
+    "Usage:",
+    "  WIPEFS <path> --dry-run",
+    "  WIPEFS <path> --max-bytes <N> --yes",
+    "",
+    "Safety:",
+    "  Refuses destructive mode unless --max-bytes and --yes are supplied.",
+    "  CLI mode is safety-stubbed; use the interactive shell for bounded testing.",
+    "",
+    "Examples:",
+    "  WIPEFS testdata --dry-run",
+    "  WIPEFS testdata/wipefs_sandbox --max-bytes 1048576 --yes"
 };
 /* ===========================
    HELP TABLE
@@ -350,6 +365,7 @@ static const help_entry_t help_table[] = {
     { "MD5",         help_md5_lines,         sizeof(help_md5_lines)/sizeof(char*)},
     { "SHA256",      help_sha256_lines,      sizeof(help_sha256_lines)/sizeof(char*)},
     { "RSA-FACTOR",  help_rsa_factor_lines,  sizeof(help_rsa_factor_lines)/sizeof(char*)},
+    { "WIPEFS",      help_wipefs_lines,      sizeof(help_wipefs_lines)/sizeof(char*) },
     
 };
 
@@ -385,6 +401,8 @@ void opus_help_general(void)
     for (size_t i = 0; i < general_help_count; i++)
         printf("%s\n", general_help_lines[i]);
 }
+
+
 
 void opus_help_specific(const char *cmd)
 {
