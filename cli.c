@@ -7,7 +7,7 @@
  *   RSA-WIENER
  *   RSA-ECM
  */
-
+#include <gmp.h>
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
@@ -16,10 +16,13 @@
 #include "cli.h"
 #include "rsa_factor.h"
 #include "md5.h"
-
+#include "rsa_common.h"
+#include "rsa_small_e.h"
+#include "rsa_wiener.h"
 
 typedef struct opus_context opus_context;
 
+void opus_print_plaintext_from_bigint(const mpz_t m);
 int opus_rsa_knownpq(const char *path, const char *p_str, const char *q_str);
 int cmd_search(int argc, char **argv);
 int opus_cmd_sha256(int argc, char **argv);
@@ -335,8 +338,84 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
         detect_magic(argv[cli->arg_start]);
         return 0;
 
-    } else if (strcmp(cmd, "RSA-FACTOR") == 0) {
-        if (cli->arg_start >= argc) {
+    
+	    
+	} else if (strcmp(cmd, "RSA-SMALL-E") == 0) {
+	    if (cli->arg_start >= argc) {
+		fprintf(stderr, "Usage: opus RSA-SMALL-E <rsa_file>\n");
+		return 1;
+	    }
+
+	    const char *path = argv[cli->arg_start];
+
+	    mpz_t N, e, c, m;
+	    mpz_inits(N, e, c, m, NULL);
+
+	    if (parse_rsa_file(path, N, e, c) != 0) {
+		printf("rsa-small-e: failed to parse RSA file\n");
+		mpz_clears(N, e, c, m, NULL);
+		return 1;
+	    }
+
+	    unsigned long e_ul = mpz_get_ui(e);
+
+	    printf("[*] RSA-SMALL-E: checking for small exponent attack (e = %lu)\n", e_ul);
+
+	    if (e_ul == 0 || e_ul > 64) {
+		printf("[-] RSA-SMALL-E: exponent too large or invalid\n");
+		mpz_clears(N, e, c, m, NULL);
+		return 1;
+	    }
+
+	    if (rsa_small_e_attack(m, c, e_ul)) {
+		printf("[+] RSA-SMALL-E: recovered plaintext via integer %lu-th root\n", e_ul);
+		opus_print_plaintext_from_bigint(m);
+		mpz_clears(N, e, c, m, NULL);
+		return 0;
+	    }
+
+	    printf("[-] RSA-SMALL-E: attack not applicable (no exact root)\n");
+	    mpz_clears(N, e, c, m, NULL);
+	    return 1;
+
+	} else if (strcmp(cmd, "RSA-WIENER") == 0) {
+	    if (cli->arg_start >= argc) {
+		fprintf(stderr, "Usage: opus RSA-WIENER <rsa_file>\n");
+		return 1;
+	    }
+
+    const char *path = argv[cli->arg_start];
+
+    printf("[*] Input file: %s\n", path);
+
+    mpz_t N, e, c, d, m;
+    mpz_inits(N, e, c, d, m, NULL);
+
+    if (parse_rsa_file(path, N, e, c) != 0) {
+        printf("rsa-wiener: failed to parse RSA file\n");
+        mpz_clears(N, e, c, d, m, NULL);
+        return 1;
+    }
+
+    printf("[*] RSA-WIENER: starting Wiener attack\n");
+
+    if (opus_rsa_wiener_attack(N, e, d) != 0) {
+        printf("[-] RSA-WIENER: Wiener attack failed (d not small)\n");
+        mpz_clears(N, e, c, d, m, NULL);
+        return 1;
+    }
+
+    printf("[+] RSA-WIENER: recovered d\n");
+
+    mpz_powm(m, c, d, N);
+    opus_print_plaintext_from_bigint(m);
+    putchar('\n');
+
+    mpz_clears(N, e, c, d, m, NULL);
+    return 0;
+	} 
+        else if (strcmp(cmd, "RSA-FACTOR") == 0) {
+          if (cli->arg_start >= argc) {
             fprintf(stderr, "Usage: opus rsa-factor <rsa_file>\n");
             return 1;
         }

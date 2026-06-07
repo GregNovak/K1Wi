@@ -283,6 +283,47 @@ fi
 
 pass "RSA factor command completed"
 
+echo
+echo "[TEST] RSA small-e negative sample"
+
+set +e
+OUT=$($BIN RSA-SMALL-E ./testdata/rsa/rsa_61_53_e17.txt 2>&1)
+RC=$?
+set -e
+
+echo "$OUT"
+
+require_output \
+    "RSA-SMALL-E detects non-applicable attack" \
+    "$OUT" \
+    "attack not applicable"
+
+if [ "$RC" -eq 0 ]; then
+    fail "RSA-SMALL-E expected non-zero for non-applicable attack"
+fi
+
+pass "RSA-SMALL-E negative path completed"
+
+echo
+echo "[TEST] RSA Wiener negative sample"
+
+set +e
+OUT=$($BIN RSA-WIENER ./testdata/rsa/rsa_61_53_e17.txt 2>&1)
+RC=$?
+set -e
+
+echo "$OUT"
+
+require_output \
+    "RSA-WIENER detects non-small d" \
+    "$OUT" \
+    "Wiener attack failed"
+
+if [ "$RC" -eq 0 ]; then
+    fail "RSA-WIENER expected non-zero for non-vulnerable sample"
+fi
+
+pass "RSA-WIENER negative path completed"
 
 echo
 echo "[TEST] HELP"
