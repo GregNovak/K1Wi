@@ -371,6 +371,26 @@ fi
 
 pass "CREATE created empty file"
 
+
+echo
+echo "[TEST] DEL secure delete sample"
+
+cp testdata/text/hello.txt k1wi_del_test.txt
+
+OUT=$($BIN DEL k1wi_del_test.txt -s 2 -y 2>&1)
+echo "$OUT"
+
+require_output \
+    "DEL reports secure deletion" \
+    "$OUT" \
+    "Secure deletion complete"
+
+if [ -f k1wi_del_test.txt ]; then
+    fail "DEL did not remove file"
+fi
+
+pass "DEL removed file"
+
     
 echo
 echo "[TEST] READ basic file"

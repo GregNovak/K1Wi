@@ -114,6 +114,8 @@ int secure_delete_file(const char *filename, int standard) {
  *   "<filename> -s 2 -y" -> standard=2 (NIST), auto-yes
  */
 void fileDeleteCmd(const char *args) {
+    
+
     if (!args || !*args) {
         /* fallback to interactive behavior */
         fileDelete();

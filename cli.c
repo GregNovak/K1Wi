@@ -17,6 +17,8 @@
 #include "rsa_rho.h"
 #include "file_copy.h"
 #include "file_ops.h"
+#include "secure_delete_cmds.h"
+
 
 typedef struct opus_context opus_context;
 
@@ -542,6 +544,26 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
     return fileCreate(argv[cli->arg_start]) == 0 ? 0 : 1;
     
+    
+    
+    } else if (strcmp(cmd, "DEL") == 0) {
+    if (cli->arg_start >= argc) {
+        fprintf(stderr, "Usage: opus DEL <file> [-s 1|2] [-y]\n");
+        return 1;
+    }
+
+    char args_buf[4096] = {0};
+
+    for (int i = cli->arg_start; i < argc; i++) {
+        if (i > cli->arg_start) {
+            strncat(args_buf, " ", sizeof(args_buf) - strlen(args_buf) - 1);
+        }
+
+        strncat(args_buf, argv[i], sizeof(args_buf) - strlen(args_buf) - 1);
+    }
+
+    fileDeleteCmd(args_buf);
+    return 0;
     
     }
     
