@@ -31,9 +31,7 @@ bool opus_rsa_knownpq(const char *path, const char *p_str, const char *q_str)
     }
 
     printf("[*] RSA-KNOWNPQ: loaded RSA parameters from '%s'\n", path);
-    gmp_printf("[DEBUG] N = %Zd\n", N);
-    gmp_printf("[DEBUG] e = %Zd\n", e);
-    gmp_printf("[DEBUG] c = %Zd\n", c);
+
 
     /* Load p, q from strings */
     p_str = skip_spaces(p_str);
@@ -51,8 +49,7 @@ bool opus_rsa_knownpq(const char *path, const char *p_str, const char *q_str)
     }
 
     printf("[*] RSA-KNOWNPQ: using provided primes p and q\n");
-    gmp_printf("[DEBUG] p = %Zd\n", p);
-    gmp_printf("[DEBUG] q = %Zd\n", q);
+
 
 	/* Validate p and q using shared primality + factor logic */
 	if (!rsa_validate_pq(p, q)) {
@@ -68,7 +65,7 @@ bool opus_rsa_knownpq(const char *path, const char *p_str, const char *q_str)
     mpz_mul(tmp, p, q);
     if (mpz_cmp(tmp, N) != 0) {
         printf("[-] RSA-KNOWNPQ: sanity check failed: p*q != N\n");
-        gmp_printf("[DEBUG] p*q = %Zd\n", tmp);
+        
         mpz_clears(N, e, c, p, q, phi, d, m, tmp, NULL);
         return false;
     }
@@ -80,7 +77,7 @@ bool opus_rsa_knownpq(const char *path, const char *p_str, const char *q_str)
 	mpz_sub_ui(phi, q, 1);   // phi = q - 1
 	mpz_mul(phi, tmp, phi);  // phi = (p - 1) * (q - 1)
 
-	gmp_printf("[DEBUG] phi = %Zd\n", phi);
+	
 
 
     printf("[*] RSA-KNOWNPQ: computing d = e^{-1} mod phi\n");
@@ -92,7 +89,7 @@ bool opus_rsa_knownpq(const char *path, const char *p_str, const char *q_str)
         return false;
     }
 
-    gmp_printf("[DEBUG] d = %Zd\n", d);
+    
 
     printf("[*] RSA-KNOWNPQ: decrypting m = c^d mod N\n");
 
