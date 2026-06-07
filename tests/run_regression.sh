@@ -282,6 +282,28 @@ require_output \
     "RSA-DFROMPQ computes d" \
     "$OUT" \
     "d = 2753"
+
+echo
+echo "[TEST] RSA Pollard Rho sample"
+
+OUT=$($BIN RSA-RHO ./testdata/rsa/rsa_61_53_e17.txt 2>&1)
+echo "$OUT"
+
+require_output \
+    "RSA-RHO finds p" \
+    "$OUT" \
+    "[+] p ="
+
+require_output \
+    "RSA-RHO finds q" \
+    "$OUT" \
+    "[+] q ="
+
+require_output \
+    "RSA-RHO recovers plaintext" \
+    "$OUT" \
+    "m = 123"
+
     
 echo
 echo "[TEST] READ basic file"

@@ -14,6 +14,7 @@
 #include "rsa_ecm.h"
 #include "rsa_checkpq.h"
 #include "rsa_dfrompq.h"
+#include "rsa_rho.h"
 
 typedef struct opus_context opus_context;
 
@@ -493,6 +494,16 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
     mpz_clears(N, e, c, f, q, NULL);
     return 0;
+    
+    } else if (strcmp(cmd, "RSA-RHO") == 0) {
+
+    if (cli->arg_start >= argc) {
+        fprintf(stderr,
+                "Usage: opus RSA-RHO <rsa_file>\n");
+        return 1;
+    }
+
+    return opus_rsa_rho(argv[cli->arg_start]) ? 0 : 1;
     
     
     } else if (strcmp(cmd, "TIME") == 0) {
