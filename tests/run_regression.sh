@@ -134,7 +134,7 @@ echo
 echo "[TEST] ELF self-analysis"
 
 OUT=$($BIN elfinfo ./bin/opus 2>&1)
-echo "$OUT" | head -40
+set -euo pipefail
 
 require_output \
     "ELF reports ELFINFO header" \
@@ -150,7 +150,7 @@ echo
 echo "[TEST] PIECALC symbol list"
 
 OUT=$($BIN PIECALC --bin ./bin/opus --list 2>&1)
-echo "$OUT" | head -40
+sed -n '1,40p' <<< "$OUT"
 
 require_output \
     "PIECALC lists symbols" \
@@ -166,7 +166,7 @@ echo
 echo "[TEST] PIETIME basic analysis"
 
 OUT=$($BIN PIETIME -IN ./bin/opus -LEAK 0x401000 -BASE 0x400000 2>&1)
-echo "$OUT" | head -20
+sed -n '1,20p' <<< "$OUT"
 
 require_output "PIETIME reports analysis" "$OUT" "[PIETIME] ANALYSIS"
 require_output "PIETIME reports binary" "$OUT" "binary:"
@@ -324,6 +324,31 @@ if [ "$RC" -eq 0 ]; then
 fi
 
 pass "RSA-WIENER negative path completed"
+
+echo
+echo "[TEST] RSA ECM small factor sample"
+
+set +e
+OUT=$(timeout 5s $BIN RSA-ECM testdata/rsa/rsa_ecm_small_factor.txt 2>&1)
+RC=$?
+set -e
+
+echo "$OUT"
+
+if [ "$RC" -eq 124 ]; then
+    fail "RSA-ECM timed out"
+fi
+
+require_output \
+    "RSA-ECM finds factor" \
+    "$OUT" \
+    "RSA-ECM: found factor"
+
+require_output \
+    "RSA-ECM finds cofactor" \
+    "$OUT" \
+    "RSA-ECM: cofactor"
+
 
 echo
 echo "[TEST] HELP"

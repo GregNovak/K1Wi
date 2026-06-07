@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include "rsa_ecm.h"
 
 
@@ -15,6 +16,18 @@
  * Returns 1 on success (factor found), 0 on failure.
  */
 
+static int is_decimal_token(const char *s)
+{
+    if (!s || *s == '\0')
+        return 0;
+
+    for (const unsigned char *p = (const unsigned char *)s; *p; p++) {
+        if (!isdigit(*p))
+            return 0;
+    }
+
+    return 1;
+}
 
 int opus_rsa_ecm_factor(const mpz_t n, mpz_t factor)
 {
@@ -27,7 +40,7 @@ int opus_rsa_ecm_factor(const mpz_t n, mpz_t factor)
     // B1 = 1e6, 2000 curves; tune as desired
     char cmd[8192];
     snprintf(cmd, sizeof(cmd),
-             "ecm -c 2000 1000000 %s > %s 2>/dev/null",
+             "echo %s | ecm -c 5 1000 > %s 2>/dev/null",
              n_str, tmp_path);
 
     int status = system(cmd);
@@ -44,19 +57,19 @@ int opus_rsa_ecm_factor(const mpz_t n, mpz_t factor)
     char fac_str[8192] = {0};
 
     while (fgets(line, sizeof(line), fp)) {
-        if (strstr(line, "Found") != NULL) {
-            char *tok = strtok(line, " \t\n");
-            char *last = NULL;
-            while (tok) {
-                last = tok;
-                tok = strtok(NULL, " \t\n");
-            }
-            if (last) {
-                strncpy(fac_str, last, sizeof(fac_str) - 1);
-                fac_str[sizeof(fac_str) - 1] = '\0';
-                break;
-            }
-        }
+        if (strstr(line, "Found") != NULL || strstr(line, "factor") != NULL) {
+	    char *tok = strtok(line, " \t\r\n:=,");
+	    while (tok) {
+		if (is_decimal_token(tok)) {
+		    strncpy(fac_str, tok, sizeof(fac_str) - 1);
+		    fac_str[sizeof(fac_str) - 1] = '\0';
+		}
+		tok = strtok(NULL, " \t\r\n:=,");
+	    }
+
+	    if (fac_str[0] != '\0')
+		break;
+	}
     }
 
     fclose(fp);

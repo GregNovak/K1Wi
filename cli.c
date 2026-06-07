@@ -19,6 +19,8 @@
 #include "rsa_common.h"
 #include "rsa_small_e.h"
 #include "rsa_wiener.h"
+#include "rsa_ecm.h"
+
 
 typedef struct opus_context opus_context;
 
@@ -441,9 +443,41 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
     printf("rsa-knownpq: failed\n");
     return 1;
-   
-   
-   
+    
+    } else if (strcmp(cmd, "RSA-ECM") == 0) {
+    if (cli->arg_start >= argc) {
+        fprintf(stderr, "Usage: opus RSA-ECM <rsa_file>\n");
+        return 1;
+    }
+
+    const char *path = argv[cli->arg_start];
+
+    mpz_t N, e, c, f, q;
+    mpz_inits(N, e, c, f, q, NULL);
+
+    if (parse_rsa_file(path, N, e, c) != 0) {
+        printf("rsa-ecm: failed to parse RSA file\n");
+        mpz_clears(N, e, c, f, q, NULL);
+        return 1;
+    }
+
+    printf("[*] RSA-ECM: starting ECM factorization\n");
+
+    if (!opus_rsa_ecm_factor(N, f)) {
+        printf("[-] RSA-ECM: no factor found (within bounds)\n");
+        mpz_clears(N, e, c, f, q, NULL);
+        return 1;
+    }
+
+    mpz_fdiv_q(q, N, f);
+
+    gmp_printf("[+] RSA-ECM: found factor f = %Zd\n", f);
+    gmp_printf("[+] RSA-ECM: cofactor q = %Zd\n", q);
+
+    mpz_clears(N, e, c, f, q, NULL);
+    return 0;
+    
+    
     } else if (strcmp(cmd, "TIME") == 0) {
         systemTime();
         return 0;
