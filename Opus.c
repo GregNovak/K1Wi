@@ -1438,29 +1438,20 @@ int opus_repl(void)
 	}
 
 	else if (strcmp(cmd, "WIPEFS") == 0) {
-	    char *p = line;
-	    while (*p && isspace((unsigned char)*p)) p++;
+	    char args_buf[4096] = {0};
 
-	    char *first = strtok(p, " \t");
-	    if (first && strcasecmp(first, "WIPEFS") == 0) {
-		char *rest = NULL;
-		char *cmd_pos = strstr(p, first);
-		if (cmd_pos) {
-		    char *after = cmd_pos + strlen(first);
-		    while (*after && isspace((unsigned char)*after)) after++;
-		    rest = (*after) ? after : NULL;
+	    for (int i = 1; i < argc; i++) {
+		if (i > 1) {
+		    strncat(args_buf, " ", sizeof(args_buf) - strlen(args_buf) - 1);
 		}
 
-		char *argcopy = rest ? strdup(rest) : NULL;
-		wipeFsCmd(argcopy ? argcopy : "");
-		free(argcopy);
-		continue;
+		strncat(args_buf, argv[i], sizeof(args_buf) - strlen(args_buf) - 1);
 	    }
 
-	    /* fallback: default to current directory */
-	    wipeFsCmd(NULL);
+	    wipeFsCmd(args_buf);
 	    continue;
 	}
+	
 
         else if (strcmp(cmd, "CLR") == 0 || strcmp(cmd, "CLEAR") == 0) {
             clearScreen();

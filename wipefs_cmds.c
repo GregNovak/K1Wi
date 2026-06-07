@@ -24,15 +24,59 @@ static int make_wipe_dir(const char *base, char *out, size_t out_sz) {
 }
 
 void wipeFsCmd(const char *args) {
-    char target[PATH_MAX];
-    const char *path = (args && *args) ? args : ".";
+    char target[PATH_MAX] = ".";
+    unsigned long long max_bytes = 0;
+    int dry_run = 0;
+    int yes = 0;
 
-    /* strip trailing newline/spaces if coming from line buffer */
-    snprintf(target, sizeof(target), "%s", path);
-    size_t len = strlen(target);
-    while (len > 0 && (target[len-1] == '\n' || target[len-1] == ' ' || target[len-1] == '\t'))
-        target[--len] = '\0';
+    if (!args || !*args) {
+        fprintf(stderr,
+                "WIPEFS: refused. Usage: WIPEFS <path> --dry-run OR WIPEFS <path> --max-bytes <N> --yes\n");
+        return;
+    }
 
+    char *copy = strdup(args);
+    if (!copy) {
+        fprintf(stderr, "WIPEFS: memory allocation failed.\n");
+        return;
+    }
+
+    char *saveptr = NULL;
+    char *tok = strtok_r(copy, " \t\r\n", &saveptr);
+    int have_target = 0;
+
+    while (tok) {
+        if (strcmp(tok, "--dry-run") == 0) {
+            dry_run = 1;
+        } else if (strcmp(tok, "--yes") == 0 || strcmp(tok, "-y") == 0) {
+            yes = 1;
+        } else if (strcmp(tok, "--max-bytes") == 0) {
+            char *v = strtok_r(NULL, " \t\r\n", &saveptr);
+            if (!v) {
+                fprintf(stderr, "WIPEFS: --max-bytes requires a value.\n");
+                free(copy);
+                return;
+            }
+            max_bytes = strtoull(v, NULL, 10);
+        } else if (!have_target) {
+            snprintf(target, sizeof(target), "%s", tok);
+            have_target = 1;
+        } else {
+            fprintf(stderr, "WIPEFS: unknown extra argument '%s'\n", tok);
+            free(copy);
+            return;
+        }
+
+        tok = strtok_r(NULL, " \t\r\n", &saveptr);
+    }
+
+    free(copy);
+
+    if (!dry_run && (!yes || max_bytes == 0)) {
+        fprintf(stderr,
+                "WIPEFS: refused. Destructive mode requires --max-bytes <N> and --yes.\n");
+        return;
+    }
     struct stat st;
     if (stat(target, &st) != 0) {
         fprintf(stderr, "WIPEFS: cannot stat '%s': %s\n", target, strerror(errno));
@@ -65,6 +109,18 @@ void wipeFsCmd(const char *args) {
     unsigned long long free_bytes = (unsigned long long)vfs.f_bavail * vfs.f_frsize;
     fprintf(stderr, "WIPEFS: starting free-space wipe on '%s' (~%llu bytes free)\n",
             base, free_bytes);
+            
+    if (dry_run) {
+    fprintf(stderr,
+            "WIPEFS: dry-run only. Would create temporary wipe files in '%s'.\n",
+            base);
+
+    fprintf(stderr,
+            "WIPEFS: available free space: %llu bytes.\n",
+            free_bytes);
+
+    return;
+    }
 
     char wipe_dir[PATH_MAX];
     if (make_wipe_dir(base, wipe_dir, sizeof(wipe_dir)) != 0) {
@@ -76,7 +132,8 @@ void wipeFsCmd(const char *args) {
 
     int file_index = 0;
     int rc = 0;
-
+    unsigned long long written_total = 0;
+    
     while (1) {
         char fname[PATH_MAX];
         if (snprintf(fname, sizeof(fname), "%s/wipe_%06d.bin", wipe_dir, file_index++) >= (int)sizeof(fname)) {
@@ -106,18 +163,41 @@ void wipeFsCmd(const char *args) {
         memset(buf, 0x00, chunk_size);
 
         while (1) {
-            size_t w = fwrite(buf, 1, chunk_size, fp);
-            if (w < chunk_size) {
-                if (ferror(fp)) {
-                    if (errno == ENOSPC) {
-                        fprintf(stderr, "WIPEFS: filesystem full.\n");
-                    } else {
-                        fprintf(stderr, "WIPEFS: write error on '%s': %s\n", fname, strerror(errno));
-                    }
-                }
-                break;
+    size_t to_write = chunk_size;
+
+    if (max_bytes > 0) {
+        unsigned long long remaining = max_bytes - written_total;
+
+        if (remaining == 0) {
+            break;
+        }
+
+        if (remaining < (unsigned long long)chunk_size) {
+            to_write = (size_t)remaining;
+        }
+    }
+
+    size_t w = fwrite(buf, 1, to_write, fp);
+    written_total += (unsigned long long)w;
+
+    if (w < to_write) {
+        if (ferror(fp)) {
+            if (errno == ENOSPC) {
+                fprintf(stderr, "WIPEFS: filesystem full.\n");
+            } else {
+                fprintf(stderr, "WIPEFS: write error on '%s': %s\n", fname, strerror(errno));
             }
         }
+        break;
+    }
+
+    if (max_bytes > 0 && written_total >= max_bytes) {
+        fprintf(stderr,
+                "WIPEFS: reached max-bytes limit (%llu bytes).\n",
+                max_bytes);
+        break;
+    }
+}
 
         free(buf);
         fflush(fp);
@@ -125,20 +205,24 @@ void wipeFsCmd(const char *args) {
 
         /* Now securely delete this wipe file using the core engine */
         if (opus_secure_delete_file(fname, &policy) != 0) {
-            fprintf(stderr, "WIPEFS: secure delete failed for '%s': %s\n", fname, strerror(errno));
-            rc = -1;
-            break;
-        }
+	    fprintf(stderr, "WIPEFS: secure delete failed for '%s': %s\n", fname, strerror(errno));
+	    rc = -1;
+	    break;
+	}
 
-        /* Check remaining free space; if very low, stop */
-        if (statvfs(base, &vfs) == 0) {
-            free_bytes = (unsigned long long)vfs.f_bavail * vfs.f_frsize;
-            if (free_bytes < (unsigned long long)chunk_size) {
-                fprintf(stderr, "WIPEFS: nearly out of space, stopping.\n");
-                break;
-            }
-        }
-    }
+	if (max_bytes > 0 && written_total >= max_bytes) {
+	    break;
+	}
+
+	/* Check remaining free space; if very low, stop */
+	if (statvfs(base, &vfs) == 0) {
+	    free_bytes = (unsigned long long)vfs.f_bavail * vfs.f_frsize;
+	    if (free_bytes < (unsigned long long)chunk_size) {
+		fprintf(stderr, "WIPEFS: nearly out of space, stopping.\n");
+		break;
+	    }
+	}
+   }
 
     /* Try to remove the wipe directory (should be empty if all deletes succeeded) */
     if (rmdir(wipe_dir) != 0) {

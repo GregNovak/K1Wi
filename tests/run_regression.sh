@@ -391,6 +391,16 @@ fi
 
 pass "DEL removed file"
 
+echo
+echo "[TEST] WIPEFS CLI safety stub"
+
+OUT=$($BIN WIPEFS 2>&1)
+echo "$OUT"
+
+require_output \
+    "WIPEFS CLI remains safety-stubbed" \
+    "$OUT" \
+    "legacy CLI stub"
     
 echo
 echo "[TEST] READ basic file"
