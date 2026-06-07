@@ -16,7 +16,7 @@
 #include "rsa_dfrompq.h"
 #include "rsa_rho.h"
 #include "file_copy.h"
-
+#include "file_ops.h"
 
 typedef struct opus_context opus_context;
 
@@ -533,6 +533,15 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
     printf("COPY: failed\n");
     return 1;
+    
+    } else if (strcmp(cmd, "CREATE") == 0) {
+    if (cli->arg_start >= argc) {
+        fprintf(stderr, "Usage: opus CREATE <filename>\n");
+        return 1;
+    }
+
+    return fileCreate(argv[cli->arg_start]) == 0 ? 0 : 1;
+    
     
     }
     

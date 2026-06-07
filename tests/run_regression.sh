@@ -347,6 +347,30 @@ grep -Fq "CTF{TEST_FLAG}" /tmp/k1wi_copy_test.txt \
     && pass "COPY content verified" \
     || fail "COPY content verification failed"
 
+
+echo
+echo "[TEST] CREATE secure empty file"
+
+rm -f /tmp/k1wi_create_test.txt
+
+OUT=$($BIN CREATE /tmp/k1wi_create_test.txt 2>&1)
+echo "$OUT"
+
+require_output \
+    "CREATE reports secure file" \
+    "$OUT" \
+    "Created secure empty file"
+
+if [ ! -f /tmp/k1wi_create_test.txt ]; then
+    fail "CREATE did not create file"
+fi
+
+if [ -s /tmp/k1wi_create_test.txt ]; then
+    fail "CREATE file is not empty"
+fi
+
+pass "CREATE created empty file"
+
     
 echo
 echo "[TEST] READ basic file"
