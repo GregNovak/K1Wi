@@ -1345,16 +1345,7 @@ int opus_repl(void)
         /* parse into cmd + argv */
         get_command(input, cmd, &argc, argv);
 
-#ifdef OPUS_DEBUG
-        printf("[DEBUG] cmd='%s' argc=%d\n", cmd, argc);
 
-        for (int i = 0; i < argc; i++) {
-
-            printf("[DEBUG] argv[%d] = '%s'\n",
-                   i,
-                   argv[i]);
-        }
-#endif
 
         /* uppercase ONLY the command token */
         for (char *p = cmd; *p; ++p)
@@ -3950,7 +3941,7 @@ void stringAnalyzer(void)
 {
     char dec[8192];
     decode_escapes(working, dec, sizeof(dec));
-       printf("[DEBUG] dec = '%s'\n", dec); 
+       
     size_t dlen = strlen(dec);
     double ratio = ascii_printable_ratio((unsigned char*)dec, dlen);
     double H = shannon_entropy((unsigned char*)dec, dlen);
