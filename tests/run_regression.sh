@@ -304,6 +304,27 @@ require_output \
     "$OUT" \
     "m = 123"
 
+echo
+echo "[TEST] RSA mini negative sample"
+
+set +e
+OUT=$($BIN RSA-MINI ./testdata/rsa/rsa_61_53_e17.txt 2>&1)
+RC=$?
+set -e
+
+echo "$OUT"
+
+require_output \
+    "RSA-MINI rejects unsupported exponent" \
+    "$OUT" \
+    "only e=3 supported"
+
+if [ "$RC" -eq 0 ]; then
+    fail "RSA-MINI expected non-zero for unsupported exponent"
+fi
+
+pass "RSA-MINI negative path completed"
+
     
 echo
 echo "[TEST] READ basic file"

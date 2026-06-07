@@ -160,15 +160,15 @@ static __attribute__((unused)) void dump_plaintext(const mpz_t M) {
     free(buf);
 }
 
-int opus_mini_rsa(void) {
+int opus_mini_rsa(const char *path) {
     mpz_t N, e, c, x, m, test;
     mpz_inits(N, e, c, x, m, test, NULL);
 
     // ------------------------------------------------------------
     // Use the shared RSA parser (no FILE*, no fgets, no brittle logic)
     // ------------------------------------------------------------
-    if (parse_rsa_file("rsa_values.txt", N, e, c) != 0) {
-        printf("mini_rsa: failed to parse rsa_values.txt\n");
+    if (parse_rsa_file(path, N, e, c) != 0) {
+        printf("mini_rsa: failed to parse %s\n", path);
         mpz_clears(N, e, c, x, m, test, NULL);
         return 0;
     }

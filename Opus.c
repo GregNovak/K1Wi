@@ -2503,12 +2503,18 @@ else if (strcasecmp(cmd, "STRING") == 0) {
             opus_designation_analyze(filename);
         }
         else if (strcmp(cmd, "RSA-MINI") == 0) {
-            int rc = opus_mini_rsa();
-            if (rc == 0)
-                fprintf(stderr, "rsa-mini: failed\n");
-            else
-                fprintf(stderr, "rsa-mini: success\n");
-        }
+	    if (argc != 2) {
+		printf("Usage: RSA-MINI <rsa_file>\n");
+		continue;
+	    }
+
+    int rc = opus_mini_rsa(argv[1]);
+
+    if (rc == 0)
+        fprintf(stderr, "rsa-mini: failed\n");
+    else
+        fprintf(stderr, "rsa-mini: success\n");
+}
         else if (strcmp(cmd, "RSA-FACTOR") == 0) {
     if (argc != 2) {
         printf("Usage: RSA-FACTOR <rsa_file>\n");

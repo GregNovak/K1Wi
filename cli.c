@@ -505,6 +505,13 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
     return opus_rsa_rho(argv[cli->arg_start]) ? 0 : 1;
     
+    } else if (strcmp(cmd, "RSA-MINI") == 0) {
+    if (cli->arg_start >= argc) {
+        fprintf(stderr, "Usage: opus RSA-MINI <rsa_file>\n");
+        return 1;
+    }
+
+    return opus_mini_rsa(argv[cli->arg_start]) ? 0 : 1;
     
     } else if (strcmp(cmd, "TIME") == 0) {
         systemTime();
