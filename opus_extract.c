@@ -528,11 +528,10 @@ static int extract_ar(const char *path, char *out, size_t out_sz) {
     snprintf(cmd, sizeof(cmd), "cd \"%s\" && ar x \"%s\"", dir, path);
     if (run_cmd(cmd) != 0) return -1;
 
-    // naive: pick first regular file
-    // TODO: improve by scanning directory properly
-    snprintf(out, out_sz, "%s/%s", dir, "TODO_pick_first_file");
-    // for now, user will adjust this; integrating dir scan is trivial
-    return 0;
+    fprintf(stderr, "EXTRACT: ar extraction completed into '%s', but automatic file selection is not implemented.\n", dir);
+	(void)out;
+	(void)out_sz;
+	return -1;
 }
 
 /* cpio: extract to dir and pick first file */
@@ -545,8 +544,12 @@ static int extract_cpio_newc(const char *path, char *out, size_t out_sz) {
     snprintf(cmd, sizeof(cmd), "cd \"%s\" && cpio -id < \"%s\"", dir, path);
     if (run_cmd(cmd) != 0) return -1;
 
-    snprintf(out, out_sz, "%s/%s", dir, "TODO_pick_first_file");
-    return 0;
+    fprintf(stderr,
+        "EXTRACT: extraction completed into '%s', but automatic file selection is not implemented.\n",
+        dir);
+	(void)out;
+	(void)out_sz;
+	return -1;
 }
 
 /* shar: execute as shell script in dir, pick first file */
@@ -559,8 +562,12 @@ static int extract_shar(const char *path, char *out, size_t out_sz) {
     snprintf(cmd, sizeof(cmd), "cd \"%s\" && sh \"%s\"", dir, path);
     if (run_cmd(cmd) != 0) return -1;
 
-    snprintf(out, out_sz, "%s/%s", dir, "TODO_pick_first_file");
-    return 0;
+    fprintf(stderr,
+        "EXTRACT: extraction completed into '%s', but automatic file selection is not implemented.\n",
+        dir);
+	(void)out;
+	(void)out_sz;
+	return -1;
 }
 
 /* uuencode: uudecode in dir, pick first file */
@@ -573,8 +580,12 @@ static int extract_uuencode(const char *path, char *out, size_t out_sz) {
     snprintf(cmd, sizeof(cmd), "cd \"%s\" && uudecode \"%s\"", dir, path);
     if (run_cmd(cmd) != 0) return -1;
 
-    snprintf(out, out_sz, "%s/%s", dir, "TODO_pick_first_file");
-    return 0;
+    fprintf(stderr,
+        "EXTRACT: extraction completed into '%s', but automatic file selection is not implemented.\n",
+        dir);
+	(void)out;
+	(void)out_sz;
+	return -1;
 }
 
 /* ---------- Handler table ---------- */
