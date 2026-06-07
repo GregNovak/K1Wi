@@ -325,6 +325,28 @@ fi
 
 pass "RSA-MINI negative path completed"
 
+
+echo
+echo "[TEST] COPY sample file"
+
+rm -f /tmp/k1wi_copy_test.txt
+
+OUT=$($BIN COPY testdata/text/hello.txt /tmp/k1wi_copy_test.txt 2>&1)
+echo "$OUT"
+
+require_output \
+    "COPY reports success" \
+    "$OUT" \
+    "COPY: success"
+
+if [ ! -f /tmp/k1wi_copy_test.txt ]; then
+    fail "COPY destination file not created"
+fi
+
+grep -Fq "CTF{TEST_FLAG}" /tmp/k1wi_copy_test.txt \
+    && pass "COPY content verified" \
+    || fail "COPY content verification failed"
+
     
 echo
 echo "[TEST] READ basic file"

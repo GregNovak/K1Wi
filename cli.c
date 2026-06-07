@@ -15,6 +15,8 @@
 #include "rsa_checkpq.h"
 #include "rsa_dfrompq.h"
 #include "rsa_rho.h"
+#include "file_copy.h"
+
 
 typedef struct opus_context opus_context;
 
@@ -513,7 +515,28 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
     return opus_mini_rsa(argv[cli->arg_start]) ? 0 : 1;
     
-    } else if (strcmp(cmd, "TIME") == 0) {
+    } else if (strcmp(cmd, "COPY") == 0) {
+    if (cli->arg_start + 1 >= argc) {
+        fprintf(stderr, "Usage: opus COPY <src> <dst>\n");
+        return 1;
+    }
+
+    const char *src = argv[cli->arg_start];
+    const char *dst = argv[cli->arg_start + 1];
+
+    int rc = opus_file_copy(src, dst);
+
+    if (rc == 0) {
+        printf("COPY: success\n");
+        return 0;
+    }
+
+    printf("COPY: failed\n");
+    return 1;
+    
+    }
+    
+    else if (strcmp(cmd, "TIME") == 0) {
         systemTime();
         return 0;
 	   } else if (strcmp(cmd, "SPLASH") == 0) {
