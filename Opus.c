@@ -1293,7 +1293,7 @@ int opus_repl(void)
         fd_set rfds;
 
         /* show prompt and block until input arrives */
-        printf("Command: ");
+        printf("\nCommand: ");
         fflush(stdout);
 
         FD_ZERO(&rfds);

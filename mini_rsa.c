@@ -173,9 +173,6 @@ int opus_mini_rsa(const char *path) {
         return 0;
     }
 
-    gmp_printf("[DEBUG] N = %Zd\n", N);
-    gmp_printf("[DEBUG] e = %Zd\n", e);
-    gmp_printf("[DEBUG] c = %Zd\n", c);
 
     // ------------------------------------------------------------
     // Only support e = 3 for this attack
