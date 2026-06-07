@@ -250,6 +250,38 @@ echo "$OUT"
 
 require_output "RSA-KNOWNPQ recovers plaintext" "$OUT" "[+] m (int) = 123"
 require_output "RSA-KNOWNPQ command succeeds" "$OUT" "rsa-knownpq: success"    
+
+echo
+echo "[TEST] RSA check p/q sample"
+
+OUT=$($BIN RSA-CHECKPQ 61 53 2>&1)
+echo "$OUT"
+
+require_output \
+    "RSA-CHECKPQ validates p" \
+    "$OUT" \
+    "p is prime"
+
+require_output \
+    "RSA-CHECKPQ validates q" \
+    "$OUT" \
+    "q is prime"
+
+echo
+echo "[TEST] RSA derive d from p/q/e sample"
+
+OUT=$($BIN RSA-DFROMPQ 61 53 17 2>&1)
+echo "$OUT"
+
+require_output \
+    "RSA-DFROMPQ computes phi" \
+    "$OUT" \
+    "phi = 3120"
+
+require_output \
+    "RSA-DFROMPQ computes d" \
+    "$OUT" \
+    "d = 2753"
     
 echo
 echo "[TEST] READ basic file"

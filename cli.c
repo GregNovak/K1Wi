@@ -1,18 +1,10 @@
-/*
- * CLI/Shell parity candidates for v1.0 audit:
- *   READ
- *   SEARCH
- *   RSA-KNOWNPQ
- *   RSA-SMALL-E
- *   RSA-WIENER
- *   RSA-ECM
- */
 #include <gmp.h>
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
 #include <stdlib.h>
 #include <ctype.h>
+
 #include "cli.h"
 #include "rsa_factor.h"
 #include "md5.h"
@@ -20,7 +12,8 @@
 #include "rsa_small_e.h"
 #include "rsa_wiener.h"
 #include "rsa_ecm.h"
-
+#include "rsa_checkpq.h"
+#include "rsa_dfrompq.h"
 
 typedef struct opus_context opus_context;
 
@@ -443,6 +436,30 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
     printf("rsa-knownpq: failed\n");
     return 1;
+    
+    } else if (strcmp(cmd, "RSA-CHECKPQ") == 0) {
+    if (cli->arg_start + 1 >= argc) {
+        fprintf(stderr, "Usage: opus RSA-CHECKPQ <p> <q>\n");
+        return 1;
+    }
+
+    return opus_rsa_checkpq(argv[cli->arg_start],
+                            argv[cli->arg_start + 1]) ? 0 : 1;
+    
+    
+    } else if (strcmp(cmd, "RSA-DFROMPQ") == 0) {
+
+    if (cli->arg_start + 2 >= argc) {
+        fprintf(stderr,
+                "Usage: opus RSA-DFROMPQ <p> <q> <e>\n");
+        return 1;
+    }
+
+    return opus_rsa_dfrompq(argv[cli->arg_start],
+                            argv[cli->arg_start + 1],
+                            argv[cli->arg_start + 2]) ? 0 : 1;
+    
+    
     
     } else if (strcmp(cmd, "RSA-ECM") == 0) {
     if (cli->arg_start >= argc) {
