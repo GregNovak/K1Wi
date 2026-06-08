@@ -436,13 +436,13 @@ static const char *help_rsa_checkpq_lines[] = {
     "RSA-CHECKPQ - RSA Prime Pair Checker",
     "",
     "Usage:",
-    "  RSA-CHECKPQ <rsa_file>",
+    "  RSA-CHECKPQ <p> <q>",
     "",
     "Description:",
     "  Checks whether provided p and q values are prime.",
     "",
     "Example:",
-    "  RSA-CHECKPQ testdata/rsa/rsa_61_53_e17.txt",
+    "  RSA-CHECKPQ 61 53",
     NULL
 };
 
@@ -450,13 +450,13 @@ static const char *help_rsa_dfrompq_lines[] = {
     "RSA-DFROMPQ - Compute Private Exponent",
     "",
     "Usage:",
-    "  RSA-DFROMPQ <rsa_file>",
+    "  RSA-DFROMPQ <p> <q> <e>",
     "",
     "Description:",
     "  Computes phi and private exponent d from p, q, and e.",
     "",
     "Example:",
-    "  RSA-DFROMPQ testdata/rsa/rsa_61_53_e17.txt",
+    "  RSA-DFROMPQ 61 53 17",
     NULL
 };
 

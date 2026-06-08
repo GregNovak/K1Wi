@@ -2,9 +2,15 @@
 
 K1Wi is a Linux-based reverse engineering, cryptanalysis, digital forensics, and file analysis framework written in C.
 
-The project combines forensic analysis, archive extraction, cryptanalysis, binary inspection, and reverse engineering utilities into a single command-line toolkit.
+The project combines digital forensics, archive extraction, cryptanalysis, binary inspection, and reverse engineering utilities into a unified command-line framework.
 
 ## Features
+
+K1Wi provides a collection of reverse engineering, digital forensics,
+cryptanalysis, binary analysis, and file investigation tools designed for
+security researchers, students, and CTF participants.
+
+Major capabilities are grouped into the categories below.
 
 ### Forensics
 
@@ -68,9 +74,22 @@ Requirements:
 * libncurses-dev
 * libjpeg-dev
 
+Install dependencies (Ubuntu/Debian):
+
+```bash
+sudo apt install build-essential libgmp-dev libssl-dev libncurses-dev libjpeg-dev
+```
+
 Build:
 
 ```bash
+make
+```
+
+Clean build:
+
+```bash
+make clean
 make
 ```
 
@@ -128,6 +147,7 @@ PASS: 69
 FAIL: 0
 SKIP: 0
 ```
+Validated using a clean-room build and full regression suite execution.
 
 ## Safety
 
@@ -151,10 +171,11 @@ Always test destructive operations inside disposable directories before use on p
 
 Current Version: v0.99 RC1
 
-K1Wi has successfully completed clean-room build validation and regression testing and is approaching the v1.0 release milestone.
+Release Status: Release Candidate
+
+The project has completed clean-room build validation and currently passes all regression tests (69/69).
 
 ## License
-
 
 K1Wi is released under the MIT License.
 

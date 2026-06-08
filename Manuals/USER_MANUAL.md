@@ -1,18 +1,18 @@
-# Chapter 1: What Is K1wi?
+# Chapter 1: What Is K1Wi?
 
 ## Introduction
 
-K1wi is an integrated cybersecurity analysis framework that combines reverse engineering, digital forensics, cryptanalysis, binary analysis, and Capture-The-Flag (CTF) tooling into a unified command-line environment.
+K1Wi is an integrated cybersecurity analysis framework that combines reverse engineering, digital forensics, cryptanalysis, binary analysis, and Capture-The-Flag (CTF) tooling into a unified command-line environment.
 
-The goal of K1wi is to provide security professionals, students, researchers, and enthusiasts with a single toolkit capable of analyzing files, binaries, encoded data, cryptographic artifacts, and forensic evidence without requiring multiple disconnected utilities.
+The goal of K1Wi is to provide security professionals, students, researchers, and enthusiasts with a single toolkit capable of analyzing files, binaries, encoded data, cryptographic artifacts, and forensic evidence without requiring multiple disconnected utilities.
 
-Unlike many specialized tools that focus on only one discipline, K1wi brings together capabilities from several cybersecurity domains. A user may extract files from an archive, inspect a Linux executable, analyze hidden data within an image, evaluate cryptographic material, calculate Position Independent Executable (PIE) offsets, and perform string intelligence analysis from the same framework.
+Unlike many specialized tools that focus on only one discipline, K1Wi brings together capabilities from several cybersecurity domains. A user may extract files from an archive, inspect a Linux executable, analyze hidden data within an image, evaluate cryptographic material, calculate Position Independent Executable (PIE) offsets, and perform string intelligence analysis from the same framework.
 
 ## Mission
 
-The mission of K1wi is to provide practical cybersecurity analysis capabilities through a lightweight, transparent, and extensible platform.
+The mission of K1Wi is to provide practical cybersecurity analysis capabilities through a lightweight, transparent, and extensible platform.
 
-K1wi is designed to help users:
+K1Wi is designed to help users:
 
 * Analyze suspicious files and artifacts
 * Perform reverse engineering tasks
@@ -24,7 +24,7 @@ K1wi is designed to help users:
 
 ## Target Audience
 
-K1wi is intended for:
+K1Wi is intended for:
 
 * Cybersecurity students
 * Capture-The-Flag competitors
@@ -35,11 +35,11 @@ K1wi is intended for:
 * Incident responders
 * Hobbyists and self-directed learners
 
-No advanced programming knowledge is required to begin using K1wi, although users with experience in operating systems, networking, programming, and information security will benefit from the framework's advanced capabilities.
+No advanced programming knowledge is required to begin using K1Wi, although users with experience in operating systems, networking, programming, and information security will benefit from the framework's advanced capabilities.
 
 ## Design Philosophy
 
-K1wi is built around several core principles:
+K1Wi is built around several core principles:
 
 ### Simplicity
 
@@ -47,7 +47,7 @@ Common tasks should require minimal commands and configuration.
 
 ### Transparency
 
-Analysis results should be understandable and traceable. K1wi attempts to explain findings rather than simply report them.
+Analysis results should be understandable and traceable. K1Wi attempts to explain findings rather than simply report them.
 
 ### Practicality
 
@@ -59,11 +59,11 @@ Capabilities are organized into independent modules that can evolve without affe
 
 ### Education
 
-K1wi serves as both an operational toolkit and a learning platform for understanding cybersecurity concepts.
+K1Wi serves as both an operational toolkit and a learning platform for understanding cybersecurity concepts.
 
 ## Core Capability Areas
 
-K1wi currently provides functionality in the following areas:
+K1Wi currently provides functionality in the following areas:
 
 ### String Intelligence
 
@@ -97,25 +97,20 @@ Integrated workflows that assist with challenge analysis, artifact inspection, a
 
 Current Release:
 
-Version: 0.98
+Version: 0.99 RC1
+Current Development Status: Release Candidate
 
-Release Name: K1Wi
+K1Wi continues to evolve through additional analysis modules, expanded testing coverage, improved documentation, and user-driven enhancements.
 
-Current Development Status:
+The remainder of this manual describes installation, operation, workflows, command references, troubleshooting procedures, and development guidance for the K1Wi Framework.
 
-Release Candidate (RC)
-
-K1wi continues to evolve through additional analysis modules, expanded testing coverage, improved documentation, and user-driven enhancements.
-
-The remainder of this manual describes installation, operation, workflows, command references, troubleshooting procedures, and development guidance for the K1wi Framework.
-
-# Chapter 2: Installation and Building K1wi
+# Chapter 2: Installation and Building K1Wi
 
 ## Overview
 
-This chapter describes the process of installing dependencies, compiling K1wi from source, running tests, and verifying a successful installation.
+This chapter describes the process of installing dependencies, compiling K1Wi from source, running tests, and verifying a successful installation.
 
-K1wi is currently developed and tested on Ubuntu Linux and other Debian-based distributions. The build system uses GNU Make and the Clang compiler.
+K1Wi is currently developed and tested on Ubuntu Linux and other Debian-based distributions. The build system uses GNU Make and the Clang compiler.
 
 ## System Requirements
 
@@ -137,7 +132,7 @@ Recommended system:
 
 ## Required Dependencies
 
-K1wi depends on several external libraries.
+K1Wi depends on several external libraries.
 
 Install all required packages using:
 
@@ -170,20 +165,20 @@ sudo apt install \
 Clone the repository:
 
 ```bash
-git clone <repository-url>
-cd software
+git clone https://github.com/GregNovak/K1Wi.git
+cd K1Wi
 ```
 
 Or extract a source archive:
 
 ```bash
-tar -xf K1wi-source.tar.gz
+tar -xf k1wi-source.tar.gz
 cd software
 ```
 
 ## Directory Structure
 
-A typical K1wi source tree contains:
+A typical K1Wi source tree contains:
 
 ```text
 software/
@@ -210,7 +205,7 @@ software/
 | testdata  | Sample files used by testing |
 | include   | Shared header files          |
 
-## Building K1wi
+## Building K1Wi
 
 ### Clean Build
 
@@ -297,7 +292,7 @@ After compilation completes, verify that k1wi starts correctly.
 Expected output:
 
 ```text
-K1wi Framework v0.98
+K1Wi Framework v0.99 RC1
 Release Name: K1Wi
 Build Date: ...
 Build Time: ...
@@ -313,7 +308,7 @@ This command should display the available modules and command categories.
 
 ## Running Regression Tests
 
-K1wi includes an automated regression suite.
+K1Wi includes an automated regression suite.
 
 Execute:
 
@@ -327,12 +322,12 @@ A successful run will end with output similar to:
 ============================================================
 REGRESSION TEST SUMMARY
 ============================================================
-PASS: 31
+PASS: 69
 FAIL: 0
 SKIP: 0
 ```
 
-Any failures should be investigated before deploying or releasing K1wi.
+Any failures should be investigated before deploying or releasing K1Wi.
 
 ## Running Sanitizer Validation
 
@@ -405,9 +400,9 @@ make
 
 ## Summary
 
-At this point, K1wi should compile successfully, pass regression testing, and be ready for operational use.
+At this point, K1Wi should compile successfully, pass regression testing, and be ready for operational use.
 
-The next chapter introduces the Quick Start Guide and demonstrates common workflows that can be performed within the first fifteen minutes of using K1wi.
+The next chapter introduces the Quick Start Guide and demonstrates common workflows that can be performed within the first fifteen minutes of using K1Wi.
 
 # Chapter 3: Quick Start Guide
 
@@ -451,16 +446,16 @@ Important modules include:
 * EXTRACT
 * LYZER
 * ENTROPY
-* ELF
+* ELFINFO
 * PIECALC
-* RSA
+* RSA-FACTOR
 
 ## Analyze a Simple String
 
 Run:
 
 ```bash
-./bin/k1wi string "hello world"
+./bin/k1wi STRING "hello world"
 ```
 
 Example output:
@@ -479,7 +474,7 @@ K1Wi automatically attempts to identify string types and detect common encodings
 Run:
 
 ```bash
-./bin/k1wi string "R2d2d2d2d2d424547494e2050524956415445204b45592d"
+./bin/k1wi STRING "R2d2d2d2d2d424547494e2050524956415445204b45592d"
 ```
 
 K1Wi will identify this as a shifted hexadecimal encoded private key marker.
@@ -491,7 +486,7 @@ This demonstrates the framework's ability to recognize encoded artifacts commonl
 Run:
 
 ```bash
-./bin/k1wi entropy image.jpg
+./bin/k1wi ENTROPY image.jpg
 ```
 
 Example output:
@@ -512,7 +507,7 @@ High entropy may indicate:
 Run:
 
 ```bash
-./bin/k1wi lyzer image.jpg ALL
+./bin/k1wi LYZER image.jpg ALL
 ```
 
 This executes all available forensic modules, including:
@@ -532,7 +527,7 @@ This is one of the most powerful workflows within K1Wi.
 Run:
 
 ```bash
-./bin/k1wi elf ./bin/k1wi
+./bin/k1wi ELFINFO -IN ./bin/k1wi
 ```
 
 K1Wi will display:
@@ -564,15 +559,39 @@ This displays symbol names and offsets useful for:
 Run:
 
 ```bash
-./bin/k1wi rsa testdata/rsa/rsa_61_53_e17.txt
+./bin/k1wi RSA-FACTOR testdata/rsa/rsa_61_53_e17.txt
+```
+
+Example output:
+
+```text
+RSA Input
+---------
+N = 3233
+e = 17
+c = 855
+
+[+] p = 53
+[+] q = 61
+
+Key Recovery
+------------
+d = 2753
+
+Plaintext Recovery
+------------------
+m = 123
+
+Decoded ASCII:
+{
 ```
 
 K1Wi will:
 
-* Factor the modulus
+* Factor the RSA modulus
 * Recover the private exponent
 * Decrypt the ciphertext
-* Display recovered plaintext
+* Display the recovered plaintext
 
 This module is intended for educational cryptography and challenge-solving workflows.
 
@@ -587,7 +606,7 @@ Run:
 Expected result:
 
 ```text
-PASS: 31
+PASS: 69
 FAIL: 0
 SKIP: 0
 ```
@@ -613,19 +632,19 @@ Unlike traditional string extraction utilities that simply display printable tex
 Analyze a string directly:
 
 ```bash
-./bin/k1wi string "hello world"
+./bin/k1wi STRING "hello world"
 ```
 
 Analyze a file:
 
 ```bash
-./bin/k1wi string --file sample.txt
+./bin/k1wi STRING --file sample.txt
 ```
 
 Decode detected content:
 
 ```bash
-./bin/k1wi string --decode "<data>"
+./bin/k1wi STRING --decode "<data>"
 ```
 
 ## Supported Detection Types
@@ -650,7 +669,7 @@ Additional detectors may be added in future releases.
 Input:
 
 ```bash
-./bin/k1wi string "hello K1wi"
+./bin/k1wi STRING "hello K1Wi"
 ```
 
 Example output:
@@ -671,7 +690,7 @@ The input appears to be normal human-readable text and does not exhibit characte
 Input:
 
 ```bash
-./bin/k1wi string \
+./bin/k1wi STRING \
 "R2d2d2d2d2d424547494e2050524956415445204b45592d"
 ```
 
@@ -759,13 +778,13 @@ The EXTRACT engine supports:
 Extract a file:
 
 ```bash
-./bin/k1wi extract sample.zip
+./bin/k1wi EXTRACT sample.zip
 ```
 
 Perform recursive extraction:
 
 ```bash
-./bin/k1wi extract --recursive sample.zip
+./bin/k1wi EXTRACT --recursive sample.zip
 ```
 
 This instructs K1Wi to continue processing newly discovered files until no additional extractable content remains or the recursion limit is reached.
@@ -803,7 +822,7 @@ Recursive mode is one of the most powerful capabilities of the EXTRACT engine.
 Example:
 
 ```bash
-./bin/k1wi extract --recursive suspicious_archive.zip
+./bin/k1wi EXTRACT --recursive suspicious_archive.zip
 ```
 
 Possible structure:
@@ -885,7 +904,7 @@ Recovered artifacts are automatically added to the extraction workflow.
 Command:
 
 ```bash
-./bin/k1wi extract --recursive testdata/archives/sample.zip
+./bin/k1wi EXTRACT --recursive testdata/archives/sample.zip
 ```
 
 Example output:
@@ -981,13 +1000,13 @@ The LYZER engine currently includes:
 Run all available modules:
 
 ```bash
-./bin/k1wi lyzer image.jpg ALL
+./bin/k1wi LYZER image.jpg ALL
 ```
 
 Run a specific module:
 
 ```bash
-./bin/k1wi lyzer image.jpg E
+./bin/k1wi LYZER image.jpg E
 ```
 
 Module selection codes are described in the following sections.
@@ -1004,6 +1023,7 @@ A single anomaly is rarely sufficient to reach a conclusion.
 
 Multiple independent findings generally increase confidence.
 
+### Table 1 - Entropy Interpretation
 | Entropy Range | Interpretation                        |
 | ------------- | ------------------------------------- |
 | 0.0 - 2.0     | Repetitive or mostly empty data       |
@@ -1012,7 +1032,7 @@ Multiple independent findings generally increase confidence.
 | 7.0 - 8.0     | Highly compressed or encrypted data   |
 | 8.0           | Maximum randomness                    |
 
-
+### Table 2 - RS Analysis Interpretation
 | Observation                 | Possible Meaning             |
 | --------------------------- | ---------------------------- |
 | Balanced R/S values         | Typical image                |
@@ -1021,9 +1041,60 @@ Multiple independent findings generally increase confidence.
 | Multiple anomalies          | Increased suspicion          |
 | Normal RS profile           | No strong indicator detected |
 
-Table 3 - Embedded Signature Types
-Table 4 - Huffman Fingerprint Interpretation
-Table 5 - DCT Coefficient Interpretation
-Table 6 - LYZER Confidence Levels
-Table 7 - Recommended Investigator Actions
+
+
+### Table 3 - Embedded Signature Types
+
+| Signature Type | Meaning                            | Investigator Action                    |
+| -------------- | ---------------------------------- | -------------------------------------- |
+| ZIP            | Embedded archive detected          | Extract and inspect contents           |
+| JPEG           | Embedded image detected            | Review image metadata and content      |
+| PNG            | Embedded image detected            | Inspect for hidden or modified content |
+| PDF            | Embedded document detected         | Review document structure and metadata |
+| GZIP           | Compressed data stream detected    | Decompress and analyze recovered data  |
+| ELF            | Embedded Linux executable detected | Perform binary analysis                |
+| Unknown        | Unrecognized signature             | Investigate manually                   |
+
+### Table 4 - Huffman Fingerprint Interpretation
+
+| Observation             | Possible Meaning                          |
+| ----------------------- | ----------------------------------------- |
+| Standard Huffman Tables | Typical JPEG generated by common software |
+| Custom Huffman Tables   | Possible recompression or modification    |
+| Uncommon Fingerprint    | Non-standard processing pipeline          |
+| Multiple Variations     | Potential editing history                 |
+| Highly Anomalous Tables | May warrant further forensic review       |
+
+### Table 5 - DCT Coefficient Interpretation
+
+| Observation                       | Possible Meaning                  |
+| --------------------------------- | --------------------------------- |
+| Natural Distribution              | Typical JPEG compression          |
+| Excessive Zero Coefficients       | Heavy compression                 |
+| Unusual Frequency Patterns        | Possible manipulation             |
+| Localized Anomalies               | Potential embedded content        |
+| Significant Statistical Deviation | Requires additional investigation |
+
+### Table 6 - LYZER Confidence Levels
+
+| Confidence Level | Description                                      |
+| ---------------- | ------------------------------------------------ |
+| Low              | Minor anomaly detected                           |
+| Moderate         | Multiple indicators present                      |
+| High             | Strong forensic indicators observed              |
+| Very High        | Multiple independent anomalies support suspicion |
+| Critical         | Significant evidence requiring immediate review  |
+
+### Table 7 - Recommended Investigator Actions
+
+| Finding Type                 | Recommended Action                          |
+| ---------------------------- | ------------------------------------------- |
+| High Entropy Region          | Inspect for compression or encryption       |
+| Embedded Signature           | Extract and analyze recovered file          |
+| RS Analysis Alert            | Investigate possible steganography          |
+| Suspicious Strings           | Review decoded content                      |
+| Custom Huffman Tables        | Examine image editing history               |
+| Multiple Concurrent Findings | Perform full forensic review                |
+| No Significant Findings      | Document results and continue investigation |
+
 

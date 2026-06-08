@@ -67,16 +67,16 @@ require_failure_output() {
     fi
 }
 echo "============================================================"
-echo "OPUS REGRESSION TESTS"
+echo "K1wi REGRESSION TESTS"
 echo "============================================================"
 
 if [ ! -x "$BIN" ]; then
-    fail "opus binary not found. Run make first."
+    fail "K1wi binary not found. Run make first."
 fi
 
 echo
 echo "[TEST] STRING basic text"
-OUT=$($BIN string "hello OPUS")
+OUT=$($BIN string "hello K1wi")
 echo "$OUT"
 require_output "STRING basic UTF-8 detection" "$OUT" "Detected Type: UTF"
 
