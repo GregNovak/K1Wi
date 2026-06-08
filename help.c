@@ -170,7 +170,6 @@ static const char *help_piecalc_lines[] = {
     "  PIECALC -IN chall -LEAK 0xf010 -GUESS -TARGET main",
     NULL
 };
-
 static const char *help_pietime_lines[] = {
     "PIETIME - PIE Runtime Address Analyzer",
     "",
@@ -185,23 +184,6 @@ static const char *help_pietime_lines[] = {
     "  PIETIME -IN ./bin/opus -LEAK 0x401000 -BASE 0x400000",
     NULL
 };
-
-
-static const char *help_pietime[] = {
-    "PIETIME - PIE Runtime Address Analyzer",
-    "",
-    "Usage:",
-    "  PIETIME -IN <binary> -LEAK <addr> -BASE <base>",
-    "",
-    "Description:",
-    "  Analyze a leaked runtime address using a known PIE base.",
-    "  Reports the calculated offset and nearest symbol information when available.",
-    "",
-    "Examples:",
-    "  PIETIME -IN ./bin/opus -LEAK 0x401000 -BASE 0x400000",
-    NULL
-};
-
 static const char *help_string_lines[] = {
     "STRING - Universal String Analyzer",
     "",

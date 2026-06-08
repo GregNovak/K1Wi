@@ -76,7 +76,7 @@ static int fermat_factor(mpz_t p, mpz_t q, const mpz_t n) {
  */
 int opus_rsa_factor(const char *filename) {
     mpz_t n, c, p, q, phi, d, m, e_mpz;
-    unsigned long e_ul;
+   
     
     mpz_inits(n, c, p, q, phi, d, m, e_mpz, NULL);
 
@@ -85,7 +85,7 @@ int opus_rsa_factor(const char *filename) {
 	    return 0;
 	}
 
-	e_ul = mpz_get_ui(e_mpz);
+	
 
 
 	printf("\nRSA Input\n");
