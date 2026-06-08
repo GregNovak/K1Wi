@@ -9,11 +9,13 @@ The project combines forensic analysis, archive extraction, cryptanalysis, binar
 ### Forensics
 
 * LYZER forensic file and image analysis
+* STRING intelligence and decoding
+* SEARCH file pattern analysis
 * Entropy analysis
 * Embedded file detection
 * File carving
 * JPEG forensic analysis
-* String intelligence
+* Magic byte detection
 
 ### Extraction
 
@@ -27,26 +29,44 @@ The project combines forensic analysis, archive extraction, cryptanalysis, binar
 * Substitution cipher solving
 * RSA cryptanalysis
 
-  * Fermat factorization
-  * Pollard Rho
-  * Wiener attack
-  * Small exponent attacks
+  * RSA-FACTOR (Fermat / Classical)
+  * RSA-RHO (Pollard Rho)
+  * RSA-ECM (Elliptic Curve Method)
+  * RSA-WIENER
+  * RSA-SMALL-E
+  * RSA-KNOWNPQ
+  * RSA-CHECKPQ
+  * RSA-DFROMPQ
+  * RSA-MINI
 
 ### Binary Analysis
 
 * ELF inspection
 * PIE base calculations
+* Runtime address analysis
 * Symbol analysis
+
+  * ELFINFO
+  * PIECALC
+  * PIETIME
+
+### Utility
+
+* Integrated HELP system
+* Command menu system
+* MD5 and SHA-256 utilities
+* Secure delete operations
+* Bounded filesystem wipe controls
 
 ## Build
 
 Requirements:
 
 * GCC or Clang
-* GMP
-* OpenSSL
-* ncurses
-* libjpeg
+* libgmp-dev
+* libssl-dev
+* libncurses-dev
+* libjpeg-dev
 
 Build:
 
@@ -60,6 +80,39 @@ Run:
 ./bin/opus
 ```
 
+## Quick Start
+
+View available commands:
+
+```bash
+./bin/opus HELP
+./bin/opus MENU
+```
+
+Analyze a string:
+
+```bash
+./bin/opus STRING SGVsbG8=
+```
+
+Analyze a file:
+
+```bash
+./bin/opus ENTROPY sample.bin
+```
+
+Inspect an ELF binary:
+
+```bash
+./bin/opus ELFINFO -IN ./bin/opus
+```
+
+Run image forensics:
+
+```bash
+./bin/opus LYZER image.jpg ALL
+```
+
 ## Testing
 
 Run the regression suite:
@@ -71,16 +124,40 @@ Run the regression suite:
 Current regression status:
 
 ```text
-PASS: 31
+PASS: 69
 FAIL: 0
+SKIP: 0
 ```
+
+## Safety
+
+Some commands operate on live filesystems and user data.
+
+WIPEFS refuses destructive mode unless explicit safety controls are supplied:
+
+```bash
+WIPEFS <path> --max-bytes <N> --yes
+```
+
+Use dry-run mode whenever possible:
+
+```bash
+WIPEFS <path> --dry-run
+```
+
+Always test destructive operations inside disposable directories before use on production systems.
 
 ## Status
 
 Current Version: v0.99 RC1
 
-K1Wi is under active development and approaching the 1.0 release milestone.
+K1Wi has successfully completed clean-room build validation and regression testing and is approaching the v1.0 release milestone.
 
 ## License
 
-License to be determined.
+
+K1Wi is released under the MIT License.
+
+Copyright (c) 2026 Gregory B. Novak
+
+See the LICENSE file for full details.
