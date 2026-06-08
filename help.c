@@ -322,6 +322,191 @@ static const char *help_wipefs_lines[] = {
     "  WIPEFS testdata --dry-run",
     "  WIPEFS testdata/wipefs_sandbox --max-bytes 1048576 --yes"
 };
+
+static const char *help_read_lines[] = {
+    "READ - File Reader",
+    "",
+    "Usage:",
+    "  READ <file>",
+    "",
+    "Description:",
+    "  Displays file content using K1Wi's file reader.",
+    "  Supports raw, safe, and structured read modes where available.",
+    "",
+    "Example:",
+    "  READ testdata/text/hello.txt",
+    NULL
+};
+
+static const char *help_create_lines[] = {
+    "CREATE - Secure Empty File Creator",
+    "",
+    "Usage:",
+    "  CREATE <file>",
+    "",
+    "Description:",
+    "  Creates a secure empty file with restrictive permissions.",
+    "",
+    "Example:",
+    "  CREATE /tmp/k1wi_create_test.txt",
+    NULL
+};
+
+static const char *help_copy_lines[] = {
+    "COPY - Verified File Copy",
+    "",
+    "Usage:",
+    "  COPY <source> <destination>",
+    "",
+    "Description:",
+    "  Copies a file and verifies the result using MD5 comparison.",
+    "",
+    "Example:",
+    "  COPY testdata/text/hello.txt /tmp/k1wi_copy_test.txt",
+    NULL
+};
+
+static const char *help_del_lines[] = {
+    "DEL - Secure File Delete",
+    "",
+    "Usage:",
+    "  DEL <file> [-s 1|2] [-y]",
+    "",
+    "Description:",
+    "  Securely deletes a file using the selected wipe standard.",
+    "  -s 1 selects DoD-style overwrite behavior.",
+    "  -s 2 selects NIST-style overwrite behavior.",
+    "  -y confirms deletion without prompting.",
+    "",
+    "Example:",
+    "  DEL k1wi_del_test.txt -s 2 -y",
+    NULL
+};
+
+static const char *help_rsa_rho_lines[] = {
+    "RSA-RHO - Pollard Rho Factorization",
+    "",
+    "Usage:",
+    "  RSA-RHO <rsa_file>",
+    "",
+    "Description:",
+    "  Attempts RSA factorization using Pollard Rho.",
+    "",
+    "Example:",
+    "  RSA-RHO testdata/rsa/rsa_61_53_e17.txt",
+    NULL
+};
+static const char *help_help_lines[] = {
+    "HELP - Command Help",
+    "",
+    "Usage:",
+    "  HELP",
+    "  HELP <command>",
+    "",
+    "Description:",
+    "  Shows the general command reference or detailed help for a command.",
+    "",
+    "Example:",
+    "  HELP RSA-ECM",
+    NULL
+};
+
+static const char *help_menu_lines[] = {
+    "MENU - K1Wi Menu",
+    "",
+    "Usage:",
+    "  MENU",
+    "",
+    "Description:",
+    "  Shows grouped K1Wi command categories.",
+    NULL
+};
+
+static const char *help_about_lines[] = {
+    "ABOUT - About K1Wi",
+    "",
+    "Usage:",
+    "  ABOUT",
+    "",
+    "Description:",
+    "  Shows K1Wi project information, release name, and core feature summary.",
+    NULL
+};
+static const char *help_rsa_checkpq_lines[] = {
+    "RSA-CHECKPQ - RSA Prime Pair Checker",
+    "",
+    "Usage:",
+    "  RSA-CHECKPQ <rsa_file>",
+    "",
+    "Description:",
+    "  Checks whether provided p and q values are prime.",
+    "",
+    "Example:",
+    "  RSA-CHECKPQ testdata/rsa/rsa_61_53_e17.txt",
+    NULL
+};
+
+static const char *help_rsa_dfrompq_lines[] = {
+    "RSA-DFROMPQ - Compute Private Exponent",
+    "",
+    "Usage:",
+    "  RSA-DFROMPQ <rsa_file>",
+    "",
+    "Description:",
+    "  Computes phi and private exponent d from p, q, and e.",
+    "",
+    "Example:",
+    "  RSA-DFROMPQ testdata/rsa/rsa_61_53_e17.txt",
+    NULL
+};
+
+static const char *help_rsa_mini_lines[] = {
+    "RSA-MINI - Mini RSA Solver",
+    "",
+    "Usage:",
+    "  RSA-MINI <rsa_file>",
+    "",
+    "Description:",
+    "  Runs the mini RSA helper for small demonstration RSA cases.",
+    "",
+    "Example:",
+    "  RSA-MINI testdata/rsa/rsa_61_53_e17.txt",
+    NULL
+};
+
+static const char *help_version_lines[] = {
+    "VERSION - Version Banner",
+    "",
+    "Usage:",
+    "  VERSION",
+    "",
+    "Description:",
+    "  Prints the K1Wi version, release name, build date, and build time.",
+    NULL
+};
+
+static const char *help_time_lines[] = {
+    "TIME - System Time",
+    "",
+    "Usage:",
+    "  TIME",
+    "",
+    "Description:",
+    "  Prints the current system time.",
+    NULL
+};
+
+static const char *help_exit_lines[] = {
+    "EXIT - Exit K1Wi",
+    "",
+    "Usage:",
+    "  EXIT",
+    "",
+    "Description:",
+    "  Exits the K1Wi interactive shell.",
+    NULL
+};
+
 /* ===========================
    HELP TABLE
    =========================== */
@@ -348,6 +533,20 @@ static const help_entry_t help_table[] = {
     { "SHA256",      help_sha256_lines,      sizeof(help_sha256_lines)/sizeof(char*)},
     { "RSA-FACTOR",  help_rsa_factor_lines,  sizeof(help_rsa_factor_lines)/sizeof(char*)},
     { "WIPEFS",      help_wipefs_lines,      sizeof(help_wipefs_lines)/sizeof(char*) },
+        { "READ",        help_read_lines,        sizeof(help_read_lines)/sizeof(char*) },
+    { "CREATE",      help_create_lines,      sizeof(help_create_lines)/sizeof(char*) },
+    { "COPY",        help_copy_lines,        sizeof(help_copy_lines)/sizeof(char*) },
+    { "DEL",         help_del_lines,         sizeof(help_del_lines)/sizeof(char*) },
+    { "RSA-RHO",     help_rsa_rho_lines,     sizeof(help_rsa_rho_lines)/sizeof(char*) },
+    { "RSA-CHECKPQ", help_rsa_checkpq_lines, sizeof(help_rsa_checkpq_lines)/sizeof(char*) },
+    { "RSA-DFROMPQ", help_rsa_dfrompq_lines, sizeof(help_rsa_dfrompq_lines)/sizeof(char*) },
+    { "RSA-MINI",    help_rsa_mini_lines,    sizeof(help_rsa_mini_lines)/sizeof(char*) },
+    { "VERSION",     help_version_lines,     sizeof(help_version_lines)/sizeof(char*) },
+    { "TIME",        help_time_lines,        sizeof(help_time_lines)/sizeof(char*) },
+    { "EXIT",        help_exit_lines,        sizeof(help_exit_lines)/sizeof(char*) },
+    { "HELP",        help_help_lines,        sizeof(help_help_lines)/sizeof(char*) },
+    { "MENU",        help_menu_lines,        sizeof(help_menu_lines)/sizeof(char*) },
+    { "ABOUT",       help_about_lines,       sizeof(help_about_lines)/sizeof(char*) },
     
 };
 
