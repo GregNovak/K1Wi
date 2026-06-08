@@ -185,26 +185,36 @@ void opus_cmd_print_help(void)
 void opus_cmd_print_menu(void)
 {
     printf("=============== K1Wi MENU ===============\n");
+    printf("\n");
 
-    size_t n = 0;
-    const opus_command *table = opus_cmd_table(&n);
-    const char *seen[16];
-    size_t seen_count = 0;
+    printf("File Tools\n");
+    printf("  READ CREATE COPY DEL MD5 SHA256 SEARCH STRING WIPEFS\n");
+    printf("\n");
 
-    for (size_t i = 0; i < n; i++) {
-        const char *cat = table[i].category ? table[i].category : "Misc";
-        int already = 0;
-        for (size_t j = 0; j < seen_count; j++) {
-            if (strcmp(seen[j], cat) == 0) {
-                already = 1;
-                break;
-            }
-        }
-        if (!already && seen_count < sizeof(seen)/sizeof(seen[0])) {
-            seen[seen_count++] = cat;
-            printf(" - %s\n", cat);
-        }
-    }
+    printf("Forensics / Extraction\n");
+    printf("  LYZER EXTRACT ENTROPY MAGIC\n");
+    printf("\n");
+
+    printf("RSA Tools\n");
+    printf("  RSA-FACTOR RSA-RHO RSA-ECM RSA-WIENER RSA-SMALL-E\n");
+    printf("  RSA-KNOWNPQ RSA-CHECKPQ RSA-DFROMPQ RSA-MINI\n");
+    printf("\n");
+
+    printf("Binary / PIE Tools\n");
+    printf("  ELFINFO PIECALC PIETIME\n");
+    printf("\n");
+
+    printf("Cryptanalysis\n");
+    printf("  VIGAN VIGCRACK VIGSOLVE VIGREFINE VIGAUTO\n");
+    printf("  SOLVE MONO DIGRAPH CAESAR\n");
+    printf("\n");
+
+    printf("Utility\n");
+    printf("  HELP MENU ABOUT VERSION TIME EXIT\n");
+    printf("\n");
+
+    printf("Use HELP <command> for details.\n");
+    printf("WIPEFS requires --dry-run or --max-bytes <N> --yes.\n");
 
     printf("=========================================\n");
 }
