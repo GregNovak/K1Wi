@@ -112,29 +112,72 @@ int opus_cmd_dispatch(opus_context *ctx, int argc, char **argv)
 /* Simple grouped HELP output. */
 void opus_cmd_print_help(void)
 {
-    size_t n = 0;
-    const opus_command *table = opus_cmd_table(&n);
-    const char *current_cat = NULL;
-
-    for (size_t i = 0; i < n; i++) {
-        const opus_command *cmd = &table[i];
-        if (!current_cat || strcmp(current_cat, cmd->category) != 0) {
-            current_cat = cmd->category;
-            printf("\n%s:\n", current_cat ? current_cat : "Commands");
-        }
-        if (cmd->alias)
-            printf("  %-8s (%-2s)  %s\n", cmd->name, cmd->alias, cmd->help);
-        else
-            printf("  %-8s       %s\n", cmd->name, cmd->help);
-    }
     printf("\n");
-    printf("Additional supported commands:\n");
-    printf("  File:   READ CREATE COPY DEL MD5 SHA256 SEARCH STRING\n");
-    printf("  RSA:    RSA-RHO RSA-ECM RSA-WIENER RSA-SMALL-E RSA-KNOWNPQ RSA-CHECKPQ RSA-DFROMPQ RSA-MINI\n");
-    printf("  Binary: PIETIME\n");
-    printf("  Safe:   WIPEFS --dry-run / WIPEFS <path> --max-bytes <N> --yes\n");
-    printf("\nUse HELP <command> for detailed command pages where available.\n");
-    printf("Use MENU to view command categories.\n");
+    printf("K1Wi Command Reference\n");
+    printf("Use: HELP <command> for detailed command pages where available.\n");
+    printf("\n");
+
+    printf("File Tools:\n");
+    printf("  READ        File reader with raw, safe, and structured modes\n");
+    printf("  CREATE      Create secure empty file\n");
+    printf("  COPY        Copy file with MD5 verification\n");
+    printf("  DEL         Secure delete file\n");
+    printf("  MD5         Compute, verify, or compare MD5 hashes\n");
+    printf("  SHA256      Compute, verify, or compare SHA-256 hashes\n");
+    printf("  SEARCH      Search for byte/text patterns in files\n");
+    printf("  STRING      Analyze text or extract strings from files\n");
+    printf("  WIPEFS      Bounded free-space wipe; requires safety flags\n");
+    printf("\n");
+
+    printf("Forensics and Extraction:\n");
+    printf("  LYZER   (L)  Image forensics and steganography analysis\n");
+    printf("  EXTRACT (X)  Recursive extraction engine\n");
+    printf("  ENTROPY (E)  Shannon entropy calculator\n");
+    printf("  MAGIC        Magic byte detector\n");
+    printf("\n");
+
+    printf("RSA Tools:\n");
+    printf("  RSA-FACTOR    Fermat / classical factorization\n");
+    printf("  RSA-RHO       Pollard Rho factorization\n");
+    printf("  RSA-ECM       Elliptic Curve Method factorization\n");
+    printf("  RSA-WIENER    Wiener small private exponent attack\n");
+    printf("  RSA-SMALL-E   Small exponent attack check\n");
+    printf("  RSA-KNOWNPQ   Decrypt with known p and q\n");
+    printf("  RSA-CHECKPQ   Validate p and q\n");
+    printf("  RSA-DFROMPQ   Compute d from p, q, and e\n");
+    printf("  RSA-MINI      Mini RSA solver / small-e helper\n");
+    printf("\n");
+
+    printf("Binary and PIE Tools:\n");
+    printf("  ELFINFO     ELF Symbol & Section Viewer\n");
+    printf("  PIECALC     PIE Base Calculator\n");
+    printf("  PIETIME     PIE Runtime Address Analyzer\n");
+    printf("\n");
+
+    printf("Cryptanalysis Tools:\n");
+    printf("  VIGAN       Vigenere key-length analyzer\n");
+    printf("  VIGCRACK    Vigenere auto solver\n");
+    printf("  VIGSOLVE    Vigenere fixed-length key solver\n");
+    printf("  VIGREFINE   Vigenere key refiner\n");
+    printf("  VIGAUTO     Vigenere full pipeline\n");
+    printf("  SOLVE       Substitution solver\n");
+    printf("  MONO        Monoalphabetic solver\n");
+    printf("  DIGRAPH     Digraph and trigraph analysis\n");
+    printf("  CAESAR      Caesar bruteforce analyzer\n");
+    printf("\n");
+
+    printf("Utility:\n");
+    printf("  HELP    (H)  Show command reference\n");
+    printf("  MENU    (M)  Show main menu\n");
+    printf("  ABOUT        Show K1Wi version/build info\n");
+    printf("  VERSION      Show version banner\n");
+    printf("  TIME         Show system time\n");
+    printf("  EXIT    (Z)  Exit K1Wi\n");
+    printf("\n");
+
+    printf("Safety note:\n");
+    printf("  WIPEFS refuses destructive mode unless --max-bytes and --yes are supplied.\n");
+    printf("  Example: WIPEFS testdata/wipefs_sandbox --max-bytes 1048576 --yes\n");
     printf("\n");
 }
 
