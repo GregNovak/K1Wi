@@ -63,9 +63,9 @@ static bool is_elf_file(const char *path)
 
 static const char *detect_format(const char *path)
 {
-    /* TODO: replace with real magic-based detection using existing Opus code.
-     * For now, use a dumb extension-based heuristic.
-     */
+    /* Format detection currently checks ELF magic first, then falls back to
+    * extension-based heuristics for structured read modes.
+    */
      
          if (is_elf_file(path))
         return "elf";
