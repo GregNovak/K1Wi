@@ -128,6 +128,14 @@ void opus_cmd_print_help(void)
             printf("  %-8s       %s\n", cmd->name, cmd->help);
     }
     printf("\n");
+    printf("Additional supported commands:\n");
+    printf("  File:   READ CREATE COPY DEL MD5 SHA256 SEARCH STRING\n");
+    printf("  RSA:    RSA-RHO RSA-ECM RSA-WIENER RSA-SMALL-E RSA-KNOWNPQ RSA-CHECKPQ RSA-DFROMPQ RSA-MINI\n");
+    printf("  Binary: PIETIME\n");
+    printf("  Safe:   WIPEFS --dry-run / WIPEFS <path> --max-bytes <N> --yes\n");
+    printf("\nUse HELP <command> for detailed command pages where available.\n");
+    printf("Use MENU to view command categories.\n");
+    printf("\n");
 }
 
 /* Simple MENU output – just categories, for now. */
