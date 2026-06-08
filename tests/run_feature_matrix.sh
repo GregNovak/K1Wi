@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BIN="./bin/opus"
+BIN="./bin/k1wi"
 
 PASS_COUNT=0
 FAIL_COUNT=0

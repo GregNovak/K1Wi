@@ -12,7 +12,7 @@ int cmd_extract(const OpusCLI *cli, int argc, char **argv) {
 
     if (argi >= argc) {
         fprintf(stderr, "ERROR: extract requires a file path\n");
-        fprintf(stderr, "Usage: opus extract [--recursive] <file>\n");
+        fprintf(stderr, "Usage: k1wi extract [--recursive] <file>\n");
         return 1;
     }
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BIN="./bin/opus"
+BIN="./bin/k1wi"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -133,7 +133,7 @@ fi
 echo
 echo "[TEST] ELF self-analysis"
 
-OUT=$($BIN elfinfo ./bin/opus 2>&1)
+OUT=$($BIN elfinfo ./bin/k1wi 2>&1)
 set -euo pipefail
 
 require_output \
@@ -149,7 +149,7 @@ require_output \
 echo
 echo "[TEST] PIECALC symbol list"
 
-OUT=$($BIN PIECALC --bin ./bin/opus --list 2>&1)
+OUT=$($BIN PIECALC --bin ./bin/k1wi --list 2>&1)
 sed -n '1,40p' <<< "$OUT"
 
 require_output \
@@ -165,7 +165,7 @@ require_output \
 echo
 echo "[TEST] PIETIME basic analysis"
 
-OUT=$($BIN PIETIME -IN ./bin/opus -LEAK 0x401000 -BASE 0x400000 2>&1)
+OUT=$($BIN PIETIME -IN ./bin/k1wi -LEAK 0x401000 -BASE 0x400000 2>&1)
 sed -n '1,20p' <<< "$OUT"
 
 require_output "PIETIME reports analysis" "$OUT" "[PIETIME] ANALYSIS"
@@ -563,7 +563,7 @@ require_failure_output \
 require_failure_output \
     "ELFINFO missing file fails" \
     "$BIN elfinfo" \
-    "Usage: opus elfinfo <file>"
+    "Usage: k1wi elfinfo <file>"
 
 require_failure_output \
     "EXTRACT missing argument fails" \
@@ -573,7 +573,7 @@ require_failure_output \
 require_failure_output \
     "RSA-FACTOR missing argument fails" \
     "$BIN RSA-FACTOR" \
-    "Usage: opus rsa-factor <rsa_file>"
+    "Usage: k1wi rsa-factor <rsa_file>"
 
     
         

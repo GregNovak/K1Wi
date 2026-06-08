@@ -1,4 +1,4 @@
-# Opus Release Checklist
+# K1wi Release Checklist
 
 Release: **K1Wi**  
 Version: **v0.99 RC1**
@@ -8,7 +8,7 @@ Version: **v0.99 RC1**
 - [x] `make clean && make` completes successfully
 - [x] No compiler errors
 - [x] No compiler warnings
-- [x] Binary generated at `bin/opus`
+- [x] Binary generated at `bin/k1wi`
 
 ## Testing
 
@@ -19,15 +19,15 @@ Version: **v0.99 RC1**
 
 ## Verified Commands
 
-- [x] `opus --version`
-- [x] `opus help`
-- [x] `opus string`
-- [x] `opus extract`
-- [x] `opus lyzer`
-- [x] `opus entropy`
-- [x] `opus elf`
-- [x] `opus PIECALC`
-- [x] `opus rsa`
+- [x] `k1wi --version`
+- [x] `k1wi help`
+- [x] `k1wi string`
+- [x] `k1wi extract`
+- [x] `k1wi lyzer`
+- [x] `k1wi entropy`
+- [x] `k1wi elf`
+- [x] `k1wi PIECALC`
+- [x] `k1wi rsa`
 
 ## Documentation
 

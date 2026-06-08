@@ -181,7 +181,7 @@ static const char *help_pietime_lines[] = {
     "  Reports the calculated offset from the base address.",
     "",
     "Examples:",
-    "  PIETIME -IN ./bin/opus -LEAK 0x401000 -BASE 0x400000",
+    "  PIETIME -IN ./bin/k1wi -LEAK 0x401000 -BASE 0x400000",
     NULL
 };
 static const char *help_string_lines[] = {

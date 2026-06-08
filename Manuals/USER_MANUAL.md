@@ -1,18 +1,18 @@
-# Chapter 1: What Is Opus?
+# Chapter 1: What Is K1wi?
 
 ## Introduction
 
-Opus is an integrated cybersecurity analysis framework that combines reverse engineering, digital forensics, cryptanalysis, binary analysis, and Capture-The-Flag (CTF) tooling into a unified command-line environment.
+K1wi is an integrated cybersecurity analysis framework that combines reverse engineering, digital forensics, cryptanalysis, binary analysis, and Capture-The-Flag (CTF) tooling into a unified command-line environment.
 
-The goal of Opus is to provide security professionals, students, researchers, and enthusiasts with a single toolkit capable of analyzing files, binaries, encoded data, cryptographic artifacts, and forensic evidence without requiring multiple disconnected utilities.
+The goal of K1wi is to provide security professionals, students, researchers, and enthusiasts with a single toolkit capable of analyzing files, binaries, encoded data, cryptographic artifacts, and forensic evidence without requiring multiple disconnected utilities.
 
-Unlike many specialized tools that focus on only one discipline, Opus brings together capabilities from several cybersecurity domains. A user may extract files from an archive, inspect a Linux executable, analyze hidden data within an image, evaluate cryptographic material, calculate Position Independent Executable (PIE) offsets, and perform string intelligence analysis from the same framework.
+Unlike many specialized tools that focus on only one discipline, K1wi brings together capabilities from several cybersecurity domains. A user may extract files from an archive, inspect a Linux executable, analyze hidden data within an image, evaluate cryptographic material, calculate Position Independent Executable (PIE) offsets, and perform string intelligence analysis from the same framework.
 
 ## Mission
 
-The mission of Opus is to provide practical cybersecurity analysis capabilities through a lightweight, transparent, and extensible platform.
+The mission of K1wi is to provide practical cybersecurity analysis capabilities through a lightweight, transparent, and extensible platform.
 
-Opus is designed to help users:
+K1wi is designed to help users:
 
 * Analyze suspicious files and artifacts
 * Perform reverse engineering tasks
@@ -24,7 +24,7 @@ Opus is designed to help users:
 
 ## Target Audience
 
-Opus is intended for:
+K1wi is intended for:
 
 * Cybersecurity students
 * Capture-The-Flag competitors
@@ -35,11 +35,11 @@ Opus is intended for:
 * Incident responders
 * Hobbyists and self-directed learners
 
-No advanced programming knowledge is required to begin using Opus, although users with experience in operating systems, networking, programming, and information security will benefit from the framework's advanced capabilities.
+No advanced programming knowledge is required to begin using K1wi, although users with experience in operating systems, networking, programming, and information security will benefit from the framework's advanced capabilities.
 
 ## Design Philosophy
 
-Opus is built around several core principles:
+K1wi is built around several core principles:
 
 ### Simplicity
 
@@ -47,7 +47,7 @@ Common tasks should require minimal commands and configuration.
 
 ### Transparency
 
-Analysis results should be understandable and traceable. Opus attempts to explain findings rather than simply report them.
+Analysis results should be understandable and traceable. K1wi attempts to explain findings rather than simply report them.
 
 ### Practicality
 
@@ -59,11 +59,11 @@ Capabilities are organized into independent modules that can evolve without affe
 
 ### Education
 
-Opus serves as both an operational toolkit and a learning platform for understanding cybersecurity concepts.
+K1wi serves as both an operational toolkit and a learning platform for understanding cybersecurity concepts.
 
 ## Core Capability Areas
 
-Opus currently provides functionality in the following areas:
+K1wi currently provides functionality in the following areas:
 
 ### String Intelligence
 
@@ -105,17 +105,17 @@ Current Development Status:
 
 Release Candidate (RC)
 
-Opus continues to evolve through additional analysis modules, expanded testing coverage, improved documentation, and user-driven enhancements.
+K1wi continues to evolve through additional analysis modules, expanded testing coverage, improved documentation, and user-driven enhancements.
 
-The remainder of this manual describes installation, operation, workflows, command references, troubleshooting procedures, and development guidance for the Opus Framework.
+The remainder of this manual describes installation, operation, workflows, command references, troubleshooting procedures, and development guidance for the K1wi Framework.
 
-# Chapter 2: Installation and Building Opus
+# Chapter 2: Installation and Building K1wi
 
 ## Overview
 
-This chapter describes the process of installing dependencies, compiling Opus from source, running tests, and verifying a successful installation.
+This chapter describes the process of installing dependencies, compiling K1wi from source, running tests, and verifying a successful installation.
 
-Opus is currently developed and tested on Ubuntu Linux and other Debian-based distributions. The build system uses GNU Make and the Clang compiler.
+K1wi is currently developed and tested on Ubuntu Linux and other Debian-based distributions. The build system uses GNU Make and the Clang compiler.
 
 ## System Requirements
 
@@ -137,7 +137,7 @@ Recommended system:
 
 ## Required Dependencies
 
-Opus depends on several external libraries.
+K1wi depends on several external libraries.
 
 Install all required packages using:
 
@@ -177,13 +177,13 @@ cd software
 Or extract a source archive:
 
 ```bash
-tar -xf opus-source.tar.gz
+tar -xf K1wi-source.tar.gz
 cd software
 ```
 
 ## Directory Structure
 
-A typical Opus source tree contains:
+A typical K1wi source tree contains:
 
 ```text
 software/
@@ -210,7 +210,7 @@ software/
 | testdata  | Sample files used by testing |
 | include   | Shared header files          |
 
-## Building Opus
+## Building K1wi
 
 ### Clean Build
 
@@ -230,13 +230,13 @@ Expected output:
 
 ```text
 [CC] ...
-[LINK] bin/opus
+[LINK] bin/k1wi
 ```
 
 Upon successful completion, the executable will be located at:
 
 ```bash
-bin/opus
+bin/k1wi
 ```
 
 ## Build Modes
@@ -286,18 +286,18 @@ make tsan
 
 ## Verifying Installation
 
-After compilation completes, verify that Opus starts correctly.
+After compilation completes, verify that k1wi starts correctly.
 
 ### Display Version Information
 
 ```bash
-./bin/opus --version
+./bin/k1wi --version
 ```
 
 Expected output:
 
 ```text
-Opus Framework v0.98
+K1wi Framework v0.98
 Release Name: K1Wi
 Build Date: ...
 Build Time: ...
@@ -306,14 +306,14 @@ Build Time: ...
 ### Display Help Information
 
 ```bash
-./bin/opus help
+./bin/k1wi help
 ```
 
 This command should display the available modules and command categories.
 
 ## Running Regression Tests
 
-Opus includes an automated regression suite.
+K1wi includes an automated regression suite.
 
 Execute:
 
@@ -332,7 +332,7 @@ FAIL: 0
 SKIP: 0
 ```
 
-Any failures should be investigated before deploying or releasing Opus.
+Any failures should be investigated before deploying or releasing K1wi.
 
 ## Running Sanitizer Validation
 
@@ -389,7 +389,7 @@ Solution:
 Verify executable permissions:
 
 ```bash
-chmod +x ./bin/opus
+chmod +x ./bin/k1wi
 ```
 
 ### Build Artifacts Corrupted
@@ -405,9 +405,9 @@ make
 
 ## Summary
 
-At this point, Opus should compile successfully, pass regression testing, and be ready for operational use.
+At this point, K1wi should compile successfully, pass regression testing, and be ready for operational use.
 
-The next chapter introduces the Quick Start Guide and demonstrates common workflows that can be performed within the first fifteen minutes of using Opus.
+The next chapter introduces the Quick Start Guide and demonstrates common workflows that can be performed within the first fifteen minutes of using K1wi.
 
 # Chapter 3: Quick Start Guide
 
@@ -420,7 +420,7 @@ This chapter introduces the most common K1Wi workflows. By the end of this chapt
 Display version information:
 
 ```bash
-./bin/opus --version
+./bin/k1wi --version
 ```
 
 Expected output:
@@ -440,7 +440,7 @@ If version information appears, the executable is functioning correctly.
 Show the built-in command reference:
 
 ```bash
-./bin/opus help
+./bin/k1wi help
 ```
 
 This command displays the major K1Wi modules and supported workflows.
@@ -460,7 +460,7 @@ Important modules include:
 Run:
 
 ```bash
-./bin/opus string "hello world"
+./bin/k1wi string "hello world"
 ```
 
 Example output:
@@ -479,7 +479,7 @@ K1Wi automatically attempts to identify string types and detect common encodings
 Run:
 
 ```bash
-./bin/opus string "R2d2d2d2d2d424547494e2050524956415445204b45592d"
+./bin/k1wi string "R2d2d2d2d2d424547494e2050524956415445204b45592d"
 ```
 
 K1Wi will identify this as a shifted hexadecimal encoded private key marker.
@@ -491,7 +491,7 @@ This demonstrates the framework's ability to recognize encoded artifacts commonl
 Run:
 
 ```bash
-./bin/opus entropy image.jpg
+./bin/k1wi entropy image.jpg
 ```
 
 Example output:
@@ -512,7 +512,7 @@ High entropy may indicate:
 Run:
 
 ```bash
-./bin/opus lyzer image.jpg ALL
+./bin/k1wi lyzer image.jpg ALL
 ```
 
 This executes all available forensic modules, including:
@@ -532,7 +532,7 @@ This is one of the most powerful workflows within K1Wi.
 Run:
 
 ```bash
-./bin/opus elf ./bin/opus
+./bin/k1wi elf ./bin/k1wi
 ```
 
 K1Wi will display:
@@ -549,7 +549,7 @@ This functionality is useful for reverse engineering and binary analysis.
 Run:
 
 ```bash
-./bin/opus PIECALC --bin ./bin/opus --list
+./bin/k1wi PIECALC --bin ./bin/k1wi --list
 ```
 
 This displays symbol names and offsets useful for:
@@ -564,7 +564,7 @@ This displays symbol names and offsets useful for:
 Run:
 
 ```bash
-./bin/opus rsa testdata/rsa/rsa_61_53_e17.txt
+./bin/k1wi rsa testdata/rsa/rsa_61_53_e17.txt
 ```
 
 K1Wi will:
@@ -613,19 +613,19 @@ Unlike traditional string extraction utilities that simply display printable tex
 Analyze a string directly:
 
 ```bash
-./bin/opus string "hello world"
+./bin/k1wi string "hello world"
 ```
 
 Analyze a file:
 
 ```bash
-./bin/opus string --file sample.txt
+./bin/k1wi string --file sample.txt
 ```
 
 Decode detected content:
 
 ```bash
-./bin/opus string --decode "<data>"
+./bin/k1wi string --decode "<data>"
 ```
 
 ## Supported Detection Types
@@ -650,7 +650,7 @@ Additional detectors may be added in future releases.
 Input:
 
 ```bash
-./bin/opus string "hello OPUS"
+./bin/k1wi string "hello K1wi"
 ```
 
 Example output:
@@ -671,7 +671,7 @@ The input appears to be normal human-readable text and does not exhibit characte
 Input:
 
 ```bash
-./bin/opus string \
+./bin/k1wi string \
 "R2d2d2d2d2d424547494e2050524956415445204b45592d"
 ```
 
@@ -759,13 +759,13 @@ The EXTRACT engine supports:
 Extract a file:
 
 ```bash
-./bin/opus extract sample.zip
+./bin/k1wi extract sample.zip
 ```
 
 Perform recursive extraction:
 
 ```bash
-./bin/opus extract --recursive sample.zip
+./bin/k1wi extract --recursive sample.zip
 ```
 
 This instructs K1Wi to continue processing newly discovered files until no additional extractable content remains or the recursion limit is reached.
@@ -803,7 +803,7 @@ Recursive mode is one of the most powerful capabilities of the EXTRACT engine.
 Example:
 
 ```bash
-./bin/opus extract --recursive suspicious_archive.zip
+./bin/k1wi extract --recursive suspicious_archive.zip
 ```
 
 Possible structure:
@@ -885,7 +885,7 @@ Recovered artifacts are automatically added to the extraction workflow.
 Command:
 
 ```bash
-./bin/opus extract --recursive testdata/archives/sample.zip
+./bin/k1wi extract --recursive testdata/archives/sample.zip
 ```
 
 Example output:
@@ -981,13 +981,13 @@ The LYZER engine currently includes:
 Run all available modules:
 
 ```bash
-./bin/opus lyzer image.jpg ALL
+./bin/k1wi lyzer image.jpg ALL
 ```
 
 Run a specific module:
 
 ```bash
-./bin/opus lyzer image.jpg E
+./bin/k1wi lyzer image.jpg E
 ```
 
 Module selection codes are described in the following sections.

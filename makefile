@@ -23,7 +23,8 @@ INC_DIR := include
 OBJ_DIR := build
 BIN_DIR := bin
 
-TARGET := $(BIN_DIR)/opus
+TARGET := $(BIN_DIR)/k1wi
+LEGACY_TARGET := $(BIN_DIR)/opus
 
 # ------------------------------------------------------------
 # Source Discovery
@@ -162,12 +163,14 @@ rebuild: clean debug
 # Install
 # ------------------------------------------------------------
 install: release
-	sudo cp $(TARGET) /usr/local/bin/opus
+	sudo cp $(TARGET) /usr/local/bin/k1wi
+	sudo ln -sf /usr/local/bin/k1wi /usr/local/bin/opus
 
 # ------------------------------------------------------------
 # Uninstall
 # ------------------------------------------------------------
 uninstall:
+	sudo rm -f /usr/local/bin/k1wi
 	sudo rm -f /usr/local/bin/opus
 
 # ------------------------------------------------------------

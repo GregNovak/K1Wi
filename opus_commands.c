@@ -84,7 +84,7 @@ const opus_cmd_t opus_commands[] = {
        =========================== */
     { "TIME",    "Utility", "Show system time and timestamp utilities" }, 
     { "HELP",    "Utility", "Show general or command-specific help" },
-    { "SPLASH",  "Utility", "Display the Opus splash banner" },
+    { "SPLASH",  "Utility", "Display the K1wi splash banner" },
     { "MENU",    "Utility", "Show the K1Wi main menu" },
 };
 

@@ -32,7 +32,7 @@ int cmd_entropy(const OpusCLI *cli, int argc, char **argv)
     int argi = cli->arg_start;
 
     if (argi >= argc) {
-        fprintf(stderr, "Usage: opus entropy <file>\n");
+        fprintf(stderr, "Usage: k1wi entropy <file>\n");
         return 1;
     }
 
@@ -56,7 +56,7 @@ int cmd_magic(int argc, char **argv) {
   (void)argc;
   (void)argv;
 
-    fprintf(stderr, "[cmd_magic] legacy CLI stub; use READ/STRING/ENTROPY/LYZER in the main Opus shell.\n");
+    fprintf(stderr, "[cmd_magic] legacy CLI stub; use READ/STRING/ENTROPY/LYZER in the main k1wi shell.\n");
     return -1; // legacy compatibility stub
 }
 
@@ -64,7 +64,7 @@ int cmd_vig(int argc, char **argv) {
   (void)argc;
   (void)argv;
 
-    fprintf(stderr, "[cmd_vig] legacy CLI stub; use VIGAN/VIGCRACK/VIGSOLVE/VIGAUTO in the main Opus shell.\n");
+    fprintf(stderr, "[cmd_vig] legacy CLI stub; use VIGAN/VIGCRACK/VIGSOLVE/VIGAUTO in the main k1wi shell.\n");
     return -1; // legacy compatibility stub
 }
 
@@ -72,14 +72,14 @@ int cmd_sub(int argc, char **argv) {
   (void)argc;
   (void)argv;
 
-    fprintf(stderr, "[cmd_sub] legacy CLI stub; use SOLVE/MONO in the main Opus shell.\n");
+    fprintf(stderr, "[cmd_sub] legacy CLI stub; use SOLVE/MONO in the main k1wi shell.\n");
     return -1; // legacy compatibility stub
 }
 
 int cmd_rsa(int argc, char **argv)
 {
     if (argc < 2) {
-        fprintf(stderr, "Usage: opus rsa <rsa_file>\n");
+        fprintf(stderr, "Usage: k1wi rsa <rsa_file>\n");
         return 1;
     }
 
@@ -91,7 +91,7 @@ int cmd_elf(int argc, char **argv) {
   (void)argc;
   (void)argv;
 
-    fprintf(stderr, "[cmd_elf] legacy CLI stub; use ELFINFO/PIECALC/PIETIME in the main Opus shell.\n");
+    fprintf(stderr, "[cmd_elf] legacy CLI stub; use ELFINFO/PIECALC/PIETIME in the main k1wi shell.\n");
     return -1; // legacy compatibility stub
 }
 
@@ -99,7 +99,7 @@ int cmd_exit(int argc, char **argv) {
   (void)argc;
   (void)argv;	
 
-    fprintf(stderr, "[cmd_exit] legacy CLI stub; use EXIT in the main Opus shell.\n");
+    fprintf(stderr, "[cmd_exit] legacy CLI stub; use EXIT in the main k1wi shell.\n");
     return 0;  // legacy compatibility stub
 }
 

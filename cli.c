@@ -170,10 +170,10 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
        
         } else if (strcmp(cmd, "MD5") == 0) {
         if (cli->arg_start >= argc) {
-            fprintf(stderr, "Usage: opus md5 <file>\n");
-            fprintf(stderr, "       opus md5 -in <file>\n");
-            fprintf(stderr, "       opus md5 -verify <file> <hash>\n");
-            fprintf(stderr, "       opus md5 -compare <file1> <file2>\n");
+            fprintf(stderr, "Usage: k1wi md5 <file>\n");
+            fprintf(stderr, "       k1wi md5 -in <file>\n");
+            fprintf(stderr, "       k1wi md5 -verify <file> <hash>\n");
+            fprintf(stderr, "       k1wi md5 -compare <file1> <file2>\n");
             return 1;
         }
 
@@ -276,7 +276,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 } else if (strcmp(cmd, "LYZER") == 0) {
     if (cli->arg_start >= argc) {
         fprintf(stderr, "ERROR: lyzer requires a file path\n");
-        fprintf(stderr, "Usage: opus lyzer <file> [H|R|E|C|S|J|D|ALL]\n");
+        fprintf(stderr, "Usage: k1wi lyzer <file> [H|R|E|C|S|J|D|ALL]\n");
         return 1;
     }
 
@@ -296,7 +296,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
    } else if (strcmp(cmd, "READ") == 0) {
        if (cli->arg_start >= argc) {
-        fprintf(stderr, "Usage: opus READ <file>\n");
+        fprintf(stderr, "Usage: k1wi READ <file>\n");
         return 1;
     }
 
@@ -331,7 +331,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     }
     else if (strcmp(cmd, "MAGIC") == 0) {
         if (cli->arg_start >= argc) {
-            fprintf(stderr, "Usage: opus magic <file>\n");
+            fprintf(stderr, "Usage: k1wi magic <file>\n");
             return 1;
         }
 
@@ -342,7 +342,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 	    
 	} else if (strcmp(cmd, "RSA-SMALL-E") == 0) {
 	    if (cli->arg_start >= argc) {
-		fprintf(stderr, "Usage: opus RSA-SMALL-E <rsa_file>\n");
+		fprintf(stderr, "Usage: k1wi RSA-SMALL-E <rsa_file>\n");
 		return 1;
 	    }
 
@@ -380,7 +380,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
 	} else if (strcmp(cmd, "RSA-WIENER") == 0) {
 	    if (cli->arg_start >= argc) {
-		fprintf(stderr, "Usage: opus RSA-WIENER <rsa_file>\n");
+		fprintf(stderr, "Usage: k1wi RSA-WIENER <rsa_file>\n");
 		return 1;
 	    }
 
@@ -416,7 +416,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 	} 
         else if (strcmp(cmd, "RSA-FACTOR") == 0) {
           if (cli->arg_start >= argc) {
-            fprintf(stderr, "Usage: opus rsa-factor <rsa_file>\n");
+            fprintf(stderr, "Usage: k1wi rsa-factor <rsa_file>\n");
             return 1;
         }
 
@@ -424,7 +424,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
    } else if (strcmp(cmd, "RSA-KNOWNPQ") == 0) {
     if (cli->arg_start + 2 >= argc) {
-        fprintf(stderr, "Usage: opus RSA-KNOWNPQ <rsa_file> <p> <q>\n");
+        fprintf(stderr, "Usage: k1wi RSA-KNOWNPQ <rsa_file> <p> <q>\n");
         return 1;
     }
 
@@ -444,7 +444,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     
     } else if (strcmp(cmd, "RSA-CHECKPQ") == 0) {
     if (cli->arg_start + 1 >= argc) {
-        fprintf(stderr, "Usage: opus RSA-CHECKPQ <p> <q>\n");
+        fprintf(stderr, "Usage: k1wi RSA-CHECKPQ <p> <q>\n");
         return 1;
     }
 
@@ -456,7 +456,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
     if (cli->arg_start + 2 >= argc) {
         fprintf(stderr,
-                "Usage: opus RSA-DFROMPQ <p> <q> <e>\n");
+                "Usage: k1wi RSA-DFROMPQ <p> <q> <e>\n");
         return 1;
     }
 
@@ -468,7 +468,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     
     } else if (strcmp(cmd, "RSA-ECM") == 0) {
     if (cli->arg_start >= argc) {
-        fprintf(stderr, "Usage: opus RSA-ECM <rsa_file>\n");
+        fprintf(stderr, "Usage: k1wi RSA-ECM <rsa_file>\n");
         return 1;
     }
 
@@ -503,7 +503,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
     if (cli->arg_start >= argc) {
         fprintf(stderr,
-                "Usage: opus RSA-RHO <rsa_file>\n");
+                "Usage: k1wi RSA-RHO <rsa_file>\n");
         return 1;
     }
 
@@ -511,7 +511,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     
     } else if (strcmp(cmd, "RSA-MINI") == 0) {
     if (cli->arg_start >= argc) {
-        fprintf(stderr, "Usage: opus RSA-MINI <rsa_file>\n");
+        fprintf(stderr, "Usage: k1wi RSA-MINI <rsa_file>\n");
         return 1;
     }
 
@@ -519,7 +519,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     
     } else if (strcmp(cmd, "COPY") == 0) {
     if (cli->arg_start + 1 >= argc) {
-        fprintf(stderr, "Usage: opus COPY <src> <dst>\n");
+        fprintf(stderr, "Usage: k1wi COPY <src> <dst>\n");
         return 1;
     }
 
@@ -538,7 +538,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     
     } else if (strcmp(cmd, "CREATE") == 0) {
     if (cli->arg_start >= argc) {
-        fprintf(stderr, "Usage: opus CREATE <filename>\n");
+        fprintf(stderr, "Usage: k1wi CREATE <filename>\n");
         return 1;
     }
 
@@ -548,7 +548,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     
     } else if (strcmp(cmd, "DEL") == 0) {
     if (cli->arg_start >= argc) {
-        fprintf(stderr, "Usage: opus DEL <file> [-s 1|2] [-y]\n");
+        fprintf(stderr, "Usage: k1wi DEL <file> [-s 1|2] [-y]\n");
         return 1;
     }
 
@@ -585,7 +585,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 	}
 	
 	fprintf(stderr, "ERROR: Unknown command '%s'\n", cmd);
-	fprintf(stderr, "Try: opus help\n");
+	fprintf(stderr, "Try: k1wi help\n");
 	return 1;
 }
 

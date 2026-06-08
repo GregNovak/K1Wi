@@ -1,4 +1,7 @@
 /*
+
+Codename: Opus
+
 ---------- K1Wi v0.99 RC-1 -----------
 
 */
@@ -651,7 +654,7 @@ void analyze_image_file(const char *filename) {
 }
 
 
-//======= OPUS Core Code END =============
+//======= K1wi Core Code END =============
 
 // ---------------------------------------------------------
 // Enhanced String Analyzer Helper Functions (Decoders)
@@ -2758,7 +2761,7 @@ void run_rs_analysis(const char *path) {
 
 void run_file_carver(const char *path) {
     opus_carve_result_t res;
-    /* For now, carve into a fixed subdir next to Opus. */
+    /* For now, carve into a fixed subdir next to K1wi. */
     const char *outdir = "carved";
 
     printf("\n--- File Carver ---\n");
@@ -4595,7 +4598,7 @@ int cmd_vigenere(int argc, char **argv)
         return -1;
     }
 
-    /* Write output file (Opus sandbox-safe) */
+    /* Write output file (K1wi sandbox-safe) */
     if (opus_write_file(out_path, out_buf, in_len) != 0) {
         printf("[VIG] Failed to write output file: %s\n", out_path);
         free(in_buf);

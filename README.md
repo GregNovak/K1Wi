@@ -77,7 +77,7 @@ make
 Run:
 
 ```bash
-./bin/opus
+./bin/k1wi
 ```
 
 ## Quick Start
@@ -85,32 +85,32 @@ Run:
 View available commands:
 
 ```bash
-./bin/opus HELP
-./bin/opus MENU
+./bin/k1wi HELP
+./bin/k1wi MENU
 ```
 
 Analyze a string:
 
 ```bash
-./bin/opus STRING SGVsbG8=
+./bin/k1wi STRING SGVsbG8=
 ```
 
 Analyze a file:
 
 ```bash
-./bin/opus ENTROPY sample.bin
+./bin/k1wi ENTROPY sample.bin
 ```
 
 Inspect an ELF binary:
 
 ```bash
-./bin/opus ELFINFO -IN ./bin/opus
+./bin/k1wi ELFINFO -IN ./bin/k1wi
 ```
 
 Run image forensics:
 
 ```bash
-./bin/opus LYZER image.jpg ALL
+./bin/k1wi LYZER image.jpg ALL
 ```
 
 ## Testing
