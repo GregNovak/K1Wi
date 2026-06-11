@@ -1,4 +1,4 @@
-Opus Framework Roadmap
+K1Wi Framework Roadmap
 
 v0.9 — K1Wi Release Candidate
 - stabilization

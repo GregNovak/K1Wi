@@ -1,5 +1,5 @@
 # ============================================================
-# OPUS Build System
+# K1Wi Build System
 # ============================================================
 # Targets:
 #   make debug
@@ -178,7 +178,7 @@ uninstall:
 # ------------------------------------------------------------
 help:
 	@echo ""
-	@echo "OPUS Build Targets"
+	@echo "K1Wi Build Targets"
 	@echo "------------------------------------"
 	@echo "make debug      - Debug build"
 	@echo "make release    - Optimized release build"
@@ -188,7 +188,7 @@ help:
 	@echo "make run        - Build and run"
 	@echo "make clean      - Remove build artifacts"
 	@echo "make rebuild    - Full rebuild"
-	@echo "make install    - Install OPUS"
+	@echo "make install    - Install K1Wi"
 	@echo "make uninstall  - Remove installed binary"
 	@echo ""
 

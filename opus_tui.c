@@ -409,7 +409,7 @@ static void draw_banner(const app_state_t *app) {
 
     attron(COLOR_PAIR(CP_BANNER) | A_BOLD);
     mvhline(0, 0, ' ', maxx);
-    draw_centered(stdscr, 0, "OPUS Forensic & Cryptanalysis Suite",
+    draw_centered(stdscr, 0, "K1Wi Forensic & Cryptanalysis Suite",
                   COLOR_PAIR(CP_BANNER) | A_BOLD);
     attroff(COLOR_PAIR(CP_BANNER) | A_BOLD);
 }

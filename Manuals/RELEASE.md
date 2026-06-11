@@ -1,4 +1,4 @@
-# K1wi Release Checklist
+# K1Wi Release Checklist
 
 Release: **K1Wi**  
 Version: **v0.99 RC1**

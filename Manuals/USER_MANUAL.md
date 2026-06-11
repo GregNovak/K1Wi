@@ -1097,4 +1097,230 @@ Multiple independent findings generally increase confidence.
 | Multiple Concurrent Findings | Perform full forensic review                |
 | No Significant Findings      | Document results and continue investigation |
 
+# Chapter 9: RSA Analysis Tools
+
+## Overview
+
+K1Wi includes a set of RSA analysis tools designed for educational cryptography, CTF challenges, and weak-key analysis. These tools help users explore common RSA failure cases, including weak factorization, known prime recovery, small exponent weaknesses, and small private exponent attacks.
+
+The RSA toolset includes:
+
+* RSA-FACTOR
+* RSA-RHO
+* RSA-ECM
+* RSA-WIENER
+* RSA-SMALL-E
+* RSA-KNOWNPQ
+* RSA-CHECKPQ
+* RSA-DFROMPQ
+* RSA-MINI
+
+These tools are intended for authorized analysis, coursework, lab environments, and challenge data. They are not designed to break properly generated production RSA keys.
+
+## RSA Challenge File Format
+
+Most RSA modules use a text file containing RSA parameters.
+
+Typical fields include:
+
+```text
+N = 3233
+e = 17
+c = 855
+
+# Chapter 9: RSA Analysis Tools
+
+## Overview
+
+K1Wi includes a set of RSA analysis tools designed for educational cryptography, CTF challenges, and weak-key analysis. These tools help users explore common RSA failure cases, including weak factorization, known prime recovery, small exponent weaknesses, and small private exponent attacks.
+
+The RSA toolset includes:
+
+* RSA-FACTOR
+* RSA-RHO
+* RSA-ECM
+* RSA-WIENER
+* RSA-SMALL-E
+* RSA-KNOWNPQ
+* RSA-CHECKPQ
+* RSA-DFROMPQ
+* RSA-MINI
+
+These tools are intended for authorized analysis, coursework, lab environments, and challenge data. They are not designed to break properly generated production RSA keys.
+
+## RSA Challenge File Format
+
+Most RSA modules use a text file containing RSA parameters.
+
+Typical fields include:
+
+```text
+N = 3233
+e = 17
+c = 855
+
+Where:
+
+N is the RSA modulus
+e is the public exponent
+c is the ciphertext
+
+Some modules require additional values such as p, q, or d, depending on the workflow.
+
+RSA-FACTOR
+
+RSA-FACTOR attempts Fermat/classical factorization against an RSA modulus.
+
+Usage
+./bin/k1wi RSA-FACTOR <rsa_file>
+Example
+./bin/k1wi RSA-FACTOR testdata/rsa/rsa_61_53_e17.txt
+Example Output
+RSA Input
+---------
+N = 3233
+e = 17
+c = 855
+
+[*] RSA-Factor: starting Fermat factorization
+[+] p = 53
+[+] q = 61
+
+Key Recovery
+------------
+d = 2753
+
+Plaintext Recovery
+------------------
+m = 123
+
+Hex plaintext:
+7b
+
+Decoded ASCII:
+{
+RSA-RHO
+
+RSA-RHO attempts factorization using Pollard Rho.
+
+Usage
+./bin/k1wi RSA-RHO <rsa_file>
+Example
+./bin/k1wi RSA-RHO testdata/rsa/rsa_61_53_e17.txt
+
+Pollard Rho is useful for demonstrating integer factorization against weak or small RSA moduli.
+
+RSA-ECM
+
+RSA-ECM attempts factorization using the Elliptic Curve Method.
+
+Usage
+./bin/k1wi RSA-ECM <rsa_file>
+Example
+./bin/k1wi RSA-ECM testdata/rsa/rsa_ecm_small_factor.txt
+
+ECM is useful when one RSA factor is significantly smaller than the other.
+
+RSA-WIENER
+
+RSA-WIENER attempts Wiener's continued-fraction attack against RSA keys with unusually small private exponents.
+
+Usage
+./bin/k1wi RSA-WIENER <rsa_file>
+Example
+./bin/k1wi RSA-WIENER testdata/rsa/rsa_61_53_e17.txt
+
+If the private exponent is not small enough, the attack will fail safely.
+
+RSA-SMALL-E
+
+RSA-SMALL-E checks for small public exponent weaknesses.
+
+Usage
+./bin/k1wi RSA-SMALL-E <rsa_file>
+Example
+./bin/k1wi RSA-SMALL-E testdata/rsa/rsa_61_53_e17.txt
+
+This attack is only applicable when RSA is used incorrectly, such as when plaintext is small, padding is missing, and plaintext^e < N.
+
+RSA-KNOWNPQ
+
+RSA-KNOWNPQ decrypts RSA ciphertext when the prime factors p and q are already known.
+
+Usage
+./bin/k1wi RSA-KNOWNPQ <rsa_file> <p> <q>
+Example
+./bin/k1wi RSA-KNOWNPQ testdata/rsa/rsa_61_53_e17.txt 61 53
+
+This command computes phi(N), derives the private exponent d, decrypts the ciphertext, and displays the recovered plaintext.
+
+RSA-CHECKPQ
+
+RSA-CHECKPQ checks whether supplied p and q values are prime.
+
+Usage
+./bin/k1wi RSA-CHECKPQ <p> <q>
+Example
+./bin/k1wi RSA-CHECKPQ 61 53
+Example Output
+[*] Starting RSA-CHECKPQ...
+[*] p = 61
+[+] p is prime.
+
+[*] q = 53
+[+] q is prime.
+
+[*] RSA-CHECKPQ complete.
+RSA-DFROMPQ
+
+RSA-DFROMPQ computes phi(N) and the private exponent d from known p, q, and e.
+
+Usage
+./bin/k1wi RSA-DFROMPQ <p> <q> <e>
+Example
+./bin/k1wi RSA-DFROMPQ 61 53 17
+Example Output
+[+] phi = 3120
+[+] d = 2753
+RSA-MINI
+
+RSA-MINI is a small educational RSA helper for demonstration cases.
+
+Usage
+./bin/k1wi RSA-MINI <rsa_file>
+Example
+./bin/k1wi RSA-MINI testdata/rsa/rsa_61_53_e17.txt
+Current Limitation
+
+RSA-MINI currently supports only small-exponent demonstration cases using:
+
+e = 3
+
+Inputs using unsupported public exponents are rejected.
+
+Practical Workflow
+
+A typical RSA challenge workflow may look like this:
+
+./bin/k1wi RSA-FACTOR testdata/rsa/rsa_61_53_e17.txt
+./bin/k1wi RSA-CHECKPQ 61 53
+./bin/k1wi RSA-DFROMPQ 61 53 17
+./bin/k1wi RSA-KNOWNPQ testdata/rsa/rsa_61_53_e17.txt 61 53
+
+This workflow:
+
+Factors the modulus.
+Validates the recovered primes.
+Computes the private exponent.
+Decrypts the ciphertext using known p and q.
+Limitations
+
+The RSA tools are designed for weak RSA examples, educational analysis, and CTF-style challenges.
+
+They should not be expected to factor or decrypt properly generated modern RSA keys. Strong RSA keys use sufficiently large primes, secure padding, and safe parameter choices that prevent these attacks from succeeding.
+
+Summary
+
+The RSA toolset gives K1Wi users a practical way to explore RSA weaknesses, recover keys from vulnerable examples, validate prime factors, compute private exponents, and decrypt challenge ciphertexts. These tools are especially useful for learning public-key cryptography, practicing CTF workflows, and analyzing intentionally weak RSA artifacts.
+
 
