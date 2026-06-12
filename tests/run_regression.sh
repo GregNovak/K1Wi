@@ -114,6 +114,13 @@ if [ -f "$LYZER_IMG" ]; then
     require_output "LYZER detects JPEG" "$OUT" "Detected format: JPEG"
     require_output "LYZER string intelligence" "$OUT" "String Intelligence"
     require_output "LYZER embedded signatures" "$OUT" "Embedded Signatures"
+
+    OUT=$($BIN lyzer "$LYZER_IMG" h 2>&1)
+    require_output "LYZER lowercase h mode works" "$OUT" "Entropy Heatmap"
+
+    OUT=$($BIN lyzer "$LYZER_IMG" all 2>&1)
+    require_output "LYZER lowercase all mode runs carver" "$OUT" "File Carver"
+    require_output "LYZER lowercase all mode runs strings" "$OUT" "String Intelligence"
 else
     skip "$LYZER_IMG not found"
 fi
