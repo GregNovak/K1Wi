@@ -1,6 +1,6 @@
 K1Wi Framework Roadmap
 
-v0.9 — K1Wi Release Candidate
+v1.0.0 — K1Wi Stable Release
 - stabilization
 - regression cleanup
 - command consistency
