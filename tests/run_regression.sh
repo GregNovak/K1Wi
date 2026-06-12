@@ -131,9 +131,20 @@ else
 fi
     
 echo
-echo "[TEST] ELF self-analysis"
+echo "[TEST] ELFINFO tiny ELF sample"
 
-OUT=$($BIN elfinfo ./bin/k1wi 2>&1)
+ELF_SAMPLE="/tmp/k1wi_regression_hello_elf"
+cat > /tmp/k1wi_regression_hello.c <<'EOF'
+#include <stdio.h>
+int main(void) {
+    puts("hello");
+    return 0;
+}
+EOF
+
+cc /tmp/k1wi_regression_hello.c -o "$ELF_SAMPLE"
+
+OUT=$($BIN elfinfo "$ELF_SAMPLE" 2>&1)
 set -euo pipefail
 
 require_output \
@@ -149,13 +160,13 @@ require_output \
 echo
 echo "[TEST] PIECALC symbol list"
 
-OUT=$($BIN PIECALC --bin ./bin/k1wi --list 2>&1)
+OUT=$($BIN PIECALC --bin "$ELF_SAMPLE" --list 2>&1)
 sed -n '1,40p' <<< "$OUT"
 
 require_output \
     "PIECALC lists symbols" \
     "$OUT" \
-    "find_func_offset"
+    "main"
 
 require_output \
     "PIECALC lists offsets" \

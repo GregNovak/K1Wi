@@ -350,9 +350,13 @@ static const double ENGLISH_FREQ_PCT[26] = {
 
 void center(const char *s) {
     struct winsize w;
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+    memset(&w, 0, sizeof(w));
 
-    int width = w.ws_col;
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) != 0 || w.ws_col == 0) {
+        w.ws_col = 80;
+    }
+
+    int width = (int)w.ws_col;
     int len = (int)strlen(s);
     int pad = (width - len) / 2;
     if (pad < 0) pad = 0;
@@ -453,8 +457,13 @@ static void print_grouped_min_rows_autofit(char **items, size_t count, size_t mi
 
     /* Get terminal width */
     struct winsize w;
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-    int term_width = (w.ws_col > 0 ? w.ws_col : 80);
+    memset(&w, 0, sizeof(w));
+
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) != 0 || w.ws_col == 0) {
+        w.ws_col = 80;
+    }
+
+    int term_width = (int)w.ws_col;
 
     /* First: compute theoretical max columns based on min_rows */
     size_t cols = (count + min_rows - 1) / min_rows;
@@ -1938,8 +1947,8 @@ else if (strcasecmp(cmd, "STRING") == 0) {
 
 		    opus_entropy_heatmap_render_color(&map);   /* NEW */
 		    opus_entropy_heatmap_print(&map);          /* existing table */
-		    opus_entropy_heatmap_free(&map);
 		    opus_entropy_heatmap_detect_anomalies(&map);
+		    opus_entropy_heatmap_free(&map);
 
 		}
 

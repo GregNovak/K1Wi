@@ -162,13 +162,13 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
 	const char *cmd = cmd_buf;
 
-    if (strcmp(cmd, "EXTRACT") == 0) {
+    if (strcasecmp(cmd, "EXTRACT") == 0) {
         return cmd_extract(cli, argc, argv);
 
-    } else if (strcmp(cmd, "STRING") == 0) {
+    } else if (strcasecmp(cmd, "STRING") == 0) {
         return cmd_string(argc - cli->arg_start + 1, argv + cli->arg_start - 1);
        
-        } else if (strcmp(cmd, "MD5") == 0) {
+        } else if (strcasecmp(cmd, "MD5") == 0) {
         if (cli->arg_start >= argc) {
             fprintf(stderr, "Usage: k1wi md5 <file>\n");
             fprintf(stderr, "       k1wi md5 -in <file>\n");
@@ -261,19 +261,19 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
         return 1;
         
     }
-    else if (strcmp(cmd, "SHA256") == 0) {
+    else if (strcasecmp(cmd, "SHA256") == 0) {
         return opus_cmd_sha256(argc - cli->arg_start + 1,
                                argv + cli->arg_start - 1); 
     }
-    else if (strcmp(cmd, "ENTROPY") == 0) {
+    else if (strcasecmp(cmd, "ENTROPY") == 0) {
         return cmd_entropy(cli, argc, argv);
 
-    } else if (strcmp(cmd, "ELFINFO") == 0) {
+    } else if (strcasecmp(cmd, "ELFINFO") == 0) {
         return cmd_binary(cli, argc, argv);
 
-    } else if (strcmp(cmd, "DESIG") == 0) {
+    } else if (strcasecmp(cmd, "DESIG") == 0) {
         return cmd_desig(cli, argc, argv);
-} else if (strcmp(cmd, "LYZER") == 0) {
+} else if (strcasecmp(cmd, "LYZER") == 0) {
     if (cli->arg_start >= argc) {
         fprintf(stderr, "ERROR: lyzer requires a file path\n");
         fprintf(stderr, "Usage: k1wi lyzer <file> [H|R|E|C|S|J|D|ALL]\n");
@@ -288,13 +288,13 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     }
 
     return opus_lyzer_file(path, mode);
-    } else if (strcmp(cmd, "WIPEFS") == 0) {
+    } else if (strcasecmp(cmd, "WIPEFS") == 0) {
         return cmd_wipefs(cli, argc, argv);
 
-    } else if (strcmp(cmd, "HELP") == 0) {
+    } else if (strcasecmp(cmd, "HELP") == 0) {
         return cmd_help(cli, argc, argv);
 
-   } else if (strcmp(cmd, "READ") == 0) {
+   } else if (strcasecmp(cmd, "READ") == 0) {
        if (cli->arg_start >= argc) {
         fprintf(stderr, "Usage: k1wi READ <file>\n");
         return 1;
@@ -315,21 +315,21 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
                           false,     /* verbose */
                           false);    /* summary */
 
-    } else if (strcmp(cmd, "VERSION") == 0 ||
-               strcmp(cmd, "--VERSION") == 0) {
+    } else if (strcasecmp(cmd, "VERSION") == 0 ||
+               strcasecmp(cmd, "--VERSION") == 0) {
         return cmd_version(cli, argc, argv);
 
-   } else if (strcmp(cmd, "SEARCH") == 0) {
+   } else if (strcasecmp(cmd, "SEARCH") == 0) {
     return cmd_search(argc -1, argv + 1);
    
-    } else if (strcmp(cmd, "PIECALC") == 0) {
+    } else if (strcasecmp(cmd, "PIECALC") == 0) {
         return cmd_piecalc(NULL, argc, argv);
 
-    } else if (strcmp(cmd, "PIETIME") == 0) {
+    } else if (strcasecmp(cmd, "PIETIME") == 0) {
 	return opus_pie_time_cli(argc - cli->arg_start,
 		argv + cli->arg_start);
     }
-    else if (strcmp(cmd, "MAGIC") == 0) {
+    else if (strcasecmp(cmd, "MAGIC") == 0) {
         if (cli->arg_start >= argc) {
             fprintf(stderr, "Usage: k1wi magic <file>\n");
             return 1;
@@ -340,7 +340,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
     
 	    
-	} else if (strcmp(cmd, "RSA-SMALL-E") == 0) {
+	} else if (strcasecmp(cmd, "RSA-SMALL-E") == 0) {
 	    if (cli->arg_start >= argc) {
 		fprintf(stderr, "Usage: k1wi RSA-SMALL-E <rsa_file>\n");
 		return 1;
@@ -378,7 +378,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 	    mpz_clears(N, e, c, m, NULL);
 	    return 1;
 
-	} else if (strcmp(cmd, "RSA-WIENER") == 0) {
+	} else if (strcasecmp(cmd, "RSA-WIENER") == 0) {
 	    if (cli->arg_start >= argc) {
 		fprintf(stderr, "Usage: k1wi RSA-WIENER <rsa_file>\n");
 		return 1;
@@ -414,7 +414,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     mpz_clears(N, e, c, d, m, NULL);
     return 0;
 	} 
-        else if (strcmp(cmd, "RSA-FACTOR") == 0) {
+        else if (strcasecmp(cmd, "RSA-FACTOR") == 0) {
           if (cli->arg_start >= argc) {
             fprintf(stderr, "Usage: k1wi rsa-factor <rsa_file>\n");
             return 1;
@@ -422,7 +422,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
         return opus_rsa_factor(argv[cli->arg_start]);
 
-   } else if (strcmp(cmd, "RSA-KNOWNPQ") == 0) {
+   } else if (strcasecmp(cmd, "RSA-KNOWNPQ") == 0) {
     if (cli->arg_start + 2 >= argc) {
         fprintf(stderr, "Usage: k1wi RSA-KNOWNPQ <rsa_file> <p> <q>\n");
         return 1;
@@ -442,7 +442,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     printf("rsa-knownpq: failed\n");
     return 1;
     
-    } else if (strcmp(cmd, "RSA-CHECKPQ") == 0) {
+    } else if (strcasecmp(cmd, "RSA-CHECKPQ") == 0) {
     if (cli->arg_start + 1 >= argc) {
         fprintf(stderr, "Usage: k1wi RSA-CHECKPQ <p> <q>\n");
         return 1;
@@ -452,7 +452,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
                             argv[cli->arg_start + 1]) ? 0 : 1;
     
     
-    } else if (strcmp(cmd, "RSA-DFROMPQ") == 0) {
+    } else if (strcasecmp(cmd, "RSA-DFROMPQ") == 0) {
 
     if (cli->arg_start + 2 >= argc) {
         fprintf(stderr,
@@ -466,7 +466,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     
     
     
-    } else if (strcmp(cmd, "RSA-ECM") == 0) {
+    } else if (strcasecmp(cmd, "RSA-ECM") == 0) {
     if (cli->arg_start >= argc) {
         fprintf(stderr, "Usage: k1wi RSA-ECM <rsa_file>\n");
         return 1;
@@ -499,7 +499,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     mpz_clears(N, e, c, f, q, NULL);
     return 0;
     
-    } else if (strcmp(cmd, "RSA-RHO") == 0) {
+    } else if (strcasecmp(cmd, "RSA-RHO") == 0) {
 
     if (cli->arg_start >= argc) {
         fprintf(stderr,
@@ -509,7 +509,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
     return opus_rsa_rho(argv[cli->arg_start]) ? 0 : 1;
     
-    } else if (strcmp(cmd, "RSA-MINI") == 0) {
+    } else if (strcasecmp(cmd, "RSA-MINI") == 0) {
     if (cli->arg_start >= argc) {
         fprintf(stderr, "Usage: k1wi RSA-MINI <rsa_file>\n");
         return 1;
@@ -517,7 +517,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
     return opus_mini_rsa(argv[cli->arg_start]) ? 0 : 1;
     
-    } else if (strcmp(cmd, "COPY") == 0) {
+    } else if (strcasecmp(cmd, "COPY") == 0) {
     if (cli->arg_start + 1 >= argc) {
         fprintf(stderr, "Usage: k1wi COPY <src> <dst>\n");
         return 1;
@@ -536,7 +536,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     printf("COPY: failed\n");
     return 1;
     
-    } else if (strcmp(cmd, "CREATE") == 0) {
+    } else if (strcasecmp(cmd, "CREATE") == 0) {
     if (cli->arg_start >= argc) {
         fprintf(stderr, "Usage: k1wi CREATE <filename>\n");
         return 1;
@@ -546,7 +546,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     
     
     
-    } else if (strcmp(cmd, "DEL") == 0) {
+    } else if (strcasecmp(cmd, "DEL") == 0) {
     if (cli->arg_start >= argc) {
         fprintf(stderr, "Usage: k1wi DEL <file> [-s 1|2] [-y]\n");
         return 1;
@@ -567,20 +567,20 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     
     }
     
-    else if (strcmp(cmd, "TIME") == 0) {
+    else if (strcasecmp(cmd, "TIME") == 0) {
         systemTime();
         return 0;
-	   } else if (strcmp(cmd, "SPLASH") == 0) {
+	   } else if (strcasecmp(cmd, "SPLASH") == 0) {
 	    opus_banner();
 	    return 0;
 		   	   
-	   } else if (strcmp(cmd, "ABOUT") == 0) {
+	   } else if (strcasecmp(cmd, "ABOUT") == 0) {
 	    return cmd_about(NULL, argc, argv);
 
-	  } else if (strcmp(cmd, "MENU") == 0) {
+	  } else if (strcasecmp(cmd, "MENU") == 0) {
 	    return cmd_menu(NULL, argc, argv);
 
-	} else if (strcmp(cmd, "EXIT") == 0) {
+	} else if (strcasecmp(cmd, "EXIT") == 0) {
 	    return cmd_exit(NULL, argc, argv);
 	}
 	
