@@ -97,8 +97,8 @@ Integrated workflows that assist with challenge analysis, artifact inspection, a
 
 Current Release:
 
-Version: 0.99 RC1
-Current Development Status: Release Candidate
+Version: 1.0.0
+Current Development Status: Stable
 
 K1Wi continues to evolve through additional analysis modules, expanded testing coverage, improved documentation, and user-driven enhancements.
 
@@ -292,7 +292,7 @@ After compilation completes, verify that k1wi starts correctly.
 Expected output:
 
 ```text
-K1Wi Framework v0.99 RC1
+K1Wi Framework v1.0.0
 Release Name: K1Wi
 Build Date: ...
 Build Time: ...
@@ -421,7 +421,7 @@ Display version information:
 Expected output:
 
 ```text
-K1Wi Framework v0.99 RC1
+K1Wi Framework v1.0.0
 Release Name: K1Wi
 Build Date: ...
 Build Time: ...
