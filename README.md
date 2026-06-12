@@ -173,7 +173,7 @@ Current Version: v1.0.0
 
 Release Status: Stable
 
-The project has completed clean-room build validation and currently passes all regression tests (69/69).
+The project has completed clean-room build validation and currently passes all regression tests (72/72).
 
 ## License
 
