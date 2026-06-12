@@ -2,7 +2,7 @@
 
 Codename: Opus
 
----------- K1Wi v0.99 RC-1 -----------
+---------- K1Wi v1.0.0 -----------
 
 */
 
@@ -309,7 +309,7 @@ void opus_banner(void) {
     printf("==================================================\n");
 
     printf("\n");
-    printf("Version: 0.99 RC1\n");
+    printf("Version: 1.0.0\n");
     printf("\n");
 }
 

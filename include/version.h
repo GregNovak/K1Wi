@@ -1,7 +1,7 @@
 #ifndef OPUS_VERSION_H
 #define OPUS_VERSION_H
 
-#define OPUS_VERSION      "0.99 RC1"
+#define OPUS_VERSION      "1.0.0"
 #define OPUS_RELEASE_NAME "K1Wi"
 #define OPUS_FRAMEWORK    "K1Wi Framework"
 
