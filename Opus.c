@@ -2930,27 +2930,27 @@ static void ctf_Analyzer_run(const char *path, const char *mode)
     }
 
     if (mode) {
-        if (strcmp(mode, "H") == 0 || strcmp(mode, "ALL") == 0) {
+        if (strcasecmp(mode, "H") == 0 || strcasecmp(mode, "ALL") == 0) {
             run_entropy_heatmap(filename);
         }
 
-        if (strcmp(mode, "R") == 0 || strcmp(mode, "ALL") == 0) {
+        if (strcasecmp(mode, "R") == 0 || strcasecmp(mode, "ALL") == 0) {
             run_rs_analysis(filename);
         }
 
-        if (strcmp(mode, "E") == 0 || strcmp(mode, "ALL") == 0) {
+        if (strcasecmp(mode, "E") == 0 || strcasecmp(mode, "ALL") == 0) {
             run_embedded_signature_scan(filename);
         }
 
-        if (strcmp(mode, "C") == 0 || strcmp(mode, "ALL") == 0) {
+        if (strcasecmp(mode, "C") == 0 || strcasecmp(mode, "ALL") == 0) {
             run_file_carver(filename);
         }
 
-        if (strcmp(mode, "S") == 0 || strcmp(mode, "ALL") == 0) {
+        if (strcasecmp(mode, "S") == 0 || strcasecmp(mode, "ALL") == 0) {
             run_string_file(filename);
         }
 
-        if (strcmp(mode, "J") == 0 || strcmp(mode, "ALL") == 0) {
+        if (strcasecmp(mode, "J") == 0 || strcasecmp(mode, "ALL") == 0) {
             if (is_jpeg) {
                 run_jpeg_huffman_fingerprint(filename);
             } else {
@@ -2959,7 +2959,7 @@ static void ctf_Analyzer_run(const char *path, const char *mode)
             }
         }
 
-        if (strcmp(mode, "D") == 0 || strcmp(mode, "ALL") == 0) {
+        if (strcasecmp(mode, "D") == 0 || strcasecmp(mode, "ALL") == 0) {
             if (is_jpeg) {
                 run_dct_analysis(filename);
             } else {
