@@ -121,6 +121,17 @@ if [ -f "$LYZER_IMG" ]; then
     OUT=$($BIN lyzer "$LYZER_IMG" all 2>&1)
     require_output "LYZER lowercase all mode runs carver" "$OUT" "File Carver"
     require_output "LYZER lowercase all mode runs strings" "$OUT" "String Intelligence"
+    
+    OUT=$($BIN lyzer "$LYZER_IMG" --full 2>&1)
+    require_output "LYZER --full alias runs carver" "$OUT" "File Carver"
+    require_output "LYZER --full alias runs strings" "$OUT" "String Intelligence"
+
+    OUT=$($BIN lyzer "$LYZER_IMG" --verbose 2>&1)
+    require_output "LYZER --verbose alias runs carver" "$OUT" "File Carver"
+    require_output "LYZER --verbose alias runs strings" "$OUT" "String Intelligence"
+
+    OUT=$($BIN lyzer "$LYZER_IMG" --summary 2>&1)
+    require_output "LYZER --summary alias works" "$OUT" "Entropy Heatmap"
 else
     skip "$LYZER_IMG not found"
 fi
