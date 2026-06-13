@@ -18,11 +18,23 @@
 * Public repository: `https://github.com/GregNovak/K1Wi`
 * Public release page: `https://github.com/GregNovak/K1Wi/releases/tag/v1.0.0`
 
+## Completed v1.1 Work
+
+* Added Linux `install.sh` and `uninstall.sh`.
+* Added README install and uninstall instructions.
+* Added LYZER `--summary`, `--full`, and `--verbose` modes.
+* Added real LYZER summary output.
+* Changed CLI `lyzer <file>` default behavior to summary mode.
+* Changed interactive shell `LYZER <file>` default behavior to summary mode.
+* Updated `HELP LYZER` for summary, full, and verbose modes.
+* Added regression tests for LYZER aliases and default summary behavior.
+* Current v1.1 regression status: PASS 80 / FAIL 0 / SKIP 0.
+
 ## v1.1 Goals
 
-* Improve LYZER output readability.
-* Reduce overly noisy default output.
-* Add cleaner short/summary modes for major commands.
+* Improve LYZER output readability. **Done for LYZER.**
+* Reduce overly noisy default output. **Done for LYZER.**
+* Add cleaner short/summary modes for major commands. **Done for LYZER.**
 * Add better command output modes for humans and scripts.
 * Begin TUI design.
 * Plan future GUI architecture.
@@ -30,10 +42,7 @@
 * Continue cautious sanitizer hardening.
 * Review old Opus internal names and gradually rename public-facing leftovers.
 * Improve README screenshots and usage examples.
-* Add Linux install/uninstall scripts for easier local installation.
-* Improve `make install` and `make uninstall`.
-* Consider release binaries and packaged installers later.
-* Keep the public release branch stable.
+* Add Linux install/uninstall scripts for easier local installation. **Done.**
 
 ## Track 1: Core Cleanup and Stability
 
@@ -68,16 +77,27 @@ Possible tasks:
 
 ## Track 2: LYZER Output Redesign
 
+
+Current v1.1 status:
+
+* `LYZER <file>` now defaults to summary mode in the interactive shell.
+* `k1wi lyzer <file>` now defaults to summary mode from the CLI.
+* `LYZER <file> --summary` runs the short report.
+* `LYZER <file> --full`, `LYZER <file> --verbose`, and `LYZER <file> ALL` run full analysis.
+* `HELP LYZER` documents the new behavior.
+* Regression coverage protects the new default and alias behavior.
+
+
 LYZER is powerful, but the output can be noisy. v1.1 should make LYZER easier to read without removing advanced detail.
 
 Possible modes:
 
 ```text
-LYZER <file> --summary
-LYZER <file> --full
-LYZER <file> --json
-LYZER <file> --save-report report.txt
-LYZER <file> --verbose
+LYZER <file> --summary 			Done
+LYZER <file> --full			Done
+LYZER <file> --json			Future
+LYZER <file> --save-report report.txt	Future
+LYZER <file> --verbose			Done
 ```
 
 Possible improvements:
@@ -345,6 +365,16 @@ For v1.1, focus on TUI and structured output first.
 
 ## Track 6: Installer / Packaging
 
+Current v1.1 status:
+
+* `install.sh` added.
+* `uninstall.sh` added.
+* README install/uninstall documentation added.
+* Installer installs `k1wi` to `/usr/local/bin/k1wi`.
+* Installer installs docs to `/usr/local/share/doc/k1wi`.
+* Uninstaller removes installed binary and docs without touching the source tree.
+
+
 Goal:
 
 * Make K1Wi easier to install and remove.
@@ -360,19 +390,19 @@ Windows install.exe = future goal unless Windows support becomes official
 
 Possible v1.1 installer work:
 
-* Add `install.sh`.
-* Add `uninstall.sh`.
+* Add `install.sh`.			**Done.**
+* Add `uninstall.sh`.			**Done.**
 * Improve `make install`.
 * Improve `make uninstall`.
-* Install the binary as `/usr/local/bin/k1wi`.
-* Install docs to `/usr/local/share/doc/k1wi`.
-* Add clear install instructions to README.
-* Add uninstall instructions to README.
+* Install the binary as `/usr/local/bin/k1wi`.	**Done.**
+* Install docs to `/usr/local/share/doc/k1wi`.	**Done.**
+* Add clear install instructions to README.	**Done.**
+* Add uninstall instructions to README.		**Done.**
 * Add regression test to confirm `k1wi version` works after install.
 * Make installer check for missing dependencies.
-* Make installer fail safely if build fails.
-* Make installer avoid deleting user files.
-* Make installer print the installed version.
+* Make installer fail safely if build fails.	**Done.**
+* Make installer avoid deleting user files.	**Done.**
+* Make installer print the installed version.	**Done.**
 
 Possible install command:
 
@@ -444,19 +474,17 @@ Uninstall:
   ./uninstall.sh
 ```
 
-## First v1.1 Work Candidates
+## Remaining v1.1 Work Candidates
 
-Suggested order:
+Suggested order from current state:
 
-1. Confirm branch state.
-2. Make sure `v1.1-dev` includes latest `main`.
-3. Update this planning file.
-4. Commit this planning file on `v1.1-dev`.
-5. Run baseline regression on `v1.1-dev`.
-6. Inspect current LYZER output.
-7. Decide first small v1.1 code patch.
-8. Consider install/uninstall script design.
-9. Add tests after each meaningful change.
+1. Update this TODO file to reflect completed installer and LYZER work.
+2. Update stale menu descriptions for LYZER.
+3. Review README for v1.1 feature notes.
+4. Begin TUI design skeleton.
+5. Add or improve edge-case regression tests.
+6. Continue sanitizer hardening carefully.
+7. Run final full regression before any v1.1 release candidate.
 
 Suggested startup commands:
 
@@ -535,6 +563,17 @@ Adding GUI before output modes are ready
 
 ## Current Emotional Milestone
 
+Current v1.1 progress:
+
+```text
+Installer scripts: complete
+LYZER summary mode: complete
+LYZER default output cleanup: complete
+HELP LYZER docs: complete
+Regression: 80/80 passing
+Working tree: clean after latest checkpoint
+```
+
 K1Wi v1.0.0 is launched.
 
 Final v1.0.0 state:
@@ -550,5 +589,8 @@ Regression: 72/72 passing
 Working tree: clean
 ```
 
-K1Wi v1.1 begins with stability, polish, cleaner output, better installation, and early TUI planning.
+## Bottom line
 
+Installer work is done. LYZER summary/default behavior is done. Regression is now 80 passing, not 72. Remaining big task is TUI design/polish.
+
+K1Wi v1.1 continues with stability, polish, cleaner output, better installation, and early TUI planning.
