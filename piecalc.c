@@ -567,9 +567,18 @@ int piecalc_list_symbols(const char *path, int json_mode)
         }
 
         Elf64_Shdr symsec = shdrs[i];
+
+        if (symsec.sh_link >= eh.e_shnum) {
+            continue;
+        }
+
         Elf64_Shdr strsec = shdrs[symsec.sh_link];
 
-        char *strtab = malloc(strsec.sh_size);
+        if (strsec.sh_size == 0 || strsec.sh_size > ((size_t)-1) - 1) {
+            continue;
+        }
+
+        char *strtab = calloc((size_t)strsec.sh_size + 1, 1);
 
         if (!strtab) {
             continue;
@@ -618,9 +627,13 @@ int piecalc_list_symbols(const char *path, int json_mode)
                 continue;
             }
 
+            if (s.st_name >= strsec.sh_size) {
+                continue;
+            }
+
             const char *name = strtab + s.st_name;
 
-            if (!name || name[0] == '\0') {
+            if (name[0] == '\0') {
                 continue;
             }
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.0.0 - K1Wi Framework
+
+- Promoted K1Wi from release candidate to stable v1.0.0.
+- Added lowercase LYZER mode support and regression coverage.
+- Hardened CLI dispatch, terminal-width handling, PIECALC symbol listing, and regression test targets.
+- Confirmed normal regression suite passes 72/72 tests.
+
 ## v0.99 RC1 - K1Wi
 
 ### Added

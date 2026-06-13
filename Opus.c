@@ -2,7 +2,7 @@
 
 Codename: Opus
 
----------- K1Wi v0.99 RC-1 -----------
+---------- K1Wi v1.0.0 -----------
 
 */
 
@@ -309,7 +309,7 @@ void opus_banner(void) {
     printf("==================================================\n");
 
     printf("\n");
-    printf("Version: 0.99 RC1\n");
+    printf("Version: 1.0.0\n");
     printf("\n");
 }
 
@@ -350,9 +350,13 @@ static const double ENGLISH_FREQ_PCT[26] = {
 
 void center(const char *s) {
     struct winsize w;
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+    memset(&w, 0, sizeof(w));
 
-    int width = w.ws_col;
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) != 0 || w.ws_col == 0) {
+        w.ws_col = 80;
+    }
+
+    int width = (int)w.ws_col;
     int len = (int)strlen(s);
     int pad = (width - len) / 2;
     if (pad < 0) pad = 0;
@@ -453,8 +457,13 @@ static void print_grouped_min_rows_autofit(char **items, size_t count, size_t mi
 
     /* Get terminal width */
     struct winsize w;
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-    int term_width = (w.ws_col > 0 ? w.ws_col : 80);
+    memset(&w, 0, sizeof(w));
+
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) != 0 || w.ws_col == 0) {
+        w.ws_col = 80;
+    }
+
+    int term_width = (int)w.ws_col;
 
     /* First: compute theoretical max columns based on min_rows */
     size_t cols = (count + min_rows - 1) / min_rows;
@@ -1938,8 +1947,8 @@ else if (strcasecmp(cmd, "STRING") == 0) {
 
 		    opus_entropy_heatmap_render_color(&map);   /* NEW */
 		    opus_entropy_heatmap_print(&map);          /* existing table */
-		    opus_entropy_heatmap_free(&map);
 		    opus_entropy_heatmap_detect_anomalies(&map);
+		    opus_entropy_heatmap_free(&map);
 
 		}
 
@@ -2921,27 +2930,27 @@ static void ctf_Analyzer_run(const char *path, const char *mode)
     }
 
     if (mode) {
-        if (strcmp(mode, "H") == 0 || strcmp(mode, "ALL") == 0) {
+        if (strcasecmp(mode, "H") == 0 || strcasecmp(mode, "ALL") == 0) {
             run_entropy_heatmap(filename);
         }
 
-        if (strcmp(mode, "R") == 0 || strcmp(mode, "ALL") == 0) {
+        if (strcasecmp(mode, "R") == 0 || strcasecmp(mode, "ALL") == 0) {
             run_rs_analysis(filename);
         }
 
-        if (strcmp(mode, "E") == 0 || strcmp(mode, "ALL") == 0) {
+        if (strcasecmp(mode, "E") == 0 || strcasecmp(mode, "ALL") == 0) {
             run_embedded_signature_scan(filename);
         }
 
-        if (strcmp(mode, "C") == 0 || strcmp(mode, "ALL") == 0) {
+        if (strcasecmp(mode, "C") == 0 || strcasecmp(mode, "ALL") == 0) {
             run_file_carver(filename);
         }
 
-        if (strcmp(mode, "S") == 0 || strcmp(mode, "ALL") == 0) {
+        if (strcasecmp(mode, "S") == 0 || strcasecmp(mode, "ALL") == 0) {
             run_string_file(filename);
         }
 
-        if (strcmp(mode, "J") == 0 || strcmp(mode, "ALL") == 0) {
+        if (strcasecmp(mode, "J") == 0 || strcasecmp(mode, "ALL") == 0) {
             if (is_jpeg) {
                 run_jpeg_huffman_fingerprint(filename);
             } else {
@@ -2950,7 +2959,7 @@ static void ctf_Analyzer_run(const char *path, const char *mode)
             }
         }
 
-        if (strcmp(mode, "D") == 0 || strcmp(mode, "ALL") == 0) {
+        if (strcasecmp(mode, "D") == 0 || strcasecmp(mode, "ALL") == 0) {
             if (is_jpeg) {
                 run_dct_analysis(filename);
             } else {

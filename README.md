@@ -169,11 +169,11 @@ Always test destructive operations inside disposable directories before use on p
 
 ## Status
 
-Current Version: v0.99 RC1
+Current Version: v1.0.0
 
-Release Status: Release Candidate
+Release Status: Stable
 
-The project has completed clean-room build validation and currently passes all regression tests (69/69).
+The project has completed clean-room build validation and currently passes all regression tests (72/72).
 
 ## License
 

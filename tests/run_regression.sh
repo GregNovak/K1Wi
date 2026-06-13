@@ -114,6 +114,13 @@ if [ -f "$LYZER_IMG" ]; then
     require_output "LYZER detects JPEG" "$OUT" "Detected format: JPEG"
     require_output "LYZER string intelligence" "$OUT" "String Intelligence"
     require_output "LYZER embedded signatures" "$OUT" "Embedded Signatures"
+
+    OUT=$($BIN lyzer "$LYZER_IMG" h 2>&1)
+    require_output "LYZER lowercase h mode works" "$OUT" "Entropy Heatmap"
+
+    OUT=$($BIN lyzer "$LYZER_IMG" all 2>&1)
+    require_output "LYZER lowercase all mode runs carver" "$OUT" "File Carver"
+    require_output "LYZER lowercase all mode runs strings" "$OUT" "String Intelligence"
 else
     skip "$LYZER_IMG not found"
 fi
@@ -131,9 +138,20 @@ else
 fi
     
 echo
-echo "[TEST] ELF self-analysis"
+echo "[TEST] ELFINFO tiny ELF sample"
 
-OUT=$($BIN elfinfo ./bin/k1wi 2>&1)
+ELF_SAMPLE="/tmp/k1wi_regression_hello_elf"
+cat > /tmp/k1wi_regression_hello.c <<'EOF'
+#include <stdio.h>
+int main(void) {
+    puts("hello");
+    return 0;
+}
+EOF
+
+cc /tmp/k1wi_regression_hello.c -o "$ELF_SAMPLE"
+
+OUT=$($BIN elfinfo "$ELF_SAMPLE" 2>&1)
 set -euo pipefail
 
 require_output \
@@ -149,13 +167,13 @@ require_output \
 echo
 echo "[TEST] PIECALC symbol list"
 
-OUT=$($BIN PIECALC --bin ./bin/k1wi --list 2>&1)
+OUT=$($BIN PIECALC --bin "$ELF_SAMPLE" --list 2>&1)
 sed -n '1,40p' <<< "$OUT"
 
 require_output \
     "PIECALC lists symbols" \
     "$OUT" \
-    "find_func_offset"
+    "main"
 
 require_output \
     "PIECALC lists offsets" \
@@ -536,7 +554,7 @@ OUT=$($BIN --version 2>&1)
 echo "$OUT"
 
 require_output "VERSION reports K1Wi" "$OUT" "K1Wi Framework"
-require_output "VERSION reports v0.99 RC1" "$OUT" "v0.99 RC1"
+require_output "VERSION reports v1.0.0" "$OUT" "v1.0.0"
 require_output "VERSION reports K1Wi release" "$OUT" "Release Name: K1Wi"
 
 echo
