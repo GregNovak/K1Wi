@@ -11,7 +11,7 @@ int cmd_lyzer(opus_context *ctx, int argc, char **argv)
     (void)ctx;
 
     if (argc < 2) {
-        fprintf(stderr, "Usage: LYZER <file> [H|R|E|C|S|J|D|ALL]\n");
+        fprintf(stderr, "Usage: LYZER <file> [H|R|E|C|S|J|D|ALL|--summary|--full|--verbose]\n");
         return 1;
     }
 
