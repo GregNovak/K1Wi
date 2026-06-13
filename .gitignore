@@ -90,3 +90,10 @@ testdata/testlogs/
 *.odp
 ~$*
 *.bak
+
+# Local office/manual working files
+*.odt
+*.ods
+*.odp
+~$*
+*.bak
