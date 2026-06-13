@@ -107,13 +107,16 @@ echo
 echo "[TEST] LYZER sample image/file if available"
 
 LYZER_IMG="testdata/lyzer/embedded_zip.jpg"
-
 if [ -f "$LYZER_IMG" ]; then
     OUT=$($BIN lyzer "$LYZER_IMG" ALL 2>&1)
     echo "$OUT"
     require_output "LYZER detects JPEG" "$OUT" "Detected format: JPEG"
     require_output "LYZER string intelligence" "$OUT" "String Intelligence"
     require_output "LYZER embedded signatures" "$OUT" "Embedded Signatures"
+
+    OUT=$($BIN lyzer "$LYZER_IMG" 2>&1)
+    require_output "LYZER default mode is summary" "$OUT" "K1Wi LYZER Summary"
+    require_output "LYZER default summary reports next steps" "$OUT" "Next steps"
 
     OUT=$($BIN lyzer "$LYZER_IMG" h 2>&1)
     require_output "LYZER lowercase h mode works" "$OUT" "Entropy Heatmap"
@@ -136,7 +139,7 @@ if [ -f "$LYZER_IMG" ]; then
     
 else
     skip "$LYZER_IMG not found"
-fi
+fi   
 
 echo
 echo "[TEST] ENTROPY sample image"

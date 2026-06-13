@@ -281,7 +281,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     }
 
    	const char *path = argv[cli->arg_start];
-	const char *mode = "ALL";
+	const char *mode = "SUMMARY";
 
 	if (cli->arg_start + 1 < argc) {
 	    mode = argv[cli->arg_start + 1];

@@ -3008,7 +3008,7 @@ void ctf_Analyzer(const char *mode)
 
 int opus_lyzer_file(const char *path, const char *mode)
 {
-    ctf_Analyzer_run(path, mode ? mode : "ALL");
+    ctf_Analyzer_run(path, mode ? mode : "SUMMARY");
     return 0;
 }
 
