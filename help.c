@@ -459,33 +459,7 @@ static const char *help_rsa_dfrompq_lines[] = {
     "  RSA-DFROMPQ 61 53 17",
     NULL
 };
-static const char *help_lyzer_lines[] = {
-    "LYZER - Image Forensics and Steganography Analyzer",
-    "",
-    "Usage:",
-    "  LYZER <file>",
-    "  LYZER <file> ALL",
-    "  LYZER <file> --full",
-    "  LYZER <file> --verbose",
-    "  LYZER <file> --summary",
-    "",
-    "Description:",
-    "  Performs image forensics analysis including entropy,",
-    "  embedded signature detection, stego heuristics,",
-    "  string intelligence, and file carving.",
-    "",
-    "Modes:",
-    "  ALL        Run full analysis.",
-    "  --full     Alias for ALL.",
-    "  --verbose  Alias for ALL.",
-    "  --summary  Run a shorter lightweight analysis mode.",
-    "",
-    "Examples:",
-    "  LYZER image.jpg",
-    "  LYZER image.jpg ALL",
-    "  LYZER image.jpg --full",
-    "  LYZER image.jpg --summary",
-};
+
 static const char *help_rsa_mini_lines[] = {
     "RSA-MINI - Mini RSA Solver",
     "",
