@@ -76,3 +76,10 @@ testdata/testlogs/
 /vuln
 /ziptest/
 /ciphertext3
+
+# Local office/manual working files
+*.odt
+*.ods
+*.odp
+~$*
+*.bak
