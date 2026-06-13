@@ -99,7 +99,42 @@ Run:
 ./bin/k1wi
 ```
 
+## Install on Linux
+
+K1Wi can be built and installed locally on Linux with:
+
+```bash
+./install.sh
+```
+
+This builds the project, installs the `k1wi` binary to:
+
+```text
+/usr/local/bin/k1wi
+```
+
+and installs documentation to:
+
+```text
+/usr/local/share/doc/k1wi
+```
+
+After installation, run K1Wi from anywhere with:
+
+```bash
+k1wi
+```
+
+To uninstall:
+
+```bash
+./uninstall.sh
+```
+
+The uninstall script removes the installed binary and documentation only. It does not remove the source tree or user-created files.
+
 ## Quick Start
+
 
 View available commands:
 
