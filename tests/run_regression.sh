@@ -131,7 +131,9 @@ if [ -f "$LYZER_IMG" ]; then
     require_output "LYZER --verbose alias runs strings" "$OUT" "String Intelligence"
 
     OUT=$($BIN lyzer "$LYZER_IMG" --summary 2>&1)
-    require_output "LYZER --summary alias works" "$OUT" "Entropy Heatmap"
+    require_output "LYZER --summary alias works" "$OUT" "K1Wi LYZER Summary"
+    require_output "LYZER --summary reports next steps" "$OUT" "Next steps"
+    
 else
     skip "$LYZER_IMG not found"
 fi

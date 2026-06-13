@@ -293,7 +293,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 		mode = "ALL";
 	    } else if (strcasecmp(mode, "--summary") == 0 ||
 		       strcasecmp(mode, "summary") == 0) {
-		mode = "H";
+		mode = "SUMMARY";
 	    }
 	 }
 

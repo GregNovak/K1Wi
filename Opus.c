@@ -2908,14 +2908,44 @@ static void ctf_Analyzer_run(const char *path, const char *mode)
 
     bool is_jpeg = false;
 
-	FILE *fp = fopen(filename, "rb");
-	if (fp) {
-	    unsigned char magic[2] = {0};
-	    if (fread(magic, 1, 2, fp) == 2) {
-		is_jpeg = (magic[0] == 0xFF && magic[1] == 0xD8);
-	    }
-	    fclose(fp);
-	}
+    FILE *fp = fopen(filename, "rb");
+    if (fp) {
+        unsigned char magic[2] = {0};
+        if (fread(magic, 1, 2, fp) == 2) {
+            is_jpeg = (magic[0] == 0xFF && magic[1] == 0xD8);
+        }
+        fclose(fp);
+    }
+
+    if (mode && strcasecmp(mode, "SUMMARY") == 0) {
+        printf("\nK1Wi LYZER Summary\n");
+        printf("------------------\n");
+        printf("File: %s\n", filename);
+
+        detect_magic(filename);
+
+        struct stego_report rep;
+        if (opus_stego_analyze_file(filename, &rep) == 0) {
+            printf("\nStego Summary\n");
+            printf("-------------\n");
+            printf("Bytes analyzed:   %zu\n", rep.bytes_analyzed);
+            printf("Entropy:          %.4f bits/byte\n", rep.entropy);
+            printf("Chi-square:       %.4f\n", rep.chi_square);
+
+            if (rep.entropy >= 7.5) {
+                printf("Assessment:       HIGH entropy; review with --full\n");
+            } else if (rep.entropy >= 6.5) {
+                printf("Assessment:       MEDIUM entropy; review if unexpected\n");
+            } else {
+                printf("Assessment:       LOW entropy\n");
+            }
+        }
+
+        printf("\nNext steps:\n");
+        printf("  Run LYZER %s --full for complete analysis.\n", filename);
+        printf("  Run LYZER %s --verbose for detailed analysis.\n", filename);
+        return;
+    }
 
     putchar('\n');
     systemTime();
