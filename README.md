@@ -177,6 +177,8 @@ The project has completed clean-room build validation and currently passes all r
 
 ## License
 
+K1Wi Framework is released under the MIT License. See `LICENSE` for license terms and `DISCLAIMER.md` for responsible-use and liability information.
+
 K1Wi is released under the MIT License.
 
 Copyright (c) 2026 Gregory B. Novak
