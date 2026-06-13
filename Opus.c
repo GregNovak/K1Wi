@@ -1538,7 +1538,7 @@ int opus_repl(void)
 
 else if (strcmp(cmd, "LYZER") == 0) {
     const char *path = NULL;
-    const char *mode = "ALL";
+    const char *mode = "SUMMARY";
 
     if (argc >= 2) {
         path = argv[1];

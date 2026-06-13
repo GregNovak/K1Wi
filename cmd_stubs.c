@@ -16,7 +16,7 @@ int cmd_lyzer(opus_context *ctx, int argc, char **argv)
     }
 
     const char *path = argv[1];
-    const char *mode = "ALL";
+    const char *mode = "SUMMARY";
 
     if (argc >= 3) {
         mode = argv[2];
