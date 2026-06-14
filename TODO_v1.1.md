@@ -48,15 +48,21 @@
 * Updated `HELP LYZER` for summary, full, and verbose modes.
 * Added regression tests for LYZER aliases and default summary behavior.
 * Current v1.1 regression status: PASS 80 / FAIL 0 / SKIP 0.
+* Updated main menu LYZER description.
+* Removed stray manual/demo artifacts from `v1.1-dev`.
+* Updated README status for `v1.1.0-rc1`.
+* Updated binary version to `v1.1.0-rc1`.
+* Added interactive shell `ABOUT` support.
+* Published `v1.1.0-rc1` GitHub pre-release.
 
 ## v1.1 Goals
 
 * Improve LYZER output readability. **Done for LYZER.**
 * Reduce overly noisy default output. **Done for LYZER.**
 * Add cleaner short/summary modes for major commands. **Done for LYZER.**
-* Add better command output modes for humans and scripts.
-* Begin TUI design.
-* Plan future GUI architecture.
+* Add better command output modes for humans and scripts. **Deferred to v1.2.**
+* Begin TUI design. **Deferred to v1.2.**
+* Plan future GUI architecture. **Deferred to v1.2 or later.**
 * Add more regression tests for edge cases.
 * Continue cautious sanitizer hardening.
 * Review old Opus internal names and gradually rename public-facing leftovers.
@@ -497,13 +503,12 @@ Uninstall:
 
 Suggested order from current state:
 
-1. Update this TODO file to reflect completed installer and LYZER work.
-2. Update stale menu descriptions for LYZER.
-3. Review README for v1.1 feature notes.
-4. Begin TUI design skeleton.
-5. Add or improve edge-case regression tests.
-6. Continue sanitizer hardening carefully.
-7. Run final full regression before any v1.1 release candidate.
+1. Keep v1.1 changes small and release-focused.
+2. Perform final README/help/menu audit.
+3. Run clean build and full regression before final v1.1.0.
+4. Fresh-clone or source-ZIP test final v1.1.0 before tagging.
+5. Merge `v1.1-dev` into `main` only when ready for final release.
+6. Tag final `v1.1.0` from `main`.
 
 Suggested startup commands:
 
