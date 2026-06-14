@@ -570,7 +570,7 @@ OUT=$($BIN --version 2>&1)
 echo "$OUT"
 
 require_output "VERSION reports K1Wi" "$OUT" "K1Wi Framework"
-require_output "VERSION reports v1.0.0" "$OUT" "v1.0.0"
+require_output "VERSION reports v1.1.0-rc1" "$OUT" "v1.1.0-rc1"
 require_output "VERSION reports K1Wi release" "$OUT" "Release Name: K1Wi"
 
 echo

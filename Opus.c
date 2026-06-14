@@ -309,7 +309,7 @@ void opus_banner(void) {
     printf("==================================================\n");
 
     printf("\n");
-    printf("Version: 1.0.0\n");
+    printf("Version: 1.1.0-rc1\n");
     printf("\n");
 }
 
@@ -1462,7 +1462,7 @@ int opus_repl(void)
         else if (strcmp(cmd, "SPLASH") == 0) {
             opus_banner();
         }
-	else if (strcmp(cmd, "VERSION") == 0) {
+	else if (strcmp(cmd, "VERSION") == 0 || strcmp(cmd, "ABOUT") == 0) {
         cmd_version(NULL, argc, argv);
         continue;
 	}
