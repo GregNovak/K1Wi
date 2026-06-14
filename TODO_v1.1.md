@@ -18,6 +18,25 @@
 * Public repository: `https://github.com/GregNovak/K1Wi`
 * Public release page: `https://github.com/GregNovak/K1Wi/releases/tag/v1.0.0`
 
+## Current v1.1 Release Candidate
+
+* Current RC tag: `v1.1.0-rc1`
+* RC branch: `v1.1-dev`
+* RC commit: `b3cee9d Prepare v1.1.0-rc1 version`
+* RC regression status: PASS 80 / FAIL 0 / SKIP 0
+* GitHub pre-release: published
+* Final v1.1.0 is not tagged yet.
+* Final v1.1.0 should be tagged from `main` only after merge, clean build, and full regression pass.
+
+## Deferred to v1.2 or Later
+
+* LYZER `--json`
+* LYZER `--quiet`
+* LYZER `--save-report`
+* Full TUI dashboard
+* GUI wrapper
+* Windows installer
+
 ## Completed v1.1 Work
 
 * Added Linux `install.sh` and `uninstall.sh`.
@@ -591,6 +610,6 @@ Working tree: clean
 
 ## Bottom line
 
-Installer work is done. LYZER summary/default behavior is done. Regression is now 80 passing, not 72. Remaining big task is TUI design/polish.
+Installer work is done. LYZER summary/default behavior is done. Regression is now 80 passing, not 72. v1.1.0-rc1 is published. Remaining larger work such as JSON output, quiet mode, full TUI, and GUI planning should move to v1.2 or later unless needed before final v1.1.0.
 
 K1Wi v1.1 continues with stability, polish, cleaner output, better installation, and early TUI planning.
