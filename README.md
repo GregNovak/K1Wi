@@ -161,10 +161,16 @@ Inspect an ELF binary:
 ./bin/k1wi ELFINFO -IN ./bin/k1wi
 ```
 
-Run image forensics:
+Run image forensics with the default summary view:
 
 ```bash
-./bin/k1wi LYZER image.jpg ALL
+./bin/k1wi LYZER image.jpg
+```
+
+Run full image forensics:
+
+```bash
+./bin/k1wi LYZER image.jpg --full
 ```
 
 ## Testing
@@ -175,13 +181,15 @@ Run the regression suite:
 ./tests/run_regression.sh
 ```
 
-Current regression status:
+Current v1.1 development regression status:
 
 ```text
-PASS: 69
+PASS: 80
 FAIL: 0
 SKIP: 0
 ```
+
+
 Validated using a clean-room build and full regression suite execution.
 
 ## Safety
@@ -208,7 +216,7 @@ Current Version: v1.0.0
 
 Release Status: Stable
 
-The project has completed clean-room build validation and currently passes all regression tests (72/72).
+The v1.0.0 public release passed regression testing with PASS 72 / FAIL 0 / SKIP 0. The active v1.1 development branch currently passes PASS 80 / FAIL 0 / SKIP 0.
 
 ## License
 
