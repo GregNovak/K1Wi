@@ -137,6 +137,15 @@ if [ -f "$LYZER_IMG" ]; then
     require_output "LYZER --summary alias works" "$OUT" "K1Wi LYZER Summary"
     require_output "LYZER --summary reports next steps" "$OUT" "Next steps"
     
+    OUT=$(printf "LYZER %s --summary\nEXIT\n" "$LYZER_IMG" | $BIN 2>&1)
+    require_output "LYZER shell --summary alias works" "$OUT" "K1Wi LYZER Summary"
+    require_output "LYZER shell --summary reports next steps" "$OUT" "Next steps"
+
+    OUT=$(printf "LYZER %s --full\nEXIT\n" "$LYZER_IMG" | $BIN 2>&1)
+    require_output "LYZER shell --full alias runs carver" "$OUT" "File Carver"
+    require_output "LYZER shell --full alias runs strings" "$OUT" "String Intelligence"
+    
+    
 else
     skip "$LYZER_IMG not found"
 fi   

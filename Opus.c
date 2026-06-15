@@ -1546,6 +1546,16 @@ else if (strcmp(cmd, "LYZER") == 0) {
 
     if (argc >= 3) {
         mode = argv[2];
+
+        if (strcasecmp(mode, "--full") == 0 ||
+            strcasecmp(mode, "full") == 0 ||
+            strcasecmp(mode, "--verbose") == 0 ||
+            strcasecmp(mode, "verbose") == 0) {
+            mode = "ALL";
+        } else if (strcasecmp(mode, "--summary") == 0 ||
+                   strcasecmp(mode, "summary") == 0) {
+            mode = "SUMMARY";
+        }
     }
 
     if (!path) {
