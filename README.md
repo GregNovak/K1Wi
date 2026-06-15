@@ -212,11 +212,11 @@ Always test destructive operations inside disposable directories before use on p
 
 ## Status
 
-Current Development Version: v1.1.0-rc1
+Current Version: v1.1.0
 
 The v1.0.0 public release passed regression testing with PASS 72 / FAIL 0 / SKIP 0.
-The v1.1.0-rc1 release candidate passed regression testing with PASS 80 / FAIL 0 / SKIP 0.
-The stable public release remains v1.0.0 until v1.1.0 is finalized.
+The v1.1.0 stable release passed regression testing with PASS 84 / FAIL 0 / SKIP 0.
+The stable public release is now v1.1.0.
 
 ## License
 
