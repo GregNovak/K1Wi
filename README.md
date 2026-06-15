@@ -170,6 +170,7 @@ Run image forensics with the default summary view:
 Run full image forensics:
 
 ```bash
+./bin/k1wi LYZER image.jpg --quiet
 ./bin/k1wi LYZER image.jpg --full
 ```
 
@@ -215,7 +216,7 @@ Always test destructive operations inside disposable directories before use on p
 Current Version: v1.1.0
 
 The v1.0.0 public release passed regression testing with PASS 72 / FAIL 0 / SKIP 0.
-The v1.1.0 stable release passed regression testing with PASS 84 / FAIL 0 / SKIP 0.
+The v1.1.0 stable release passed regression testing with PASS 92 / FAIL 0 / SKIP 0.
 The stable public release is now v1.1.0.
 
 ## License
