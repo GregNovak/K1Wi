@@ -276,7 +276,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 } else if (strcasecmp(cmd, "LYZER") == 0) {
     if (cli->arg_start >= argc) {
         fprintf(stderr, "ERROR: lyzer requires a file path\n");
-        fprintf(stderr, "Usage: k1wi lyzer <file> [H|R|E|C|S|J|D|ALL|--summary|--full|--verbose]\n");
+        fprintf(stderr, "Usage: k1wi lyzer <file> [H|R|E|C|S|J|D|ALL|--summary|--quiet|--full|--verbose]\n");
         return 1;
     }
 
@@ -294,7 +294,10 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 	    } else if (strcasecmp(mode, "--summary") == 0 ||
 		       strcasecmp(mode, "summary") == 0) {
 		mode = "SUMMARY";
-	    }
+	    } else if (strcasecmp(mode, "--quiet") == 0 ||
+               strcasecmp(mode, "quiet") == 0) {
+        mode = "QUIET";
+    }
 	 }
 
 	return opus_lyzer_file(path, mode);

@@ -1555,6 +1555,9 @@ else if (strcmp(cmd, "LYZER") == 0) {
         } else if (strcasecmp(mode, "--summary") == 0 ||
                    strcasecmp(mode, "summary") == 0) {
             mode = "SUMMARY";
+        } else if (strcasecmp(mode, "--quiet") == 0 ||
+                   strcasecmp(mode, "quiet") == 0) {
+            mode = "QUIET";
         }
     }
 
@@ -2925,6 +2928,31 @@ static void ctf_Analyzer_run(const char *path, const char *mode)
             is_jpeg = (magic[0] == 0xFF && magic[1] == 0xD8);
         }
         fclose(fp);
+    }
+
+    if (mode && strcasecmp(mode, "QUIET") == 0) {
+        printf("\nK1Wi LYZER Quiet\n");
+        printf("----------------\n");
+        printf("File: %s\n", filename);
+
+        detect_magic(filename);
+
+        struct stego_report rep;
+        if (opus_stego_analyze_file(filename, &rep) == 0) {
+            printf("Entropy:    %.4f bits/byte\n", rep.entropy);
+            printf("Chi-square: %.4f\n", rep.chi_square);
+
+            if (rep.entropy >= 7.5) {
+                printf("Assessment: HIGH entropy; review with --full\n");
+            } else if (rep.entropy >= 6.5) {
+                printf("Assessment: MEDIUM entropy; review if unexpected\n");
+            } else {
+                printf("Assessment: LOW entropy\n");
+            }
+        }
+
+        printf("Next step:  Run LYZER %s --full for complete analysis.\n", filename);
+        return;
     }
 
     if (mode && strcasecmp(mode, "SUMMARY") == 0) {

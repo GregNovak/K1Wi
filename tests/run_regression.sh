@@ -25,6 +25,20 @@ fail() {
     exit 1
 }
 
+
+require_not_output() {
+    local name="$1"
+    local output="$2"
+    local needle="$3"
+
+    if printf "%s" "$output" | grep -Fq "$needle"; then
+        fail "$name"
+        echo "Did not expect to find: $needle"
+    else
+        pass "$name"
+    fi
+}
+
 skip() {
     SKIP_COUNT=$((SKIP_COUNT + 1))
     echo "[SKIP] $1"
@@ -136,10 +150,22 @@ if [ -f "$LYZER_IMG" ]; then
     OUT=$($BIN lyzer "$LYZER_IMG" --summary 2>&1)
     require_output "LYZER --summary alias works" "$OUT" "K1Wi LYZER Summary"
     require_output "LYZER --summary reports next steps" "$OUT" "Next steps"
+
+    OUT=$($BIN lyzer "$LYZER_IMG" --quiet 2>&1)
+    require_output "LYZER --quiet alias works" "$OUT" "K1Wi LYZER Quiet"
+    require_output "LYZER --quiet reports assessment" "$OUT" "Assessment"
+    require_not_output "LYZER --quiet hides heatmap" "$OUT" "Entropy Heatmap"
+    require_not_output "LYZER --quiet hides carver" "$OUT" "File Carver"
     
     OUT=$(printf "LYZER %s --summary\nEXIT\n" "$LYZER_IMG" | $BIN 2>&1)
     require_output "LYZER shell --summary alias works" "$OUT" "K1Wi LYZER Summary"
     require_output "LYZER shell --summary reports next steps" "$OUT" "Next steps"
+
+    OUT=$(printf "LYZER %s --quiet\nEXIT\n" "$LYZER_IMG" | $BIN 2>&1)
+    require_output "LYZER shell --quiet alias works" "$OUT" "K1Wi LYZER Quiet"
+    require_output "LYZER shell --quiet reports assessment" "$OUT" "Assessment"
+    require_not_output "LYZER shell --quiet hides heatmap" "$OUT" "Entropy Heatmap"
+    require_not_output "LYZER shell --quiet hides carver" "$OUT" "File Carver"
 
     OUT=$(printf "LYZER %s --full\nEXIT\n" "$LYZER_IMG" | $BIN 2>&1)
     require_output "LYZER shell --full alias runs carver" "$OUT" "File Carver"

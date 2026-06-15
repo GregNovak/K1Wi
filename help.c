@@ -216,6 +216,7 @@ static const char *help_lyzer_lines[] = {
     "  LYZER <file>",
     "  LYZER <file> ALL",
     "  LYZER <file> --summary",
+    "  LYZER <file> --quiet",
     "  LYZER <file> --full",
     "  LYZER <file> --verbose",
     "",
@@ -226,6 +227,7 @@ static const char *help_lyzer_lines[] = {
     "",
     "Modes:",
     "  --summary  Short report with format, entropy, stego summary, and next steps.",
+    "  --quiet    Minimal report with assessment and one next step.",
     "  --full     Full analysis.",
     "  --verbose  Alias for full analysis.",
     "  ALL        Full analysis.",
@@ -233,6 +235,7 @@ static const char *help_lyzer_lines[] = {
     "Examples:",
     "  LYZER image.jpg",
     "  LYZER image.jpg --summary",
+    "  LYZER image.jpg --quiet",
     "  LYZER image.jpg --full",
     "  LYZER image.jpg ALL",
 };
