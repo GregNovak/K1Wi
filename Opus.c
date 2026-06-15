@@ -2,7 +2,7 @@
 
 Codename: Opus
 
----------- K1Wi v1.0.0 -----------
+---------- K1Wi v1.1.0 -----------
 
 */
 
@@ -309,7 +309,7 @@ void opus_banner(void) {
     printf("==================================================\n");
 
     printf("\n");
-    printf("Version: 1.0.0\n");
+    printf("Version: 1.1.0\n");
     printf("\n");
 }
 
@@ -1462,7 +1462,7 @@ int opus_repl(void)
         else if (strcmp(cmd, "SPLASH") == 0) {
             opus_banner();
         }
-	else if (strcmp(cmd, "VERSION") == 0) {
+	else if (strcmp(cmd, "VERSION") == 0 || strcmp(cmd, "ABOUT") == 0) {
         cmd_version(NULL, argc, argv);
         continue;
 	}
@@ -1538,7 +1538,7 @@ int opus_repl(void)
 
 else if (strcmp(cmd, "LYZER") == 0) {
     const char *path = NULL;
-    const char *mode = "ALL";
+    const char *mode = "SUMMARY";
 
     if (argc >= 2) {
         path = argv[1];
@@ -1546,6 +1546,19 @@ else if (strcmp(cmd, "LYZER") == 0) {
 
     if (argc >= 3) {
         mode = argv[2];
+
+        if (strcasecmp(mode, "--full") == 0 ||
+            strcasecmp(mode, "full") == 0 ||
+            strcasecmp(mode, "--verbose") == 0 ||
+            strcasecmp(mode, "verbose") == 0) {
+            mode = "ALL";
+        } else if (strcasecmp(mode, "--summary") == 0 ||
+                   strcasecmp(mode, "summary") == 0) {
+            mode = "SUMMARY";
+        } else if (strcasecmp(mode, "--quiet") == 0 ||
+                   strcasecmp(mode, "quiet") == 0) {
+            mode = "QUIET";
+        }
     }
 
     if (!path) {
@@ -2908,14 +2921,69 @@ static void ctf_Analyzer_run(const char *path, const char *mode)
 
     bool is_jpeg = false;
 
-	FILE *fp = fopen(filename, "rb");
-	if (fp) {
-	    unsigned char magic[2] = {0};
-	    if (fread(magic, 1, 2, fp) == 2) {
-		is_jpeg = (magic[0] == 0xFF && magic[1] == 0xD8);
-	    }
-	    fclose(fp);
-	}
+    FILE *fp = fopen(filename, "rb");
+    if (fp) {
+        unsigned char magic[2] = {0};
+        if (fread(magic, 1, 2, fp) == 2) {
+            is_jpeg = (magic[0] == 0xFF && magic[1] == 0xD8);
+        }
+        fclose(fp);
+    }
+
+    if (mode && strcasecmp(mode, "QUIET") == 0) {
+        printf("\nK1Wi LYZER Quiet\n");
+        printf("----------------\n");
+        printf("File: %s\n", filename);
+
+        detect_magic(filename);
+
+        struct stego_report rep;
+        if (opus_stego_analyze_file(filename, &rep) == 0) {
+            printf("Entropy:    %.4f bits/byte\n", rep.entropy);
+            printf("Chi-square: %.4f\n", rep.chi_square);
+
+            if (rep.entropy >= 7.5) {
+                printf("Assessment: HIGH entropy; review with --full\n");
+            } else if (rep.entropy >= 6.5) {
+                printf("Assessment: MEDIUM entropy; review if unexpected\n");
+            } else {
+                printf("Assessment: LOW entropy\n");
+            }
+        }
+
+        printf("Next step:  Run LYZER %s --full for complete analysis.\n", filename);
+        return;
+    }
+
+    if (mode && strcasecmp(mode, "SUMMARY") == 0) {
+        printf("\nK1Wi LYZER Summary\n");
+        printf("------------------\n");
+        printf("File: %s\n", filename);
+
+        detect_magic(filename);
+
+        struct stego_report rep;
+        if (opus_stego_analyze_file(filename, &rep) == 0) {
+            printf("\nStego Summary\n");
+            printf("-------------\n");
+            printf("Bytes analyzed:   %zu\n", rep.bytes_analyzed);
+            printf("Entropy:          %.4f bits/byte\n", rep.entropy);
+            printf("Chi-square:       %.4f\n", rep.chi_square);
+
+            if (rep.entropy >= 7.5) {
+                printf("Assessment:       HIGH entropy; review with --full\n");
+            } else if (rep.entropy >= 6.5) {
+                printf("Assessment:       MEDIUM entropy; review if unexpected\n");
+            } else {
+                printf("Assessment:       LOW entropy\n");
+            }
+        }
+
+        printf("\nNext steps:\n");
+        printf("  Run LYZER %s --full for complete analysis.\n", filename);
+        printf("  Run LYZER %s --verbose for detailed analysis.\n", filename);
+        return;
+    }
 
     putchar('\n');
     systemTime();
@@ -2978,7 +3046,7 @@ void ctf_Analyzer(const char *mode)
 
 int opus_lyzer_file(const char *path, const char *mode)
 {
-    ctf_Analyzer_run(path, mode ? mode : "ALL");
+    ctf_Analyzer_run(path, mode ? mode : "SUMMARY");
     return 0;
 }
 

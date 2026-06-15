@@ -25,6 +25,20 @@ fail() {
     exit 1
 }
 
+
+require_not_output() {
+    local name="$1"
+    local output="$2"
+    local needle="$3"
+
+    if printf "%s" "$output" | grep -Fq "$needle"; then
+        fail "$name"
+        echo "Did not expect to find: $needle"
+    else
+        pass "$name"
+    fi
+}
+
 skip() {
     SKIP_COUNT=$((SKIP_COUNT + 1))
     echo "[SKIP] $1"
@@ -107,7 +121,6 @@ echo
 echo "[TEST] LYZER sample image/file if available"
 
 LYZER_IMG="testdata/lyzer/embedded_zip.jpg"
-
 if [ -f "$LYZER_IMG" ]; then
     OUT=$($BIN lyzer "$LYZER_IMG" ALL 2>&1)
     echo "$OUT"
@@ -115,15 +128,53 @@ if [ -f "$LYZER_IMG" ]; then
     require_output "LYZER string intelligence" "$OUT" "String Intelligence"
     require_output "LYZER embedded signatures" "$OUT" "Embedded Signatures"
 
+    OUT=$($BIN lyzer "$LYZER_IMG" 2>&1)
+    require_output "LYZER default mode is summary" "$OUT" "K1Wi LYZER Summary"
+    require_output "LYZER default summary reports next steps" "$OUT" "Next steps"
+
     OUT=$($BIN lyzer "$LYZER_IMG" h 2>&1)
     require_output "LYZER lowercase h mode works" "$OUT" "Entropy Heatmap"
 
     OUT=$($BIN lyzer "$LYZER_IMG" all 2>&1)
     require_output "LYZER lowercase all mode runs carver" "$OUT" "File Carver"
     require_output "LYZER lowercase all mode runs strings" "$OUT" "String Intelligence"
+    
+    OUT=$($BIN lyzer "$LYZER_IMG" --full 2>&1)
+    require_output "LYZER --full alias runs carver" "$OUT" "File Carver"
+    require_output "LYZER --full alias runs strings" "$OUT" "String Intelligence"
+
+    OUT=$($BIN lyzer "$LYZER_IMG" --verbose 2>&1)
+    require_output "LYZER --verbose alias runs carver" "$OUT" "File Carver"
+    require_output "LYZER --verbose alias runs strings" "$OUT" "String Intelligence"
+
+    OUT=$($BIN lyzer "$LYZER_IMG" --summary 2>&1)
+    require_output "LYZER --summary alias works" "$OUT" "K1Wi LYZER Summary"
+    require_output "LYZER --summary reports next steps" "$OUT" "Next steps"
+
+    OUT=$($BIN lyzer "$LYZER_IMG" --quiet 2>&1)
+    require_output "LYZER --quiet alias works" "$OUT" "K1Wi LYZER Quiet"
+    require_output "LYZER --quiet reports assessment" "$OUT" "Assessment"
+    require_not_output "LYZER --quiet hides heatmap" "$OUT" "Entropy Heatmap"
+    require_not_output "LYZER --quiet hides carver" "$OUT" "File Carver"
+    
+    OUT=$(printf "LYZER %s --summary\nEXIT\n" "$LYZER_IMG" | $BIN 2>&1)
+    require_output "LYZER shell --summary alias works" "$OUT" "K1Wi LYZER Summary"
+    require_output "LYZER shell --summary reports next steps" "$OUT" "Next steps"
+
+    OUT=$(printf "LYZER %s --quiet\nEXIT\n" "$LYZER_IMG" | $BIN 2>&1)
+    require_output "LYZER shell --quiet alias works" "$OUT" "K1Wi LYZER Quiet"
+    require_output "LYZER shell --quiet reports assessment" "$OUT" "Assessment"
+    require_not_output "LYZER shell --quiet hides heatmap" "$OUT" "Entropy Heatmap"
+    require_not_output "LYZER shell --quiet hides carver" "$OUT" "File Carver"
+
+    OUT=$(printf "LYZER %s --full\nEXIT\n" "$LYZER_IMG" | $BIN 2>&1)
+    require_output "LYZER shell --full alias runs carver" "$OUT" "File Carver"
+    require_output "LYZER shell --full alias runs strings" "$OUT" "String Intelligence"
+    
+    
 else
     skip "$LYZER_IMG not found"
-fi
+fi   
 
 echo
 echo "[TEST] ENTROPY sample image"
@@ -554,7 +605,7 @@ OUT=$($BIN --version 2>&1)
 echo "$OUT"
 
 require_output "VERSION reports K1Wi" "$OUT" "K1Wi Framework"
-require_output "VERSION reports v1.0.0" "$OUT" "v1.0.0"
+require_output "VERSION reports v1.1.0" "$OUT" "v1.1.0"
 require_output "VERSION reports K1Wi release" "$OUT" "Release Name: K1Wi"
 
 echo

@@ -31,7 +31,7 @@ const opus_cmd_t opus_commands[] = {
     /* ===========================
        Analysis Tools
        =========================== */
-    { "LYZER",     "Analysis Tools", "Image forensics: H=Heatmap, R=RS Stego, ALL=Full Scan" },
+    { "LYZER",     "Analysis Tools", "Image forensics: summary default, --full for full scan" },
     { "STRING", "Analysis Tools", "String analyzer"},
 
 

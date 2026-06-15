@@ -99,7 +99,42 @@ Run:
 ./bin/k1wi
 ```
 
+## Install on Linux
+
+K1Wi can be built and installed locally on Linux with:
+
+```bash
+./install.sh
+```
+
+This builds the project, installs the `k1wi` binary to:
+
+```text
+/usr/local/bin/k1wi
+```
+
+and installs documentation to:
+
+```text
+/usr/local/share/doc/k1wi
+```
+
+After installation, run K1Wi from anywhere with:
+
+```bash
+k1wi
+```
+
+To uninstall:
+
+```bash
+./uninstall.sh
+```
+
+The uninstall script removes the installed binary and documentation only. It does not remove the source tree or user-created files.
+
 ## Quick Start
+
 
 View available commands:
 
@@ -126,10 +161,17 @@ Inspect an ELF binary:
 ./bin/k1wi ELFINFO -IN ./bin/k1wi
 ```
 
-Run image forensics:
+Run image forensics with the default summary view:
 
 ```bash
-./bin/k1wi LYZER image.jpg ALL
+./bin/k1wi LYZER image.jpg
+```
+
+Run full image forensics:
+
+```bash
+./bin/k1wi LYZER image.jpg --quiet
+./bin/k1wi LYZER image.jpg --full
 ```
 
 ## Testing
@@ -140,13 +182,15 @@ Run the regression suite:
 ./tests/run_regression.sh
 ```
 
-Current regression status:
+Current v1.1 development regression status:
 
 ```text
-PASS: 69
+PASS: 80
 FAIL: 0
 SKIP: 0
 ```
+
+
 Validated using a clean-room build and full regression suite execution.
 
 ## Safety
@@ -169,11 +213,11 @@ Always test destructive operations inside disposable directories before use on p
 
 ## Status
 
-Current Version: v1.0.0
+Current Version: v1.1.0
 
-Release Status: Stable
-
-The project has completed clean-room build validation and currently passes all regression tests (72/72).
+The v1.0.0 public release passed regression testing with PASS 72 / FAIL 0 / SKIP 0.
+The v1.1.0 stable release passed regression testing with PASS 92 / FAIL 0 / SKIP 0.
+The stable public release is now v1.1.0.
 
 ## License
 

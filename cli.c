@@ -276,18 +276,31 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 } else if (strcasecmp(cmd, "LYZER") == 0) {
     if (cli->arg_start >= argc) {
         fprintf(stderr, "ERROR: lyzer requires a file path\n");
-        fprintf(stderr, "Usage: k1wi lyzer <file> [H|R|E|C|S|J|D|ALL]\n");
+        fprintf(stderr, "Usage: k1wi lyzer <file> [H|R|E|C|S|J|D|ALL|--summary|--quiet|--full|--verbose]\n");
         return 1;
     }
 
-    const char *path = argv[cli->arg_start];
-    const char *mode = "ALL";
+   	const char *path = argv[cli->arg_start];
+	const char *mode = "SUMMARY";
 
-    if (cli->arg_start + 1 < argc) {
-        mode = argv[cli->arg_start + 1];
+	if (cli->arg_start + 1 < argc) {
+	    mode = argv[cli->arg_start + 1];
+
+	    if (strcasecmp(mode, "--full") == 0 ||
+		strcasecmp(mode, "full") == 0 ||
+		strcasecmp(mode, "--verbose") == 0 ||
+		strcasecmp(mode, "verbose") == 0) {
+		mode = "ALL";
+	    } else if (strcasecmp(mode, "--summary") == 0 ||
+		       strcasecmp(mode, "summary") == 0) {
+		mode = "SUMMARY";
+	    } else if (strcasecmp(mode, "--quiet") == 0 ||
+               strcasecmp(mode, "quiet") == 0) {
+        mode = "QUIET";
     }
+	 }
 
-    return opus_lyzer_file(path, mode);
+	return opus_lyzer_file(path, mode);
     } else if (strcasecmp(cmd, "WIPEFS") == 0) {
         return cmd_wipefs(cli, argc, argv);
 
