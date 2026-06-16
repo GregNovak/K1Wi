@@ -278,7 +278,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 } else if (strcasecmp(cmd, "LYZER") == 0) {
     if (cli->arg_start >= argc) {
         fprintf(stderr, "ERROR: lyzer requires a file path\n");
-        fprintf(stderr, "Usage: k1wi lyzer <file> [H|R|E|C|S|J|D|ALL|--summary|--quiet|--full|--verbose]\n");
+        fprintf(stderr, "Usage: k1wi lyzer <file> [H|R|E|C|S|J|D|ALL|--summary|--quiet|--json|--full|--verbose]\n");
         return 1;
     }
 
@@ -299,6 +299,9 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 	    } else if (strcasecmp(mode, "--quiet") == 0 ||
                strcasecmp(mode, "quiet") == 0) {
         mode = "QUIET";
+    } else if (strcasecmp(mode, "--json") == 0 ||
+               strcasecmp(mode, "json") == 0) {
+        mode = "JSON";
     }
 	 }
 

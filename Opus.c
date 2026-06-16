@@ -3407,6 +3407,161 @@ void run_dct_analysis(const char *path) {
     }
 }
 
+
+static void k1wi_json_print_escaped(const char *text)
+{
+    const unsigned char *p = (const unsigned char *)text;
+
+    putchar('"');
+
+    if (text) {
+        while (*p) {
+            switch (*p) {
+                case '\\': printf("\\\\"); break;
+                case '"':  printf("\\\""); break;
+                case '\b': printf("\\b");  break;
+                case '\f': printf("\\f");  break;
+                case '\n': printf("\\n");  break;
+                case '\r': printf("\\r");  break;
+                case '\t': printf("\\t");  break;
+                default:
+                    if (*p < 0x20U) {
+                        printf("\\u%04x", (unsigned int)*p);
+                    } else {
+                        putchar((int)*p);
+                    }
+                    break;
+            }
+
+            p++;
+        }
+    }
+
+    putchar('"');
+}
+
+static const char *k1wi_lyzer_format_from_magic(const unsigned char *magic, size_t n)
+{
+    if (n >= 2U && magic[0] == 0xffU && magic[1] == 0xd8U) {
+        return "JPEG";
+    }
+
+    if (n >= 8U &&
+        magic[0] == 0x89U && magic[1] == 'P' &&
+        magic[2] == 'N' && magic[3] == 'G') {
+        return "PNG";
+    }
+
+    if (n >= 6U &&
+        magic[0] == 'G' && magic[1] == 'I' && magic[2] == 'F') {
+        return "GIF";
+    }
+
+    if (n >= 4U &&
+        magic[0] == 'P' && magic[1] == 'K' &&
+        magic[2] == 0x03U && magic[3] == 0x04U) {
+        return "ZIP";
+    }
+
+    if (n >= 4U &&
+        magic[0] == 0x7fU && magic[1] == 'E' &&
+        magic[2] == 'L' && magic[3] == 'F') {
+        return "ELF";
+    }
+
+    return "UNKNOWN";
+}
+
+static void k1wi_lyzer_json_summary(const char *path)
+{
+    FILE *fp = NULL;
+    unsigned char magic[16] = {0};
+    unsigned long long counts[256] = {0};
+    unsigned char buf[4096];
+    size_t magic_len = 0U;
+    size_t nread = 0U;
+    unsigned long long total = 0ULL;
+    double entropy = 0.0;
+    const char *format = "UNKNOWN";
+    const char *assessment = "LOW";
+    int read_error = 0;
+
+    fp = fopen(path, "rb");
+    if (!fp) {
+        printf("{\n");
+        printf("  \"tool\": \"LYZER\",\n");
+        printf("  \"mode\": \"json\",\n");
+        printf("  \"file\": ");
+        k1wi_json_print_escaped(path);
+        printf(",\n");
+        printf("  \"error\": \"could not open file\"\n");
+        printf("}\n");
+        return;
+    }
+
+    magic_len = fread(magic, 1U, sizeof(magic), fp);
+    format = k1wi_lyzer_format_from_magic(magic, magic_len);
+
+    rewind(fp);
+
+    while ((nread = fread(buf, 1U, sizeof(buf), fp)) > 0U) {
+        size_t i;
+
+        total += (unsigned long long)nread;
+
+        for (i = 0U; i < nread; i++) {
+            counts[buf[i]]++;
+        }
+    }
+
+    if (ferror(fp)) {
+        read_error = 1;
+    }
+
+    fclose(fp);
+
+    if (!read_error && total > 0ULL) {
+        size_t i;
+
+        for (i = 0U; i < 256U; i++) {
+            if (counts[i] > 0ULL) {
+                double probability = (double)counts[i] / (double)total;
+                entropy -= probability * (log(probability) / log(2.0));
+            }
+        }
+    }
+
+    if (entropy >= 7.5) {
+        assessment = "HIGH";
+    } else if (entropy >= 6.5) {
+        assessment = "MEDIUM";
+    }
+
+    printf("{\n");
+    printf("  \"tool\": \"LYZER\",\n");
+    printf("  \"mode\": \"json\",\n");
+    printf("  \"file\": ");
+    k1wi_json_print_escaped(path);
+    printf(",\n");
+    printf("  \"format\": ");
+    k1wi_json_print_escaped(format);
+    printf(",\n");
+    printf("  \"size_bytes\": %llu,\n", total);
+    printf("  \"entropy\": %.4f,\n", entropy);
+    printf("  \"assessment\": ");
+    k1wi_json_print_escaped(assessment);
+    printf(",\n");
+    printf("  \"error\": ");
+    if (read_error) {
+        k1wi_json_print_escaped("read error");
+    } else {
+        printf("null");
+    }
+    printf("\n");
+    printf("}\n");
+}
+
+
 static void ctf_Analyzer_run(const char *path, const char *mode)
 {
     if (!path || path[0] == '\0') {
@@ -3425,6 +3580,15 @@ static void ctf_Analyzer_run(const char *path, const char *mode)
             is_jpeg = (magic[0] == 0xFF && magic[1] == 0xD8);
         }
         fclose(fp);
+    }
+
+
+    if (mode &&
+        (strcasecmp(mode, "JSON") == 0 ||
+         strcasecmp(mode, "--json") == 0 ||
+         strcasecmp(mode, "json") == 0)) {
+        k1wi_lyzer_json_summary(filename);
+        return;
     }
 
     if (mode && strcasecmp(mode, "QUIET") == 0) {
