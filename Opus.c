@@ -1619,7 +1619,7 @@ int opus_repl(void)
         fd_set rfds;
 
         /* show prompt and block until input arrives */
-        printf("\nCommand: ");
+        printf("\nK1Wi Command: ");
         fflush(stdout);
 
         FD_ZERO(&rfds);
