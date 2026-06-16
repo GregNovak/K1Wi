@@ -617,6 +617,7 @@ require_output "AUTO detects RSA challenge" "$OUT" "Detected type: RSA challenge
 require_output "AUTO finds RSA n" "$OUT" "RSA modulus n        : yes"
 require_output "AUTO finds RSA e" "$OUT" "RSA exponent e       : yes"
 require_output "AUTO finds RSA ciphertext" "$OUT" "RSA ciphertext field : yes"
+require_output "AUTO previews RSA public sample" "$OUT" "RSA ciphertext       : 855"
 
 AUTO_ECC_SAMPLE="/tmp/k1wi_auto_regression_ecc.txt"
 cat > "$AUTO_ECC_SAMPLE" <<'EOF'
@@ -633,6 +634,8 @@ require_output "AUTO finds ECC point" "$OUT" "ECC point/public key : yes"
 require_output "AUTO finds generic ciphertext" "$OUT" "Generic ciphertext   : yes"
 require_output "AUTO avoids false RSA ciphertext" "$OUT" "RSA ciphertext field : no"
 require_output "AUTO avoids IV false MD5" "$OUT" "MD5 hash             : no"
+require_output "AUTO previews ECC IV" "$OUT" "IV / nonce           :"
+require_output "AUTO previews encrypted flag" "$OUT" "Encrypted flag       :"
 
 
 AUTO_HASH_SAMPLE="/tmp/k1wi_auto_regression_hash_encoding.txt"
@@ -697,6 +700,8 @@ require_output "AUTO finds RSA private N" "$OUT" "RSA modulus n        : yes"
 require_output "AUTO finds RSA private d" "$OUT" "RSA private d        : yes"
 require_output "AUTO private d has no public e" "$OUT" "RSA exponent e       : no"
 require_output "AUTO private d has no ciphertext" "$OUT" "RSA ciphertext field : no"
+require_output "AUTO previews RSA private fields" "$OUT" "Field previews"
+require_output "AUTO previews RSA private d" "$OUT" "RSA private d        :"
 
 
 OUT=$($BIN help AUTO 2>&1)

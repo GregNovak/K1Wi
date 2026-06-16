@@ -1326,6 +1326,82 @@ static int k1wi_auto_base64_blob_present(const char *buf)
 }
 
 
+
+static void k1wi_auto_print_field_preview(const char *name,
+                                          const char *buf,
+                                          const char *const *labels,
+                                          size_t label_count,
+                                          int *printed_header)
+{
+    size_t i;
+
+    if (!name || !buf || !labels || !printed_header) {
+        return;
+    }
+
+    for (i = 0; i < label_count; i++) {
+        const char *hit = strstr(buf, labels[i]);
+        const char *start;
+        const char *end;
+        size_t len;
+
+        if (!hit) {
+            continue;
+        }
+
+        start = hit + strlen(labels[i]);
+
+        while (*start == ' ' || *start == '\t' || *start == '\r' ||
+               *start == '\n' || *start == ':' || *start == '=' ||
+               *start == '"' || *start == '\'') {
+            start++;
+        }
+
+        end = start;
+
+        while (*end != '\0' &&
+               *end != ' ' &&
+               *end != '\t' &&
+               *end != '\r' &&
+               *end != '\n' &&
+               *end != ',' &&
+               *end != '"' &&
+               *end != '\'' &&
+               *end != '}' &&
+               *end != ']' &&
+               *end != ';') {
+            end++;
+        }
+
+        len = (size_t)(end - start);
+
+        if (len == 0U) {
+            continue;
+        }
+
+        if (!*printed_header) {
+            printf("\nField previews\n");
+            printf("------------------\n");
+            *printed_header = 1;
+        }
+
+        printf("%-21s: ", name);
+
+        if (len <= 40U) {
+            printf("%.*s\n", (int)len, start);
+        } else {
+            printf("%.*s...%.*s\n",
+                   20,
+                   start,
+                   12,
+                   end - 12);
+        }
+
+        return;
+    }
+}
+
+
 int k1wi_auto_analyze_file(const char *path)
 {
     FILE *fp = NULL;
@@ -1349,6 +1425,7 @@ int k1wi_auto_analyze_file(const char *path)
     int has_sha512 = 0;
     int has_hex_blob = 0;
     int has_base64_blob = 0;
+    int printed_preview_header = 0;
 
     if (!path || path[0] == '\0') {
         fprintf(stderr, "AUTO: missing input file.\n");
@@ -1496,6 +1573,80 @@ int k1wi_auto_analyze_file(const char *path)
     printf("SHA512 hash          : %s\n", has_sha512 ? "yes" : "no");
     printf("Hex blob             : %s\n", has_hex_blob ? "yes" : "no");
     printf("Base64 blob          : %s\n", has_base64_blob ? "yes" : "no");
+
+
+    {
+        static const char *const rsa_n_labels[] = { "n =", "N =", "modulus", "Modulus" };
+        static const char *const rsa_e_labels[] = { "e =", "E =" };
+        static const char *const rsa_d_labels[] = { "d =", "D =", "private exponent", "Private exponent" };
+        static const char *const rsa_c_labels[] = { "c =", "ct =", "ciphertext =", "ciphertext:" };
+        static const char *const iv_labels[] = { "'iv':", "\"iv\":", "iv =", "IV =" };
+        static const char *const encrypted_flag_labels[] = { "encrypted_flag", "Encrypted flag", "encrypted flag" };
+        static const char *const md5_labels[] = { "MD5:", "md5:", "MD5 =", "md5 =" };
+        static const char *const sha256_labels[] = { "SHA256:", "sha256:", "SHA256 =", "sha256 =" };
+        static const char *const base64_labels[] = { "base64:", "Base64:", "BASE64:", "base64 =", "Base64 =", "BASE64 =" };
+        static const char *const hex_labels[] = { "hex:", "HEX:", "hex =", "HEX =" };
+
+        if (has_rsa_n) {
+            k1wi_auto_print_field_preview("RSA modulus n", buf, rsa_n_labels,
+                                          sizeof(rsa_n_labels) / sizeof(rsa_n_labels[0]),
+                                          &printed_preview_header);
+        }
+
+        if (has_rsa_e) {
+            k1wi_auto_print_field_preview("RSA exponent e", buf, rsa_e_labels,
+                                          sizeof(rsa_e_labels) / sizeof(rsa_e_labels[0]),
+                                          &printed_preview_header);
+        }
+
+        if (has_rsa_d) {
+            k1wi_auto_print_field_preview("RSA private d", buf, rsa_d_labels,
+                                          sizeof(rsa_d_labels) / sizeof(rsa_d_labels[0]),
+                                          &printed_preview_header);
+        }
+
+        if (has_rsa_c) {
+            k1wi_auto_print_field_preview("RSA ciphertext", buf, rsa_c_labels,
+                                          sizeof(rsa_c_labels) / sizeof(rsa_c_labels[0]),
+                                          &printed_preview_header);
+        }
+
+        if (has_iv) {
+            k1wi_auto_print_field_preview("IV / nonce", buf, iv_labels,
+                                          sizeof(iv_labels) / sizeof(iv_labels[0]),
+                                          &printed_preview_header);
+        }
+
+        if (has_encrypted_flag) {
+            k1wi_auto_print_field_preview("Encrypted flag", buf, encrypted_flag_labels,
+                                          sizeof(encrypted_flag_labels) / sizeof(encrypted_flag_labels[0]),
+                                          &printed_preview_header);
+        }
+
+        if (has_md5) {
+            k1wi_auto_print_field_preview("MD5", buf, md5_labels,
+                                          sizeof(md5_labels) / sizeof(md5_labels[0]),
+                                          &printed_preview_header);
+        }
+
+        if (has_sha256) {
+            k1wi_auto_print_field_preview("SHA256", buf, sha256_labels,
+                                          sizeof(sha256_labels) / sizeof(sha256_labels[0]),
+                                          &printed_preview_header);
+        }
+
+        if (has_base64_blob) {
+            k1wi_auto_print_field_preview("Base64", buf, base64_labels,
+                                          sizeof(base64_labels) / sizeof(base64_labels[0]),
+                                          &printed_preview_header);
+        }
+
+        if (has_hex_blob) {
+            k1wi_auto_print_field_preview("Hex", buf, hex_labels,
+                                          sizeof(hex_labels) / sizeof(hex_labels[0]),
+                                          &printed_preview_header);
+        }
+    }
 
     printf("\nAssessment\n");
     printf("------------------\n");
