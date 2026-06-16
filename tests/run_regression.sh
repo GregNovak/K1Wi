@@ -650,6 +650,21 @@ require_output "AUTO finds SHA256" "$OUT" "SHA256 hash          : yes"
 require_output "AUTO finds hex blob" "$OUT" "Hex blob             : yes"
 require_output "AUTO finds base64 blob" "$OUT" "Base64 blob          : yes"
 
+
+AUTO_RAW_HASH_SAMPLE="/tmp/k1wi_auto_regression_raw_hashes.txt"
+cat > "$AUTO_RAW_HASH_SAMPLE" <<'EOF'
+046e85f6fe460de94fd46198feef4d07
+b03a7ac0c7065b04e4ddf773192f300cc6528c8128ef55c31c0de77692298226
+EOF
+
+OUT=$($BIN AUTO "$AUTO_RAW_HASH_SAMPLE" 2>&1)
+echo "$OUT"
+
+require_output "AUTO detects raw hash data" "$OUT" "Detected type: hash / encoded data"
+require_output "AUTO finds raw MD5" "$OUT" "MD5 hash             : yes"
+require_output "AUTO finds raw SHA256" "$OUT" "SHA256 hash          : yes"
+require_output "AUTO finds raw hex blob" "$OUT" "Hex blob             : yes"
+
 OUT=$($BIN help AUTO 2>&1)
 echo "$OUT"
 require_output "HELP AUTO page" "$OUT" "AUTO - Input Detection and Parser"

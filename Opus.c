@@ -1218,6 +1218,62 @@ int cmd_search(int argc, char **argv) {
 /* =========================================== */
 
 
+
+static int k1wi_auto_hex_token_len(const char *buf, size_t want_len)
+{
+    const unsigned char *p = (const unsigned char *)buf;
+
+    while (*p) {
+        while (*p && !isxdigit(*p)) {
+            p++;
+        }
+
+        const unsigned char *start = p;
+        size_t len = 0;
+
+        while (*p && isxdigit(*p)) {
+            len++;
+            p++;
+        }
+
+        if (len == want_len) {
+            int left_ok = (start == (const unsigned char *)buf) || !isxdigit((unsigned char)*(start - 1));
+            int right_ok = (*p == '\0') || !isxdigit(*p);
+
+            if (left_ok && right_ok) {
+                return 1;
+            }
+        }
+    }
+
+    return 0;
+}
+
+static int k1wi_auto_hex_blob_present(const char *buf)
+{
+    const unsigned char *p = (const unsigned char *)buf;
+
+    while (*p) {
+        while (*p && !isxdigit(*p)) {
+            p++;
+        }
+
+        size_t len = 0;
+
+        while (*p && isxdigit(*p)) {
+            len++;
+            p++;
+        }
+
+        if (len >= 32U && (len % 2U) == 0U) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+
 int k1wi_auto_analyze_file(const char *path)
 {
     FILE *fp = NULL;
@@ -1302,12 +1358,30 @@ int k1wi_auto_analyze_file(const char *path)
                          strstr(buf, "Encrypted flag") != NULL ||
                          strstr(buf, "encrypted flag") != NULL;
 
-    has_md5 = strstr(buf, "MD5") != NULL || strstr(buf, "md5") != NULL;
-    has_sha1 = strstr(buf, "SHA1") != NULL || strstr(buf, "sha1") != NULL;
-    has_sha256 = strstr(buf, "SHA256") != NULL || strstr(buf, "sha256") != NULL;
-    has_sha512 = strstr(buf, "SHA512") != NULL || strstr(buf, "sha512") != NULL;
-    has_hex_blob = strstr(buf, "hex:") != NULL || strstr(buf, "HEX:") != NULL || strstr(buf, "hex =") != NULL;
-    has_base64_blob = strstr(buf, "base64") != NULL || strstr(buf, "Base64") != NULL || strstr(buf, "BASE64") != NULL;
+    has_md5 = strstr(buf, "MD5") != NULL ||
+              strstr(buf, "md5") != NULL ||
+              k1wi_auto_hex_token_len(buf, 32U);
+
+    has_sha1 = strstr(buf, "SHA1") != NULL ||
+               strstr(buf, "sha1") != NULL ||
+               k1wi_auto_hex_token_len(buf, 40U);
+
+    has_sha256 = strstr(buf, "SHA256") != NULL ||
+                 strstr(buf, "sha256") != NULL ||
+                 k1wi_auto_hex_token_len(buf, 64U);
+
+    has_sha512 = strstr(buf, "SHA512") != NULL ||
+                 strstr(buf, "sha512") != NULL ||
+                 k1wi_auto_hex_token_len(buf, 128U);
+
+    has_hex_blob = strstr(buf, "hex:") != NULL ||
+                   strstr(buf, "HEX:") != NULL ||
+                   strstr(buf, "hex =") != NULL ||
+                   k1wi_auto_hex_blob_present(buf);
+
+    has_base64_blob = strstr(buf, "base64") != NULL ||
+                      strstr(buf, "Base64") != NULL ||
+                      strstr(buf, "BASE64") != NULL;
 
     printf("\nK1Wi AUTO Analysis\n");
     printf("------------------\n");
