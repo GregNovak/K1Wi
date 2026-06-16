@@ -32,6 +32,7 @@ const opus_cmd_t opus_commands[] = {
        Analysis Tools
        =========================== */
     { "LYZER",     "Analysis Tools", "Image forensics: summary default, --full for full scan" },
+    { "AUTO",      "Analysis Tools", "Input detection and parser for RSA, ECC, hashes, encodings, and encrypted data" },
     { "STRING", "Analysis Tools", "String analyzer"},
 
 

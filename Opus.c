@@ -1360,7 +1360,7 @@ int k1wi_auto_analyze_file(const char *path)
 
     has_md5 = strstr(buf, "MD5") != NULL ||
               strstr(buf, "md5") != NULL ||
-              k1wi_auto_hex_token_len(buf, 32U);
+              (!has_iv && k1wi_auto_hex_token_len(buf, 32U));
 
     has_sha1 = strstr(buf, "SHA1") != NULL ||
                strstr(buf, "sha1") != NULL ||

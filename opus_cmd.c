@@ -130,6 +130,7 @@ void opus_cmd_print_help(void)
     printf("\n");
 
     printf("Forensics and Extraction:\n");
+    printf("  AUTO        Input detection and parser for RSA, ECC, hashes, encodings, and encrypted data\n");
     printf("  LYZER   (L)  Image forensics and steganography analysis\n");
     printf("  EXTRACT (X)  Recursive extraction engine\n");
     printf("  ENTROPY (E)  Shannon entropy calculator\n");

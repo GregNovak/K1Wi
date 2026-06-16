@@ -578,6 +578,7 @@ OUT=$($BIN help 2>&1)
 require_output "HELP shows LYZER" "$OUT" "LYZER"
 require_output "HELP shows RSA" "$OUT" "RSA"
 require_output "HELP shows PIECALC" "$OUT" "PIECALC"
+require_output "HELP shows AUTO" "$OUT" "AUTO"
 
 echo
 echo "[TEST] Individual HELP pages"
@@ -631,6 +632,7 @@ require_output "AUTO detects ECC challenge" "$OUT" "Detected type: ECC / ECDH-st
 require_output "AUTO finds ECC point" "$OUT" "ECC point/public key : yes"
 require_output "AUTO finds generic ciphertext" "$OUT" "Generic ciphertext   : yes"
 require_output "AUTO avoids false RSA ciphertext" "$OUT" "RSA ciphertext field : no"
+require_output "AUTO avoids IV false MD5" "$OUT" "MD5 hash             : no"
 
 
 AUTO_HASH_SAMPLE="/tmp/k1wi_auto_regression_hash_encoding.txt"
