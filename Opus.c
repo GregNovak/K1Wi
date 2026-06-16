@@ -1231,6 +1231,12 @@ int k1wi_auto_analyze_file(const char *path)
     int has_ecc_point = 0;
     int has_iv = 0;
     int has_encrypted_flag = 0;
+    int has_md5 = 0;
+    int has_sha1 = 0;
+    int has_sha256 = 0;
+    int has_sha512 = 0;
+    int has_hex_blob = 0;
+    int has_base64_blob = 0;
 
     if (!path || path[0] == '\0') {
         fprintf(stderr, "AUTO: missing input file.\n");
@@ -1296,6 +1302,13 @@ int k1wi_auto_analyze_file(const char *path)
                          strstr(buf, "Encrypted flag") != NULL ||
                          strstr(buf, "encrypted flag") != NULL;
 
+    has_md5 = strstr(buf, "MD5") != NULL || strstr(buf, "md5") != NULL;
+    has_sha1 = strstr(buf, "SHA1") != NULL || strstr(buf, "sha1") != NULL;
+    has_sha256 = strstr(buf, "SHA256") != NULL || strstr(buf, "sha256") != NULL;
+    has_sha512 = strstr(buf, "SHA512") != NULL || strstr(buf, "sha512") != NULL;
+    has_hex_blob = strstr(buf, "hex:") != NULL || strstr(buf, "HEX:") != NULL || strstr(buf, "hex =") != NULL;
+    has_base64_blob = strstr(buf, "base64") != NULL || strstr(buf, "Base64") != NULL || strstr(buf, "BASE64") != NULL;
+
     printf("\nK1Wi AUTO Analysis\n");
     printf("------------------\n");
     printf("Input file: %s\n", path);
@@ -1310,6 +1323,12 @@ int k1wi_auto_analyze_file(const char *path)
     printf("ECC point/public key : %s\n", has_ecc_point ? "yes" : "no");
     printf("IV / nonce field     : %s\n", has_iv ? "yes" : "no");
     printf("Encrypted flag field : %s\n", has_encrypted_flag ? "yes" : "no");
+    printf("MD5 hash             : %s\n", has_md5 ? "yes" : "no");
+    printf("SHA1 hash            : %s\n", has_sha1 ? "yes" : "no");
+    printf("SHA256 hash          : %s\n", has_sha256 ? "yes" : "no");
+    printf("SHA512 hash          : %s\n", has_sha512 ? "yes" : "no");
+    printf("Hex blob             : %s\n", has_hex_blob ? "yes" : "no");
+    printf("Base64 blob          : %s\n", has_base64_blob ? "yes" : "no");
 
     printf("\nAssessment\n");
     printf("------------------\n");
@@ -1320,6 +1339,9 @@ int k1wi_auto_analyze_file(const char *path)
     } else if (has_ecc_point && (has_iv || has_encrypted_flag)) {
         printf("Detected type: ECC / ECDH-style encrypted challenge data\n");
         printf("Recommendation: Extract curve parameters before attempting ECC analysis.\n");
+    } else if (has_md5 || has_sha1 || has_sha256 || has_sha512 || has_hex_blob || has_base64_blob) {
+        printf("Detected type: hash / encoded data\n");
+        printf("Recommendation: Use MD5, SHA256, STRING, or decoding helpers depending on the field.\n");
     } else if (has_generic_ciphertext || has_iv || has_encrypted_flag) {
         printf("Detected type: encrypted payload data\n");
         printf("Recommendation: Identify cipher, key source, IV/nonce, and encoding.\n");

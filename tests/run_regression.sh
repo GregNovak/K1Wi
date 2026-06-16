@@ -632,6 +632,24 @@ require_output "AUTO finds ECC point" "$OUT" "ECC point/public key : yes"
 require_output "AUTO finds generic ciphertext" "$OUT" "Generic ciphertext   : yes"
 require_output "AUTO avoids false RSA ciphertext" "$OUT" "RSA ciphertext field : no"
 
+
+AUTO_HASH_SAMPLE="/tmp/k1wi_auto_regression_hash_encoding.txt"
+cat > "$AUTO_HASH_SAMPLE" <<'EOF'
+MD5: 046e85f6fe460de94fd46198feef4d07
+SHA256: b03a7ac0c7065b04e4ddf773192f300cc6528c8128ef55c31c0de77692298226
+base64: Q1RGe0sxV2lfQVVUT190ZXN0fQ==
+hex: 4354467b4b3157695f4155544f5f746573747d
+EOF
+
+OUT=$($BIN AUTO "$AUTO_HASH_SAMPLE" 2>&1)
+echo "$OUT"
+
+require_output "AUTO detects hash encoded data" "$OUT" "Detected type: hash / encoded data"
+require_output "AUTO finds MD5" "$OUT" "MD5 hash             : yes"
+require_output "AUTO finds SHA256" "$OUT" "SHA256 hash          : yes"
+require_output "AUTO finds hex blob" "$OUT" "Hex blob             : yes"
+require_output "AUTO finds base64 blob" "$OUT" "Base64 blob          : yes"
+
 OUT=$($BIN help AUTO 2>&1)
 echo "$OUT"
 require_output "HELP AUTO page" "$OUT" "AUTO - Input Detection and Parser"
