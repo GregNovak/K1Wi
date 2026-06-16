@@ -1274,6 +1274,58 @@ static int k1wi_auto_hex_blob_present(const char *buf)
 }
 
 
+
+static int k1wi_auto_is_base64_char(unsigned char c)
+{
+    return isalnum(c) || c == '+' || c == '/' || c == '=';
+}
+
+static int k1wi_auto_base64_blob_present(const char *buf)
+{
+    const unsigned char *p = (const unsigned char *)buf;
+
+    while (*p) {
+        while (*p && !k1wi_auto_is_base64_char(*p)) {
+            p++;
+        }
+
+        size_t len = 0;
+        size_t pad = 0;
+        size_t non_alnum_symbol = 0;
+        size_t non_hex_char = 0;
+
+        while (*p && k1wi_auto_is_base64_char(*p)) {
+            if (*p == '=') {
+                pad++;
+            }
+
+            if (*p == '+' || *p == '/' || *p == '=') {
+                non_alnum_symbol++;
+            }
+
+            if (!isxdigit(*p)) {
+                non_hex_char++;
+            }
+
+            len++;
+            p++;
+        }
+
+        if (len >= 16U && (len % 4U) == 0U && pad <= 2U) {
+            /*
+             * Avoid treating raw MD5/SHA-style pure hex strings as base64.
+             * Base64 should include padding/symbols or at least non-hex letters.
+             */
+            if (non_hex_char > 0U && (non_alnum_symbol > 0U || len >= 24U)) {
+                return 1;
+            }
+        }
+    }
+
+    return 0;
+}
+
+
 int k1wi_auto_analyze_file(const char *path)
 {
     FILE *fp = NULL;
@@ -1381,7 +1433,8 @@ int k1wi_auto_analyze_file(const char *path)
 
     has_base64_blob = strstr(buf, "base64") != NULL ||
                       strstr(buf, "Base64") != NULL ||
-                      strstr(buf, "BASE64") != NULL;
+                      strstr(buf, "BASE64") != NULL ||
+                      k1wi_auto_base64_blob_present(buf);
 
     printf("\nK1Wi AUTO Analysis\n");
     printf("------------------\n");
