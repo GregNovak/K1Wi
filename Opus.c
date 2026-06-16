@@ -1334,6 +1334,10 @@ int k1wi_auto_analyze_file(const char *path)
 
     int has_rsa_n = 0;
     int has_rsa_e = 0;
+    int has_rsa_d = 0;
+    int has_rsa_p = 0;
+    int has_rsa_q = 0;
+    int has_rsa_phi = 0;
     int has_rsa_c = 0;
     int has_generic_ciphertext = 0;
     int has_ecc_point = 0;
@@ -1388,8 +1392,40 @@ int k1wi_auto_analyze_file(const char *path)
 
     fclose(fp);
 
-    has_rsa_n = strstr(buf, "n =") != NULL || strstr(buf, "N =") != NULL || strstr(buf, "\"n\"") != NULL;
-    has_rsa_e = strstr(buf, "e =") != NULL || strstr(buf, "E =") != NULL || strstr(buf, "\"e\"") != NULL;
+    has_rsa_n = strstr(buf, "n =") != NULL ||
+                strstr(buf, "N =") != NULL ||
+                strstr(buf, "\"n\"") != NULL ||
+                strstr(buf, "\"N\"") != NULL ||
+                strstr(buf, "modulus") != NULL ||
+                strstr(buf, "Modulus") != NULL;
+
+    has_rsa_e = strstr(buf, "e =") != NULL ||
+                strstr(buf, "E =") != NULL ||
+                strstr(buf, "\"e\"") != NULL ||
+                strstr(buf, "\"E\"") != NULL;
+
+    has_rsa_d = strstr(buf, "d =") != NULL ||
+                strstr(buf, "D =") != NULL ||
+                strstr(buf, "\"d\"") != NULL ||
+                strstr(buf, "\"D\"") != NULL ||
+                strstr(buf, "private exponent") != NULL ||
+                strstr(buf, "Private exponent") != NULL;
+
+    has_rsa_p = strstr(buf, "p =") != NULL ||
+                strstr(buf, "P =") != NULL ||
+                strstr(buf, "\"p\"") != NULL ||
+                strstr(buf, "\"P\"") != NULL;
+
+    has_rsa_q = strstr(buf, "q =") != NULL ||
+                strstr(buf, "Q =") != NULL ||
+                strstr(buf, "\"q\"") != NULL ||
+                strstr(buf, "\"Q\"") != NULL;
+
+    has_rsa_phi = strstr(buf, "phi") != NULL ||
+                  strstr(buf, "Phi") != NULL ||
+                  strstr(buf, "totient") != NULL ||
+                  strstr(buf, "Totient") != NULL;
+
     has_rsa_c = strstr(buf, "c =") != NULL ||
                 strstr(buf, "ct =") != NULL ||
                 strstr(buf, "ciphertext =") != NULL ||
@@ -1445,6 +1481,10 @@ int k1wi_auto_analyze_file(const char *path)
     printf("------------------\n");
     printf("RSA modulus n        : %s\n", has_rsa_n ? "yes" : "no");
     printf("RSA exponent e       : %s\n", has_rsa_e ? "yes" : "no");
+    printf("RSA private d        : %s\n", has_rsa_d ? "yes" : "no");
+    printf("RSA prime p          : %s\n", has_rsa_p ? "yes" : "no");
+    printf("RSA prime q          : %s\n", has_rsa_q ? "yes" : "no");
+    printf("RSA phi/totient      : %s\n", has_rsa_phi ? "yes" : "no");
     printf("RSA ciphertext field : %s\n", has_rsa_c ? "yes" : "no");
     printf("Generic ciphertext   : %s\n", has_generic_ciphertext ? "yes" : "no");
     printf("ECC point/public key : %s\n", has_ecc_point ? "yes" : "no");
@@ -1460,7 +1500,16 @@ int k1wi_auto_analyze_file(const char *path)
     printf("\nAssessment\n");
     printf("------------------\n");
 
-    if (has_rsa_n && has_rsa_e && has_rsa_c) {
+    if (has_rsa_n && has_rsa_d && has_rsa_c) {
+        printf("Detected type: RSA private exponent decrypt candidate\n");
+        printf("Recommendation: Use N and d with ciphertext to recover plaintext, or provide e/p/q for validation.\n");
+    } else if (has_rsa_n && has_rsa_d) {
+        printf("Detected type: RSA private exponent data\n");
+        printf("Recommendation: Provide ciphertext to decrypt, or provide e/p/q for validation and key reconstruction.\n");
+    } else if (has_rsa_p && has_rsa_q && has_rsa_e) {
+        printf("Detected type: RSA key reconstruction data\n");
+        printf("Recommendation: Use RSA-DFROMPQ or RSA-KNOWNPQ when ciphertext is available.\n");
+    } else if (has_rsa_n && has_rsa_e && has_rsa_c) {
         printf("Detected type: RSA challenge data\n");
         printf("Recommendation: Try RSA tools such as RSA-FACTOR, RSA-SMALL-E, RSA-WIENER, or future RSA-ROOTS.\n");
     } else if (has_ecc_point && (has_iv || has_encrypted_flag)) {
