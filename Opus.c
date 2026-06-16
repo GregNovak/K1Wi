@@ -1217,6 +1217,122 @@ int cmd_search(int argc, char **argv) {
 /* ======== MAIN FUNCTION STARTS HERE ======== */
 /* =========================================== */
 
+
+int k1wi_auto_analyze_file(const char *path)
+{
+    FILE *fp = NULL;
+    long size = 0;
+    char *buf = NULL;
+
+    int has_rsa_n = 0;
+    int has_rsa_e = 0;
+    int has_rsa_c = 0;
+    int has_generic_ciphertext = 0;
+    int has_ecc_point = 0;
+    int has_iv = 0;
+    int has_encrypted_flag = 0;
+
+    if (!path || path[0] == '\0') {
+        fprintf(stderr, "AUTO: missing input file.\n");
+        return 1;
+    }
+
+    fp = fopen(path, "rb");
+    if (!fp) {
+        perror("AUTO");
+        return 1;
+    }
+
+    if (fseek(fp, 0, SEEK_END) != 0) {
+        fclose(fp);
+        fprintf(stderr, "AUTO: failed to seek input file.\n");
+        return 1;
+    }
+
+    size = ftell(fp);
+    if (size < 0) {
+        fclose(fp);
+        fprintf(stderr, "AUTO: failed to determine input size.\n");
+        return 1;
+    }
+
+    rewind(fp);
+
+    buf = calloc((size_t)size + 1U, 1U);
+    if (!buf) {
+        fclose(fp);
+        fprintf(stderr, "AUTO: memory allocation failed.\n");
+        return 1;
+    }
+
+    if (size > 0 && fread(buf, 1U, (size_t)size, fp) != (size_t)size) {
+        free(buf);
+        fclose(fp);
+        fprintf(stderr, "AUTO: failed to read input file.\n");
+        return 1;
+    }
+
+    fclose(fp);
+
+    has_rsa_n = strstr(buf, "n =") != NULL || strstr(buf, "N =") != NULL || strstr(buf, "\"n\"") != NULL;
+    has_rsa_e = strstr(buf, "e =") != NULL || strstr(buf, "E =") != NULL || strstr(buf, "\"e\"") != NULL;
+    has_rsa_c = strstr(buf, "c =") != NULL ||
+                strstr(buf, "ct =") != NULL ||
+                strstr(buf, "ciphertext =") != NULL ||
+                strstr(buf, "ciphertext:") != NULL;
+
+    has_generic_ciphertext = strstr(buf, "ciphertext") != NULL ||
+                             strstr(buf, "encrypted") != NULL ||
+                             strstr(buf, "encrypted_flag") != NULL ||
+                             strstr(buf, "Encrypted flag") != NULL;
+
+    has_ecc_point = strstr(buf, "Point(x=") != NULL ||
+                    strstr(buf, "Point(") != NULL ||
+                    strstr(buf, "public key") != NULL ||
+                    strstr(buf, "Public key") != NULL;
+
+    has_iv = strstr(buf, "iv") != NULL || strstr(buf, "IV") != NULL;
+    has_encrypted_flag = strstr(buf, "encrypted_flag") != NULL ||
+                         strstr(buf, "Encrypted flag") != NULL ||
+                         strstr(buf, "encrypted flag") != NULL;
+
+    printf("\nK1Wi AUTO Analysis\n");
+    printf("------------------\n");
+    printf("Input file: %s\n", path);
+    printf("Bytes read : %ld\n", size);
+
+    printf("\nDetected fields\n");
+    printf("------------------\n");
+    printf("RSA modulus n        : %s\n", has_rsa_n ? "yes" : "no");
+    printf("RSA exponent e       : %s\n", has_rsa_e ? "yes" : "no");
+    printf("RSA ciphertext field : %s\n", has_rsa_c ? "yes" : "no");
+    printf("Generic ciphertext   : %s\n", has_generic_ciphertext ? "yes" : "no");
+    printf("ECC point/public key : %s\n", has_ecc_point ? "yes" : "no");
+    printf("IV / nonce field     : %s\n", has_iv ? "yes" : "no");
+    printf("Encrypted flag field : %s\n", has_encrypted_flag ? "yes" : "no");
+
+    printf("\nAssessment\n");
+    printf("------------------\n");
+
+    if (has_rsa_n && has_rsa_e && has_rsa_c) {
+        printf("Detected type: RSA challenge data\n");
+        printf("Recommendation: Try RSA tools such as RSA-FACTOR, RSA-SMALL-E, RSA-WIENER, or future RSA-ROOTS.\n");
+    } else if (has_ecc_point && (has_iv || has_encrypted_flag)) {
+        printf("Detected type: ECC / ECDH-style encrypted challenge data\n");
+        printf("Recommendation: Extract curve parameters before attempting ECC analysis.\n");
+    } else if (has_generic_ciphertext || has_iv || has_encrypted_flag) {
+        printf("Detected type: encrypted payload data\n");
+        printf("Recommendation: Identify cipher, key source, IV/nonce, and encoding.\n");
+    } else {
+        printf("Detected type: unknown / mixed input\n");
+        printf("Recommendation: Use STRING, MAGIC, ENTROPY, or add more AUTO detectors.\n");
+    }
+
+    free(buf);
+    return 0;
+}
+
+
 int opus_repl(void)
 {
 
@@ -1470,6 +1586,38 @@ int opus_repl(void)
             opus_menu();
         }
 	
+
+        else if (strcmp(cmd, "AUTO") == 0) {
+            const char *path = NULL;
+
+            if (argc >= 2) {
+                path = argv[1];
+            }
+
+            if (!path) {
+                char input_path[4096];
+
+                printf("Enter input file: ");
+                if (!fgets(input_path, sizeof(input_path), stdin)) {
+                    printf("Input error.\n");
+                    continue;
+                }
+
+                input_path[strcspn(input_path, "\r\n")] = '\0';
+
+                if (input_path[0] == '\0') {
+                    printf("AUTO: no input file provided.\n");
+                    continue;
+                }
+
+                k1wi_auto_analyze_file(input_path);
+            } else {
+                k1wi_auto_analyze_file(path);
+            }
+
+            continue;
+        }
+
     else if (strcmp(cmd, "R") == 0 || strcmp(cmd, "READ") == 0) {
 
     char path_buf[4096];

@@ -520,11 +520,29 @@ static const char *help_exit_lines[] = {
     NULL
 };
 
+
+static const char *help_auto_lines[] = {
+    "AUTO - Input Detection and Parser",
+    "",
+    "Usage:",
+    "  AUTO <file>",
+    "",
+    "Description:",
+    "  Reads a challenge or data file and attempts to identify useful fields.",
+    "  The v1.2 parser will detect RSA, ECC, hashes, encodings, and encrypted flag data.",
+    "",
+    "Examples:",
+    "  AUTO challenge.txt",
+    "  AUTO rsa_input.txt",
+    NULL
+};
+
 /* ===========================
    HELP TABLE
    =========================== */
 static const help_entry_t help_table[] = {
     { "SEARCH",      help_search_lines,      sizeof(help_search_lines)/sizeof(char*) },
+    { "AUTO",        help_auto_lines,        sizeof(help_auto_lines)/sizeof(char*) },
     { "LYZER", help_lyzer_lines, sizeof(help_lyzer_lines)/sizeof(char*) },
     { "PIECALC",     help_piecalc_lines,     sizeof(help_piecalc_lines)/sizeof(char*) },
     { "PIETIME",     help_pietime_lines,     sizeof(help_pietime_lines)/sizeof(char*) },

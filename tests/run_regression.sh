@@ -598,6 +598,45 @@ OUT=$($BIN help MAGIC 2>&1)
 echo "$OUT"
 require_output "HELP MAGIC page" "$OUT" "MAGIC - Magic Byte Detector"
 
+
+echo
+echo "[TEST] AUTO input detection"
+
+AUTO_RSA_SAMPLE="/tmp/k1wi_auto_regression_rsa.txt"
+cat > "$AUTO_RSA_SAMPLE" <<'EOF'
+n = 3233
+e = 17
+ct = 855
+EOF
+
+OUT=$($BIN AUTO "$AUTO_RSA_SAMPLE" 2>&1)
+echo "$OUT"
+
+require_output "AUTO detects RSA challenge" "$OUT" "Detected type: RSA challenge data"
+require_output "AUTO finds RSA n" "$OUT" "RSA modulus n        : yes"
+require_output "AUTO finds RSA e" "$OUT" "RSA exponent e       : yes"
+require_output "AUTO finds RSA ciphertext" "$OUT" "RSA ciphertext field : yes"
+
+AUTO_ECC_SAMPLE="/tmp/k1wi_auto_regression_ecc.txt"
+cat > "$AUTO_ECC_SAMPLE" <<'EOF'
+Alice's public key: Point(x=155781055760279718382374741001148850818103179141959728567110540865590463, y=73794785561346677848810778233901832813072697504335306937799336126503714)
+Bob's public key: Point(x=171226959585314864221294077932510094779925634276949970785138593200069419, y=54353971839516652938533335476115503436865545966356461292708042305317630)
+Encrypted flag: {'iv': '64bc75c8b38017e1397c46f85d4e332b', 'encrypted_flag': '13e4d200708b786d8f7c3bd2dc5de0201f0d7879192e6603d7c5d6b963e1df2943e3ff75f7fda9c30a92171bbbc5acbf'}
+EOF
+
+OUT=$($BIN AUTO "$AUTO_ECC_SAMPLE" 2>&1)
+echo "$OUT"
+
+require_output "AUTO detects ECC challenge" "$OUT" "Detected type: ECC / ECDH-style encrypted challenge data"
+require_output "AUTO finds ECC point" "$OUT" "ECC point/public key : yes"
+require_output "AUTO finds generic ciphertext" "$OUT" "Generic ciphertext   : yes"
+require_output "AUTO avoids false RSA ciphertext" "$OUT" "RSA ciphertext field : no"
+
+OUT=$($BIN help AUTO 2>&1)
+echo "$OUT"
+require_output "HELP AUTO page" "$OUT" "AUTO - Input Detection and Parser"
+
+
 echo
 echo "[TEST] VERSION banner"
 

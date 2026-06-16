@@ -19,6 +19,8 @@
 #include "file_ops.h"
 #include "secure_delete_cmds.h"
 
+int k1wi_auto_analyze_file(const char *path);
+
 
 typedef struct opus_context opus_context;
 
@@ -580,6 +582,16 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     
     }
     
+
+    else if (strcasecmp(cmd, "AUTO") == 0) {
+        if (cli->arg_start >= argc) {
+            fprintf(stderr, "Usage: k1wi AUTO <file>\n");
+            return 1;
+        }
+
+        return k1wi_auto_analyze_file(argv[cli->arg_start]);
+    }
+
     else if (strcasecmp(cmd, "TIME") == 0) {
         systemTime();
         return 0;
