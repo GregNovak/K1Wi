@@ -5562,71 +5562,64 @@ void fileClose(FILE *fp)
 
 void fileDelete(void)
 {
-    
     char buf[64];
-    char choice;
-    int mode = -1; /* 0 = DoD, 1 = NIST */
+    char args_buf[1024];
 
-    /* Prompt for filename */
     printf("Enter the name of the file to securely delete: ");
     if (fgets(filename, sizeof(filename), stdin) == NULL) {
         printf("No filename provided.\n");
         return;
     }
+
     filename[strcspn(filename, "\r\n")] = '\0';
 
-    /* Basic safety checks: non-empty, no absolute paths, no directory traversal */
     if (filename[0] == '\0') {
         printf("No filename provided.\n");
         return;
     }
+
     if (filename[0] == '/' || strstr(filename, "..")) {
         printf("Unsafe filename. Deletion aborted.\n");
         return;
     }
 
-    /* Choose deletion standard */
     printf("Choose deletion standard:\n");
-    printf("  1 = DoD 5220.22-M (3-pass overwrite)\n");
-    printf("  2 = NIST 800-88 Rev.1 (single-pass zero overwrite)\n");
+    printf("  1 = DoD-style 3-pass overwrite\n");
+    printf("  2 = NIST-style single-pass zero overwrite\n");
+    printf("  3 = Custom pass count (1-33)\n");
     printf("Selection: ");
 
     if (fgets(buf, sizeof(buf), stdin) == NULL) {
         printf("No selection. Deletion aborted.\n");
         return;
     }
+
     if (buf[0] == '1') {
-        mode = 0; /* DoD */
+        snprintf(args_buf, sizeof(args_buf), "%s -s 1", filename);
     } else if (buf[0] == '2') {
-        mode = 1; /* NIST */
+        snprintf(args_buf, sizeof(args_buf), "%s -s 2", filename);
+    } else if (buf[0] == '3') {
+        int passes;
+
+        printf("Enter custom pass count (1-33): ");
+        if (fgets(buf, sizeof(buf), stdin) == NULL) {
+            printf("No custom pass count. Deletion aborted.\n");
+            return;
+        }
+
+        passes = atoi(buf);
+        if (passes < 1 || passes > 33) {
+            printf("Error: custom pass count must be between 1 and 33.\n");
+            return;
+        }
+
+        snprintf(args_buf, sizeof(args_buf), "%s -p %d", filename, passes);
     } else {
         printf("Invalid selection. Deletion aborted.\n");
         return;
     }
 
-    /* Confirm */
-    printf("Are you sure you want to SECURELY DELETE '%s'? [Y/N]: ", filename);
-    if (fgets(buf, sizeof(buf), stdin) == NULL) {
-        printf("No confirmation. Deletion aborted.\n");
-        return;
-    }
-    choice = buf[0];
-    if (!(choice == 'Y' || choice == 'y')) {
-        printf("File deletion canceled.\n");
-        return;
-    }
-
-    /* Map interactive mode to secure_delete_file standard:
-       secure_delete_file: 1 = DoD, 2 = NIST */
-    int standard = (mode == 1) ? 2 : 1;
-
-    /* Call shared secure-delete core (must be implemented elsewhere) */
-    if (secure_delete_file(filename, standard) == 0) {
-        printf("Secure deletion complete.\n");
-    } else {
-        /* secure_delete_file sets errno on failure */
-        perror("Error deleting file");
-    }
+    fileDeleteCmd(args_buf);
 }
 
 
