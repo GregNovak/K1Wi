@@ -475,6 +475,57 @@ fi
 
 pass "DEL removed file"
 
+
+echo
+echo "[TEST] DEL rejects unsafe targets"
+
+rm -rf k1wi_del_dir_test k1wi_del_real_target.txt k1wi_del_symlink.txt
+mkdir -p k1wi_del_dir_test
+echo "real target must survive" > k1wi_del_real_target.txt
+ln -s k1wi_del_real_target.txt k1wi_del_symlink.txt
+
+set +e
+OUT=$($BIN DEL k1wi_del_dir_test -s 2 -y 2>&1)
+set -e
+echo "$OUT"
+
+require_output \
+    "DEL reports failure for directory target" \
+    "$OUT" \
+    "Secure delete failed"
+
+if [ ! -d k1wi_del_dir_test ]; then
+    fail "DEL removed directory target"
+fi
+
+pass "DEL rejects directory target"
+
+set +e
+OUT=$($BIN DEL k1wi_del_symlink.txt -s 2 -y 2>&1)
+set -e
+echo "$OUT"
+
+require_output \
+    "DEL reports failure for symlink target" \
+    "$OUT" \
+    "Secure delete failed"
+
+if [ ! -f k1wi_del_real_target.txt ]; then
+    fail "DEL removed symlink target"
+fi
+
+if ! grep -q "real target must survive" k1wi_del_real_target.txt; then
+    fail "DEL modified symlink target"
+fi
+
+if [ ! -L k1wi_del_symlink.txt ]; then
+    fail "DEL removed symlink itself"
+fi
+
+pass "DEL rejects symlink target and preserves real file"
+
+rm -rf k1wi_del_dir_test k1wi_del_real_target.txt k1wi_del_symlink.txt
+
 echo
 echo "[TEST] WIPEFS CLI safety stub"
 

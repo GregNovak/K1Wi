@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <time.h>
 #include <unistd.h>   /* ftruncate, getpid, access */
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -41,16 +42,41 @@ static int prompt_for_confirmation(const char *prompt) {
 int secure_delete_file(const char *filename, int standard) {
     if (!filename) { errno = EINVAL; return -1; }
 
-    /* quick existence check for clearer diagnostics */
-    if (access(filename, F_OK) != 0) {
-        /* errno set by access */
+    struct stat st;
+    if (lstat(filename, &st) != 0) {
         fprintf(stderr, "[secure_delete_file] file not found: %s\n", filename);
         return -1;
     }
 
-    FILE *fp = fopen(filename, "r+b");
+    if (S_ISLNK(st.st_mode)) {
+        errno = ELOOP;
+        fprintf(stderr, "[secure_delete_file] refusing symlink target: %s\n", filename);
+        return -1;
+    }
+
+    if (!S_ISREG(st.st_mode)) {
+        errno = EINVAL;
+        fprintf(stderr, "[secure_delete_file] refusing non-regular file: %s\n", filename);
+        return -1;
+    }
+
+    int flags = O_RDWR;
+#ifdef O_NOFOLLOW
+    flags |= O_NOFOLLOW;
+#endif
+
+    int fd = open(filename, flags);
+    if (fd < 0) {
+        fprintf(stderr, "[secure_delete_file] open('%s') failed: %s\n", filename, strerror(errno));
+        return -1;
+    }
+
+    FILE *fp = fdopen(fd, "r+b");
     if (!fp) {
-        fprintf(stderr, "[secure_delete_file] fopen('%s') failed: %s\n", filename, strerror(errno));
+        int se = errno;
+        close(fd);
+        errno = se;
+        fprintf(stderr, "[secure_delete_file] fdopen('%s') failed: %s\n", filename, strerror(errno));
         return -1;
     }
 
