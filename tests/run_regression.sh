@@ -455,6 +455,35 @@ fi
 
 pass "CREATE created empty file"
 
+CREATE_MODE=$(stat -c "%a" /tmp/k1wi_create_test.txt)
+if [ "$CREATE_MODE" != "600" ]; then
+    fail "CREATE permissions expected 600, got $CREATE_MODE"
+fi
+
+pass "CREATE uses 0600 permissions"
+
+rm -f /tmp/k1wi_create_existing.txt
+echo "do not overwrite me" > /tmp/k1wi_create_existing.txt
+
+set +e
+OUT=$($BIN CREATE /tmp/k1wi_create_existing.txt 2>&1)
+RC=$?
+set -e
+echo "$OUT"
+
+if [ "$RC" -eq 0 ]; then
+    fail "CREATE overwrote existing file"
+fi
+
+if ! grep -q "do not overwrite me" /tmp/k1wi_create_existing.txt; then
+    fail "CREATE changed existing file contents"
+fi
+
+pass "CREATE rejects existing file"
+pass "CREATE preserves existing file contents"
+
+rm -f /tmp/k1wi_create_test.txt /tmp/k1wi_create_existing.txt
+
 
 echo
 echo "[TEST] DEL secure delete sample"
