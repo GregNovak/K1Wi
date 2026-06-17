@@ -62,7 +62,27 @@ int opus_secure_delete_file(const char *path, const opus_sd_policy_t *policy) {
         return -1;
     }
 
-    int fd = open(path, O_RDWR);
+    struct stat lst;
+    if (lstat(path, &lst) < 0) {
+        return -1;
+    }
+
+    if (S_ISLNK(lst.st_mode)) {
+        errno = ELOOP;
+        return -1;
+    }
+
+    if (!S_ISREG(lst.st_mode)) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    int flags = O_RDWR;
+#ifdef O_NOFOLLOW
+    flags |= O_NOFOLLOW;
+#endif
+
+    int fd = open(path, flags);
     if (fd < 0) {
         return -1;
     }
@@ -72,6 +92,18 @@ int opus_secure_delete_file(const char *path, const opus_sd_policy_t *policy) {
         int se = errno;
         close(fd);
         errno = se;
+        return -1;
+    }
+
+    if (!S_ISREG(st.st_mode)) {
+        close(fd);
+        errno = EINVAL;
+        return -1;
+    }
+
+    if (st.st_dev != lst.st_dev || st.st_ino != lst.st_ino) {
+        close(fd);
+        errno = EAGAIN;
         return -1;
     }
 
@@ -157,8 +189,28 @@ int opus_secure_delete_file(const char *path, const opus_sd_policy_t *policy) {
         return -1;
     }
 
+    if (fsync(fd) < 0) {
+        int se = errno;
+        free(buf);
+        close(fd);
+        errno = se;
+        return -1;
+    }
+
     free(buf);
     close(fd);
+
+    struct stat final_st;
+    if (lstat(path, &final_st) < 0) {
+        return -1;
+    }
+
+    if (!S_ISREG(final_st.st_mode) ||
+        final_st.st_dev != lst.st_dev ||
+        final_st.st_ino != lst.st_ino) {
+        errno = EAGAIN;
+        return -1;
+    }
 
     return (unlink(path) == 0) ? 0 : -1;
 }
