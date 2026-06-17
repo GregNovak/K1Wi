@@ -389,11 +389,15 @@ static const char *help_del_lines[] = {
     "",
     "Usage:",
     "  DEL <file> [-s 1|2] [-y]",
+    "  DEL <file> -p N [-y]",
+    "  DEL <file> --passes N [-y]",
     "",
     "Description:",
     "  Securely deletes a regular file using the selected wipe standard.",
     "  -s 1 selects DoD-style 3-pass overwrite behavior.",
     "  -s 2 selects NIST-style single-pass zero overwrite behavior.",
+    "  -p N or --passes N selects a custom overwrite pass count.",
+    "  Custom pass count must be between 1 and 33.",
     "  -y confirms deletion without prompting.",
     "",
     "Safety:",
@@ -403,8 +407,10 @@ static const char *help_del_lines[] = {
     "",
     "Example:",
     "  DEL k1wi_del_test.txt -s 2 -y",
+    "  DEL k1wi_del_test.txt --passes 7 -y",
     NULL
 };
+
 
 static const char *help_rsa_rho_lines[] = {
     "RSA-RHO - Pollard Rho Factorization",

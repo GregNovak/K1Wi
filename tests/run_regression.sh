@@ -556,6 +556,42 @@ pass "DEL rejects symlink target and preserves real file"
 rm -rf k1wi_del_dir_test k1wi_del_real_target.txt k1wi_del_symlink.txt
 
 echo
+
+
+
+echo
+echo "[TEST] DEL custom pass count"
+
+printf "custom pass regression\n" > k1wi_del_custom_pass.txt
+del_custom_output="$(./bin/k1wi DEL k1wi_del_custom_pass.txt -p 7 -y 2>&1 || true)"
+require_output "DEL custom pass reports completion" "$del_custom_output" "using 7 custom passes"
+if [[ ! -e k1wi_del_custom_pass.txt ]]; then
+    pass "DEL custom pass removed file"
+else
+    fail "DEL custom pass removed file"
+    rm -f k1wi_del_custom_pass.txt
+fi
+
+printf "bad pass regression\n" > k1wi_del_bad_pass_zero.txt
+del_bad_zero_output="$(./bin/k1wi DEL k1wi_del_bad_pass_zero.txt -p 0 -y 2>&1 || true)"
+require_output "DEL rejects zero custom pass count" "$del_bad_zero_output" "between 1 and 33"
+if [[ -e k1wi_del_bad_pass_zero.txt ]]; then
+    pass "DEL zero pass preserves file"
+else
+    fail "DEL zero pass preserves file"
+fi
+rm -f k1wi_del_bad_pass_zero.txt
+
+printf "bad pass regression\n" > k1wi_del_bad_pass_high.txt
+del_bad_high_output="$(./bin/k1wi DEL k1wi_del_bad_pass_high.txt --passes 34 -y 2>&1 || true)"
+require_output "DEL rejects high custom pass count" "$del_bad_high_output" "between 1 and 33"
+if [[ -e k1wi_del_bad_pass_high.txt ]]; then
+    pass "DEL high pass preserves file"
+else
+    fail "DEL high pass preserves file"
+fi
+rm -f k1wi_del_bad_pass_high.txt
+
 echo "[TEST] WIPEFS CLI safety stub"
 
 OUT=$($BIN WIPEFS 2>&1)
