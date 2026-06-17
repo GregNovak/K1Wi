@@ -156,6 +156,16 @@ if [ -f "$LYZER_IMG" ]; then
     require_output "LYZER --quiet reports assessment" "$OUT" "Assessment"
     require_not_output "LYZER --quiet hides heatmap" "$OUT" "Entropy Heatmap"
     require_not_output "LYZER --quiet hides carver" "$OUT" "File Carver"
+
+    OUT=$($BIN lyzer "$LYZER_IMG" --json 2>&1)
+    echo "$OUT"
+    require_output "LYZER --json reports JSON tool" "$OUT" '"tool": "LYZER"'
+    require_output "LYZER --json reports JSON mode" "$OUT" '"mode": "json"'
+    require_output "LYZER --json reports JPEG format" "$OUT" '"format": "JPEG"'
+    require_output "LYZER --json reports file size" "$OUT" '"size_bytes":'
+    require_output "LYZER --json reports entropy" "$OUT" '"entropy":'
+    require_output "LYZER --json reports assessment" "$OUT" '"assessment":'
+    require_output "LYZER --json reports null error" "$OUT" '"error": null'
     
     OUT=$(printf "LYZER %s --summary\nEXIT\n" "$LYZER_IMG" | $BIN 2>&1)
     require_output "LYZER shell --summary alias works" "$OUT" "K1Wi LYZER Summary"
@@ -166,6 +176,11 @@ if [ -f "$LYZER_IMG" ]; then
     require_output "LYZER shell --quiet reports assessment" "$OUT" "Assessment"
     require_not_output "LYZER shell --quiet hides heatmap" "$OUT" "Entropy Heatmap"
     require_not_output "LYZER shell --quiet hides carver" "$OUT" "File Carver"
+
+    OUT=$(printf "LYZER %s --json\nEXIT\n" "$LYZER_IMG" | $BIN 2>&1)
+    require_output "LYZER shell --json reports JSON tool" "$OUT" '"tool": "LYZER"'
+    require_output "LYZER shell --json reports JSON mode" "$OUT" '"mode": "json"'
+    require_output "LYZER shell --json reports JPEG format" "$OUT" '"format": "JPEG"'
 
     OUT=$(printf "LYZER %s --full\nEXIT\n" "$LYZER_IMG" | $BIN 2>&1)
     require_output "LYZER shell --full alias runs carver" "$OUT" "File Carver"
