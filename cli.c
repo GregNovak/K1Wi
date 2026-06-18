@@ -184,7 +184,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
         if (strcmp(argv[cli->arg_start], "-in") == 0) {
             if (cli->arg_start + 1 >= argc) {
                 fprintf(stderr, "MD5 -in: need <file>\n");
-                return 1;
+        return 1;
             }
 
             const char *path = argv[cli->arg_start + 1];
@@ -201,7 +201,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
         if (strcmp(argv[cli->arg_start], "-verify") == 0) {
             if (cli->arg_start + 2 >= argc) {
                 fprintf(stderr, "MD5 -verify: need <file> <hash>\n");
-                return 1;
+        return 1;
             }
 
             const char *path = argv[cli->arg_start + 1];
@@ -209,7 +209,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
             if (opus_md5_file(path, digest) != true) {
                 fprintf(stderr, "MD5: failed to read %s\n", path);
-                return 1;
+        return 1;
             }
 
             if (strcasecmp(digest, expected) == 0) {
@@ -224,7 +224,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
         if (strcmp(argv[cli->arg_start], "-compare") == 0) {
             if (cli->arg_start + 2 >= argc) {
                 fprintf(stderr, "MD5 -compare: need <file1> <file2>\n");
-                return 1;
+        return 1;
             }
 
             char h1[33], h2[33];
@@ -233,12 +233,12 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
             if (opus_md5_file(file1, h1) != true) {
                 fprintf(stderr, "MD5: failed to read %s\n", file1);
-                return 1;
+        return 1;
             }
 
             if (opus_md5_file(file2, h2) != true) {
                 fprintf(stderr, "MD5: failed to read %s\n", file2);
-                return 1;
+        return 1;
             }
 
             if (strcasecmp(h1, h2) == 0) {
@@ -494,7 +494,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
             if (cli->arg_start + 2 >= argc) {
                 fprintf(stderr, "Usage: k1wi RSA-FACTOR <rsa_file> [TIME <minutes>|--time <minutes>|--minutes <minutes>|-t <minutes>]\n");
-                return 1;
+        return 1;
             }
 
             if (strcasecmp(opt, "TIME") == 0 ||
@@ -506,12 +506,12 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
                 if (end == argv[cli->arg_start + 2] || *end != '\0' || time_limit_minutes == 0) {
                     fprintf(stderr, "rsa-factor: time limit must be a positive number of minutes\n");
-                    return 1;
+            return 1;
                 }
             } else {
                 fprintf(stderr, "rsa-factor: unknown option '%s'\n", opt);
                 fprintf(stderr, "Usage: k1wi RSA-FACTOR <rsa_file> [TIME <minutes>|--time <minutes>|--minutes <minutes>|-t <minutes>]\n");
-                return 1;
+        return 1;
             }
         }
 
@@ -583,7 +583,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
             strcasecmp(opt, "-c") == 0) {
             if (i + 1 >= argc) {
                 fprintf(stderr, "rsa-ecm: --curves requires a positive number\n");
-                return 1;
+        return 1;
             }
 
             char *endptr = NULL;
@@ -591,7 +591,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
             if (endptr == argv[i] || *endptr != '\0' || curves == 0) {
                 fprintf(stderr, "rsa-ecm: --curves requires a positive number\n");
-                return 1;
+        return 1;
             }
         } else if (strcasecmp(opt, "--bound") == 0 ||
                    strcasecmp(opt, "--b1") == 0 ||
@@ -600,7 +600,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
                    strcasecmp(opt, "-b") == 0) {
             if (i + 1 >= argc) {
                 fprintf(stderr, "rsa-ecm: --bound requires a positive number\n");
-                return 1;
+        return 1;
             }
 
             char *endptr = NULL;
@@ -608,7 +608,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
             if (endptr == argv[i] || *endptr != '\0' || bound == 0) {
                 fprintf(stderr, "rsa-ecm: --bound requires a positive number\n");
-                return 1;
+        return 1;
             }
         } else {
             fprintf(stderr, "rsa-ecm: unknown option '%s'\n", opt);
@@ -638,15 +638,15 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     }
 
     if (mpz_cmp_ui(f, 1) <= 0 || mpz_cmp(f, N) >= 0 || !mpz_divisible_p(N, f)) {
-    gmp_printf("[-] RSA-ECM: rejected invalid factor candidate f = %Zd\n", f);
-    mpz_clears(N, e, c, f, q, NULL);
-    return 1;
+        gmp_printf("[-] RSA-ECM: rejected invalid factor candidate f = %Zd\n", f);
+        mpz_clears(N, e, c, f, q, NULL);
+        return 1;
     }
 
-     mpz_divexact(q, N, f);
+    mpz_divexact(q, N, f);
 
-     gmp_printf("[+] RSA-ECM: found factor f = %Zd\n", f);
-     gmp_printf("[+] RSA-ECM: cofactor q = %Zd\n", q);
+    gmp_printf("[+] RSA-ECM: found factor f = %Zd\n", f);
+    gmp_printf("[+] RSA-ECM: cofactor q = %Zd\n", q);
 
 	mpz_clears(N, e, c, f, q, NULL);
 	return 0;
