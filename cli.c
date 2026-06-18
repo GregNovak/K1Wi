@@ -483,11 +483,43 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 	} 
         else if (strcasecmp(cmd, "RSA-FACTOR") == 0) {
           if (cli->arg_start >= argc) {
-            fprintf(stderr, "Usage: k1wi rsa-factor <rsa_file>\n");
+            fprintf(stderr, "Usage: k1wi RSA-FACTOR <rsa_file> [TIME <minutes>|--time <minutes>|--minutes <minutes>|-t <minutes>]\n");
             return 1;
         }
 
-        return opus_rsa_factor(argv[cli->arg_start]);
+        unsigned long time_limit_minutes = 0;
+
+        if (cli->arg_start + 1 < argc) {
+            const char *opt = argv[cli->arg_start + 1];
+
+            if (cli->arg_start + 2 >= argc) {
+                fprintf(stderr, "Usage: k1wi RSA-FACTOR <rsa_file> [TIME <minutes>|--time <minutes>|--minutes <minutes>|-t <minutes>]\n");
+                return 1;
+            }
+
+            if (strcasecmp(opt, "TIME") == 0 ||
+                strcasecmp(opt, "--time") == 0 ||
+                strcasecmp(opt, "--minutes") == 0 ||
+                strcasecmp(opt, "-t") == 0) {
+                char *end = NULL;
+                time_limit_minutes = strtoul(argv[cli->arg_start + 2], &end, 10);
+
+                if (end == argv[cli->arg_start + 2] || *end != '\0' || time_limit_minutes == 0) {
+                    fprintf(stderr, "rsa-factor: time limit must be a positive number of minutes\n");
+                    return 1;
+                }
+            } else {
+                fprintf(stderr, "rsa-factor: unknown option '%s'\n", opt);
+                fprintf(stderr, "Usage: k1wi RSA-FACTOR <rsa_file> [TIME <minutes>|--time <minutes>|--minutes <minutes>|-t <minutes>]\n");
+                return 1;
+            }
+        }
+
+        if (opus_rsa_factor_with_time(argv[cli->arg_start], time_limit_minutes)) {
+            return 0;
+        }
+
+        return 1;
 
    } else if (strcasecmp(cmd, "RSA-KNOWNPQ") == 0) {
     if (cli->arg_start + 2 >= argc) {

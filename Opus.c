@@ -3020,264 +3020,41 @@ else if (strcasecmp(cmd, "STRING") == 0) {
         fprintf(stderr, "rsa-mini: success\n");
 }
         else if (strcmp(cmd, "RSA-FACTOR") == 0) {
-    if (argc != 2) {
-        printf("Usage: RSA-FACTOR <rsa_file>\n");
+    if (argc != 2 && argc != 4) {
+        printf("Usage: RSA-FACTOR <rsa_file> [TIME <minutes>|--time <minutes>|--minutes <minutes>|-t <minutes>]\n");
         continue;
     }
 
     const char *fname = argv[1];
+    unsigned long time_limit_minutes = 0;
+
+    if (argc == 4) {
+        if (strcasecmp(argv[2], "TIME") == 0 ||
+            strcasecmp(argv[2], "--time") == 0 ||
+            strcasecmp(argv[2], "--minutes") == 0 ||
+            strcasecmp(argv[2], "-t") == 0) {
+            char *endptr = NULL;
+            time_limit_minutes = strtoul(argv[3], &endptr, 10);
+
+            if (endptr == argv[3] || *endptr != '\0' || time_limit_minutes == 0) {
+                printf("rsa-factor: time limit must be a positive number of minutes\n");
+                continue;
+            }
+        } else {
+            printf("rsa-factor: unknown option '%s'\n", argv[2]);
+            printf("Usage: RSA-FACTOR <rsa_file> [TIME <minutes>|--time <minutes>|--minutes <minutes>|-t <minutes>]\n");
+            continue;
+        }
+    }
 
     printf("[*] Input file: %s\n", fname);
 
-        if (opus_rsa_factor(fname))
+    if (opus_rsa_factor_with_time(fname, time_limit_minutes))
         printf("\nrsa-factor: success\n\n");
-	else
-	    printf("\nrsa-factor: failed\n\n");
+    else
+        printf("\nrsa-factor: failed\n\n");
 
     continue;
-	}
-	else if (strcmp(cmd, "RSA-RHO") == 0) {
-	    if (argc != 2) {
-		printf("Usage: RSA-RHO <rsa_file>\n");
-		continue;
-	    }
-
-	    const char *fname = argv[1];
-
-	    printf("[*] Input file: %s\n", fname);
-
-	    if (opus_rsa_rho(fname))
-		printf("\nrsa-rho: success\n\n");
-	    else
-		printf("\nrsa-rho: failed\n\n");
-
-	    continue;
-	}
-        else if (strcmp(cmd, "RSA-WIENER") == 0) {
-    		if (argc != 2) {
-        	printf("Usage: RSA-WIENER <rsa_file>\n");
-        	continue;
-    	}
-	    const char *path = argv[1];
-	    printf("[*] Input file: %s\n", path);
-	    mpz_t N, e, c, d, m;
-	    mpz_inits(N, e, c, d, m, NULL);
-
-	    if (parse_rsa_file(path, N, e, c) != 0) {
-		printf("rsa-wiener: failed to parse RSA file\n");
-		mpz_clears(N, e, c, d, m, NULL);
-		continue;
-	    }
-
-	    printf("[*] RSA-WIENER: starting Wiener attack\n");
-
-	    if (opus_rsa_wiener_attack(N, e, d) != 0) {
-		printf("[-] RSA-WIENER: Wiener attack failed (d not small)\n");
-		mpz_clears(N, e, c, d, m, NULL);
-		continue;
-	    }
-
-	    printf("[+] RSA-WIENER: recovered d\n");
-
-	    /* m = c^d mod N */
-	    
-	    mpz_powm(m, c, d, N);
-
-	    opus_print_plaintext_from_bigint(m);
-	    putchar('\n');
-
-	    mpz_clears(N, e, c, d, m, NULL);
-	    continue;
-	}
-	else if (strcmp(cmd, "RSA-SMALL-E") == 0) {
-    		if (argc != 2) {
-        	printf("Usage: RSA-SMALL-E <rsa_file>\n");
-        	continue;
-    	}
-	    const char *path = argv[1];
-
-	    mpz_t N, e, c, m;
-	    mpz_inits(N, e, c, m, NULL);
-
-	    if (parse_rsa_file(path, N, e, c) != 0) {
-		printf("rsa-small-e: failed to parse RSA file\n");
-		mpz_clears(N, e, c, m, NULL);
-		continue;
-	    }
-
-	    unsigned long e_ul = mpz_get_ui(e);
-
-	    printf("[*] RSA-SMALL-E: checking for small exponent attack (e = %lu)\n", e_ul);
-
-	    if (e_ul == 0 || e_ul > 64) {
-		printf("[-] RSA-SMALL-E: exponent too large or invalid\n");
-		mpz_clears(N, e, c, m, NULL);
-		continue;
-	    }
-
-	    if (rsa_small_e_attack(m, c, e_ul)) {
-		printf("[+] RSA-SMALL-E: recovered plaintext via integer %lu-th root\n", e_ul);
-		opus_print_plaintext_from_bigint(m);
-	    } else {
-		printf("[-] RSA-SMALL-E: attack not applicable (no exact root)\n");
-	    }
-
-	    mpz_clears(N, e, c, m, NULL);
-	}
-	else if (strcmp(cmd, "RSA-ROOTS") == 0) {
-    		if (argc != 2) {
-        	printf("Usage: RSA-ROOTS <rsa_file>\n");
-        	continue;
-    	}
-	    const char *path = argv[1];
-
-	    mpz_t N, e, c, m;
-	    mpz_inits(N, e, c, m, NULL);
-
-	    if (parse_rsa_file(path, N, e, c) != 0) {
-		printf("rsa-roots: failed to parse RSA file\n");
-		mpz_clears(N, e, c, m, NULL);
-		continue;
-	    }
-
-	    unsigned long e_ul = mpz_get_ui(e);
-
-	    printf("[*] RSA-ROOTS: checking exact integer root path\n");
-	    gmp_printf("[*] N = %Zd\n", N);
-	    gmp_printf("[*] e = %Zd\n", e);
-	    gmp_printf("[*] c = %Zd\n", c);
-
-	    if (mpz_even_p(e)) {
-		printf("[!] RSA-ROOTS: even public exponent detected\n");
-		printf("[!] RSA-ROOTS: normal RSA private exponent may not exist if gcd(e, phi(n)) != 1\n");
-	    }
-
-	    if (e_ul == 0 || e_ul > 64 || mpz_cmp_ui(e, e_ul) != 0) {
-		printf("[-] RSA-ROOTS: exponent too large or invalid for exact integer root helper\n");
-		printf("[*] RSA-ROOTS: modular root support with known p/q is planned for a later expansion\n");
-		mpz_clears(N, e, c, m, NULL);
-		continue;
-	    }
-
-	    if (rsa_small_e_attack(m, c, e_ul)) {
-		printf("[+] RSA-ROOTS: recovered plaintext via exact integer %lu-th root\n", e_ul);
-		opus_print_plaintext_from_bigint(m);
-	    } else {
-		printf("[-] RSA-ROOTS: no exact integer %lu-th root found\n", e_ul);
-		printf("[*] RSA-ROOTS: if p and q are known, modular root recovery may still be possible\n");
-	    }
-
-	    mpz_clears(N, e, c, m, NULL);
-	}
-	else if (strcmp(cmd, "RSA-KNOWNPQ") == 0) {
-    		if (argc != 4) {
-        	printf("Usage: RSA-KNOWNPQ <rsa_file> <p> <q>\n");
-        	continue;
-    	}
-            const char *path = argv[1];
-            const char *p_str = argv[2];
-            const char *q_str = argv[3];
-
-            printf("[*] RSA-KNOWNPQ: starting known-pq decryption\n");
-            if (opus_rsa_knownpq(path, p_str, q_str)) {
-                printf("rsa-knownpq: success\n");
-            } else {
-                printf("rsa-knownpq: failed\n");
-            }
-        }
-	else if (strcmp(cmd, "RSA-CHECKPQ") == 0) {
-	    if (argc != 3) {
-		printf("Usage: RSA-CHECKPQ <p> <q>\n");
-		fflush(stdout);
-		continue;
-	    }
-
-	    opus_rsa_checkpq(argv[1], argv[2]);
-	}
-	else if (strcmp(cmd, "RSA-DFROMPQ") == 0) {
-	    if (argc != 4) {
-		printf("Usage: RSA-DFROMPQ <p> <q> <e>\n");
-		continue;
-	    }
-
-	    if (opus_rsa_dfrompq(argv[1], argv[2], argv[3])) {
-		printf("rsa-dfrompq: success\n");
-	    } else {
-		printf("rsa-dfrompq: failed\n");
-	    }
-	}
-
-	else if (strcmp(cmd, "RSA-ECM") == 0) {
-    		if (argc != 2) {
-        	printf("Usage: RSA-ECM <rsa_file>\n");
-        continue;
-    	}	
-	    const char *path = argv[1];
-
-	    mpz_t N, e, c, f, q;
-	    mpz_inits(N, e, c, f, q, NULL);
-
-	    if (parse_rsa_file(path, N, e, c) != 0) {
-		printf("rsa-ecm: failed to parse RSA file\n");
-		mpz_clears(N, e, c, f, q, NULL);
-		continue;
-	    }
-
-	    printf("[*] RSA-ECM: starting ECM factorization\n");
-
-	    if (!opus_rsa_ecm_factor(N, f)) {
-		printf("[-] RSA-ECM: no factor found (within bounds)\n");
-		mpz_clears(N, e, c, f, q, NULL);
-		continue;
-	    }
-
-	    mpz_fdiv_q(q, N, f);
-
-	    gmp_printf("[+] RSA-ECM: found factor f = %Zd\n", f);
-	    gmp_printf("[+] RSA-ECM: cofactor q = %Zd\n", q);
-
-	    // from here you can compute phi, d, and decrypt like RSA-FACTOR
-	    mpz_clears(N, e, c, f, q, NULL);
-	}
-
-
-	else if (strcasecmp(cmd, "FORENSIC") == 0) {
-	    dispatch_forensic(argc, argv);
-	    continue;
-	}
-
-	else if (strcmp(cmd, "SOLVE") == 0) {
-
-	    if (argc < 2) {
-		printf("Usage: solve <cipherfile> [forced_spec]\n");
-		continue;
-	    }
-
-	    const char *cipherfile   = argv[1];
-	    const char *forced_spec  = (argc >= 3) ? argv[2] : NULL;
-
-	    if (forced_spec)
-		printf("Launching solver on '%s' with forced substitutions: %s\n",
-		       cipherfile, forced_spec);
-	    else
-		printf("Launching solver on '%s'...\n", cipherfile);
-
-	    run_solver_from_opus(cipherfile, forced_spec);
-	    continue;
-	}
-
-
-        else if (strcmp(cmd, "X") == 0 || strcmp(cmd, "EXTRACT") == 0) {
-            fileName();
-            printf("\nRunning recursive extraction on: %s\n", filename);
-
-		/* call the public wrapper instead of the internal extract_layers */
-		if (opus_extract_recursive(filename) != 0) {
-		    fprintf(stderr, "EXTRACT: failed for %s\n", filename);
-		} else {
-		    fprintf(stderr, "EXTRACT: completed for %s\n", filename);
-		}
-
         }
         else if (strcmp(cmd, "DIGRAPH") == 0) {
             digraphTrigraphAnalyzer();

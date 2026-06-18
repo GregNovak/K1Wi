@@ -635,6 +635,33 @@ fi
 pass "RSA factor command completed"
 
 echo
+
+OUT=$($BIN RSA-FACTOR ./testdata/rsa/rsa_61_53_e17.txt TIME 1 2>&1)
+printf "%s\n" "$OUT"
+require_output "RSA factor accepts TIME minutes option" "$OUT" "[*] RSA-Factor: time limit set to 1 minute(s)"
+require_output "RSA factor TIME option still recovers plaintext" "$OUT" "Decoded ASCII:"
+require_output "RSA factor TIME option recovers brace" "$OUT" "{"
+
+OUT=$($BIN RSA-FACTOR ./testdata/rsa/rsa_61_53_e17.txt --time 1 2>&1)
+printf "%s\n" "$OUT"
+require_output "RSA factor accepts --time option" "$OUT" "[*] RSA-Factor: time limit set to 1 minute(s)"
+
+OUT=$($BIN RSA-FACTOR ./testdata/rsa/rsa_61_53_e17.txt --minutes 1 2>&1)
+printf "%s\n" "$OUT"
+require_output "RSA factor accepts --minutes option" "$OUT" "[*] RSA-Factor: time limit set to 1 minute(s)"
+
+OUT=$($BIN RSA-FACTOR ./testdata/rsa/rsa_61_53_e17.txt -t 1 2>&1)
+printf "%s\n" "$OUT"
+require_output "RSA factor accepts -t option" "$OUT" "[*] RSA-Factor: time limit set to 1 minute(s)"
+
+OUT=$($BIN RSA-FACTOR ./testdata/rsa/rsa_61_53_e17.txt TIME 0 2>&1 || true)
+printf "%s\n" "$OUT"
+require_output "RSA factor rejects zero TIME option" "$OUT" "rsa-factor: time limit must be a positive number of minutes"
+
+OUT=$($BIN RSA-FACTOR ./testdata/rsa/rsa_61_53_e17.txt banana 1 2>&1 || true)
+printf "%s\n" "$OUT"
+require_output "RSA factor rejects unknown time option" "$OUT" "rsa-factor: unknown option 'banana'"
+
 echo "[TEST] RSA-ROOTS exact root sample"
 
 OUT=$($BIN RSA-ROOTS ./testdata/rsa/rsa_root_e3_exact.txt 2>&1)
@@ -922,7 +949,7 @@ require_failure_output \
 require_failure_output \
     "RSA-FACTOR missing argument fails" \
     "$BIN RSA-FACTOR" \
-    "Usage: k1wi rsa-factor <rsa_file>"
+    "Usage: k1wi RSA-FACTOR <rsa_file>"
 
     
         

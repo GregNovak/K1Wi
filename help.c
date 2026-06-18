@@ -99,6 +99,10 @@ static const char *help_rsa_factor_lines[] = {
     "",
     "Usage:",
     "  RSA-FACTOR <rsa_file>",
+    "  RSA-FACTOR <rsa_file> TIME <minutes>",
+    "  RSA-FACTOR <rsa_file> --time <minutes>",
+    "  RSA-FACTOR <rsa_file> --minutes <minutes>",
+    "  RSA-FACTOR <rsa_file> -t <minutes>",
     NULL
 };
 
