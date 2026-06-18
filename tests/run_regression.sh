@@ -647,6 +647,22 @@ OUT=$($BIN RSA-ROOTS ./testdata/rsa/rsa_root_e3_exact_spaced.txt 2>&1)
 printf "%s\n" "$OUT"
 require_output "RSA parser accepts spaced lowercase labels" "$OUT" "[+] RSA-ROOTS: recovered plaintext via exact integer 3-th root"
 
+OUT=$($BIN RSA-ROOTS ./testdata/rsa/rsa_root_e3_colon_mixed_order.txt 2>&1)
+printf "%s\n" "$OUT"
+require_output "RSA parser accepts colon mixed-order labels" "$OUT" "[+] RSA-ROOTS: recovered plaintext via exact integer 3-th root"
+
+OUT=$($BIN RSA-ROOTS ./testdata/rsa/rsa_root_e3_oneline.txt 2>&1)
+printf "%s\n" "$OUT"
+require_output "RSA parser accepts one-line fields" "$OUT" "[+] RSA-ROOTS: recovered plaintext via exact integer 3-th root"
+
+OUT=$($BIN RSA-ROOTS ./testdata/rsa/rsa_root_e3_mixed_delimiters.txt 2>&1)
+printf "%s\n" "$OUT"
+require_output "RSA parser accepts mixed delimiters and case" "$OUT" "[+] RSA-ROOTS: recovered plaintext via exact integer 3-th root"
+
+OUT=$($BIN RSA-ROOTS ./testdata/rsa/rsa_root_e3_oneline_shuffled.txt 2>&1)
+printf "%s\n" "$OUT"
+require_output "RSA parser accepts shuffled one-line fields" "$OUT" "[+] RSA-ROOTS: recovered plaintext via exact integer 3-th root"
+
 OUT=$($BIN HELP RSA-ROOTS 2>&1)
 printf "%s\n" "$OUT"
 require_output "HELP RSA-ROOTS page" "$OUT" "RSA-ROOTS - RSA Exact Root / Even-Exponent Helper"

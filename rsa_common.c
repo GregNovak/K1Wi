@@ -33,68 +33,84 @@ int parse_rsa_file(const char *path, mpz_t N, mpz_t e, mpz_t c) {
     while (fgets(line, sizeof(line), fp)) {
         char *p = line;
 
-        while (isspace((unsigned char)*p)) {
-            p++;
-        }
-
-        if (*p == '\0' || *p == '#') {
-            continue;
-        }
-
-        char key = (char)tolower((unsigned char)*p);
-        p++;
-
-        while (isspace((unsigned char)*p)) {
-            p++;
-        }
-
-        if (*p != '=') {
-            continue;
-        }
-
-        p++;
-
-        while (isspace((unsigned char)*p)) {
-            p++;
-        }
-
-        char *value = p;
-        char *comment = strchr(value, '#');
-        if (comment) {
-            *comment = '\0';
-        }
-
-        char *end = value + strlen(value);
-        while (end > value && isspace((unsigned char)end[-1])) {
-            end--;
-        }
-        *end = '\0';
-
-        if (*value == '\0') {
-            continue;
-        }
-
-        if (key == 'n') {
-            if (mpz_set_str(N, value, 10) != 0) {
-                printf("[-] Failed to parse N.\n");
-                fclose(fp);
-                return 1;
+        while (*p != '\0') {
+            while (isspace((unsigned char)*p) || *p == ',' || *p == ';') {
+                p++;
             }
-            have_N = 1;
-        } else if (key == 'e') {
-            if (mpz_set_str(e, value, 10) != 0) {
-                printf("[-] Failed to parse e.\n");
-                fclose(fp);
-                return 1;
+
+            if (*p == '\0' || *p == '#') {
+                break;
             }
-            have_e = 1;
-        } else if (key == 'c') {
-            if (mpz_set_str(c, value, 10) != 0) {
-                printf("[-] Failed to parse c.\n");
-                fclose(fp);
-                return 1;
+
+            char key = (char)tolower((unsigned char)*p);
+
+            if (key != 'n' && key != 'e' && key != 'c') {
+                p++;
+                continue;
             }
-            have_c = 1;
+
+            p++;
+
+            while (isspace((unsigned char)*p)) {
+                p++;
+            }
+
+            if (*p != '=' && *p != ':') {
+                continue;
+            }
+
+            p++;
+
+            while (isspace((unsigned char)*p)) {
+                p++;
+            }
+
+            if (!isdigit((unsigned char)*p) && *p != '+' && *p != '-') {
+                continue;
+            }
+
+            char value[4096];
+            size_t vi = 0;
+
+            while (*p != '\0' &&
+                   *p != '#' &&
+                   *p != ',' &&
+                   *p != ';' &&
+                   !isspace((unsigned char)*p)) {
+                if (vi + 1 < sizeof(value)) {
+                    value[vi++] = *p;
+                }
+                p++;
+            }
+
+            value[vi] = '\0';
+
+            if (value[0] == '\0') {
+                continue;
+            }
+
+            if (key == 'n') {
+                if (mpz_set_str(N, value, 10) != 0) {
+                    printf("[-] Failed to parse N.\n");
+                    fclose(fp);
+                    return 1;
+                }
+                have_N = 1;
+            } else if (key == 'e') {
+                if (mpz_set_str(e, value, 10) != 0) {
+                    printf("[-] Failed to parse e.\n");
+                    fclose(fp);
+                    return 1;
+                }
+                have_e = 1;
+            } else if (key == 'c') {
+                if (mpz_set_str(c, value, 10) != 0) {
+                    printf("[-] Failed to parse c.\n");
+                    fclose(fp);
+                    return 1;
+                }
+                have_c = 1;
+            }
         }
     }
 
