@@ -728,6 +728,29 @@ require_output "RSA-ECM shell command starts" "$OUT" "[*] RSA-ECM: starting ECM 
 require_output "RSA-ECM shell command finds factor" "$OUT" "[+] RSA-ECM: found factor f = 7"
 require_output "RSA-ECM shell command succeeds" "$OUT" "rsa-ecm: success"
 
+
+OUT=$($BIN RSA-ECM ./testdata/rsa/rsa_ecm_small_factor.txt --curves 50 --bound 10000 2>&1)
+printf "%s\n" "$OUT"
+require_output "RSA-ECM CLI accepts curves and bound" "$OUT" "[*] RSA-ECM: curves=50, B1=10000"
+require_output "RSA-ECM CLI bounds mode finds factor" "$OUT" "[+] RSA-ECM: found factor f = 7"
+
+OUT=$($BIN RSA-ECM ./testdata/rsa/rsa_ecm_small_factor.txt --curves 0 2>&1 || true)
+printf "%s\n" "$OUT"
+require_output "RSA-ECM CLI rejects zero curves" "$OUT" "rsa-ecm: --curves requires a positive number"
+
+OUT=$($BIN RSA-ECM ./testdata/rsa/rsa_ecm_small_factor.txt --bound abc 2>&1 || true)
+printf "%s\n" "$OUT"
+require_output "RSA-ECM CLI rejects bad bound" "$OUT" "rsa-ecm: --bound requires a positive number"
+
+OUT=$(printf "RSA-ECM ./testdata/rsa/rsa_ecm_small_factor.txt --curves 50 --bound 10000\nEXIT\n" | $BIN 2>&1)
+printf "%s\n" "$OUT"
+require_output "RSA-ECM shell accepts curves and bound" "$OUT" "[*] RSA-ECM: curves=50, B1=10000"
+require_output "RSA-ECM shell bounds mode succeeds" "$OUT" "rsa-ecm: success"
+
+OUT=$(printf "RSA-ECM ./testdata/rsa/rsa_ecm_small_factor.txt --curves 0\nEXIT\n" | $BIN 2>&1)
+printf "%s\n" "$OUT"
+require_output "RSA-ECM shell rejects zero curves" "$OUT" "rsa-ecm: --curves requires a positive number"
+
 echo "[TEST] RSA Wiener negative sample"
 
 set +e

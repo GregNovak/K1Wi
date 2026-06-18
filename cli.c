@@ -567,25 +567,72 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     
     } else if (strcasecmp(cmd, "RSA-ECM") == 0) {
     if (cli->arg_start >= argc) {
-        fprintf(stderr, "Usage: k1wi RSA-ECM <rsa_file>\n");
+        fprintf(stderr, "Usage: k1wi RSA-ECM <rsa_file> [--curves N] [--bound N]\n");
         return 1;
     }
 
     const char *path = argv[cli->arg_start];
+    unsigned long curves = 20;
+    unsigned long bound = 5000;
+
+    for (int i = cli->arg_start + 1; i < argc; i++) {
+        const char *opt = argv[i];
+
+        if (strcasecmp(opt, "--curves") == 0 ||
+            strcasecmp(opt, "CURVES") == 0 ||
+            strcasecmp(opt, "-c") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr, "rsa-ecm: --curves requires a positive number\n");
+                return 1;
+            }
+
+            char *endptr = NULL;
+            curves = strtoul(argv[++i], &endptr, 10);
+
+            if (endptr == argv[i] || *endptr != '\0' || curves == 0) {
+                fprintf(stderr, "rsa-ecm: --curves requires a positive number\n");
+                return 1;
+            }
+        } else if (strcasecmp(opt, "--bound") == 0 ||
+                   strcasecmp(opt, "--b1") == 0 ||
+                   strcasecmp(opt, "BOUND") == 0 ||
+                   strcasecmp(opt, "B1") == 0 ||
+                   strcasecmp(opt, "-b") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr, "rsa-ecm: --bound requires a positive number\n");
+                return 1;
+            }
+
+            char *endptr = NULL;
+            bound = strtoul(argv[++i], &endptr, 10);
+
+            if (endptr == argv[i] || *endptr != '\0' || bound == 0) {
+                fprintf(stderr, "rsa-ecm: --bound requires a positive number\n");
+                return 1;
+            }
+        } else {
+            fprintf(stderr, "rsa-ecm: unknown option '%s'\n", opt);
+            fprintf(stderr, "Usage: k1wi RSA-ECM <rsa_file> [--curves N] [--bound N]\n");
+            return 1;
+        }
+    }
+
+    const char *path_for_parse = path;
 
     mpz_t N, e, c, f, q;
     mpz_inits(N, e, c, f, q, NULL);
 
-    if (parse_rsa_file(path, N, e, c) != 0) {
+    if (parse_rsa_file(path_for_parse, N, e, c) != 0) {
         printf("rsa-ecm: failed to parse RSA file\n");
         mpz_clears(N, e, c, f, q, NULL);
         return 1;
     }
 
     printf("[*] RSA-ECM: starting ECM factorization\n");
+    printf("[*] RSA-ECM: curves=%lu, B1=%lu\n", curves, bound);
 
-    if (!opus_rsa_ecm_factor(N, f)) {
-        printf("[-] RSA-ECM: no factor found (within bounds)\n");
+    if (!opus_rsa_ecm_factor_with_bounds(N, f, curves, bound)) {
+        printf("[-] RSA-ECM: no factor found after %lu curve(s) with B1=%lu\n", curves, bound);
         mpz_clears(N, e, c, f, q, NULL);
         return 1;
     }
@@ -597,7 +644,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
     mpz_clears(N, e, c, f, q, NULL);
     return 0;
-    
+
     } else if (strcasecmp(cmd, "RSA-RHO") == 0) {
 
     if (cli->arg_start >= argc) {

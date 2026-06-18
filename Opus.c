@@ -3057,12 +3057,66 @@ else if (strcasecmp(cmd, "STRING") == 0) {
     continue;
         }
         else if (strcmp(cmd, "RSA-ECM") == 0) {
-            if (argc != 2) {
-                printf("Usage: RSA-ECM <rsa_file>\n");
+            if (argc < 2) {
+                printf("Usage: RSA-ECM <rsa_file> [--curves N] [--bound N]\n");
                 continue;
             }
 
             const char *path = argv[1];
+            unsigned long curves = 20;
+            unsigned long bound = 5000;
+            int invalid_args = 0;
+
+            for (int i = 2; i < argc; i++) {
+                const char *opt = argv[i];
+
+                if (strcasecmp(opt, "--curves") == 0 ||
+                    strcasecmp(opt, "CURVES") == 0 ||
+                    strcasecmp(opt, "-c") == 0) {
+                    if (i + 1 >= argc) {
+                        printf("rsa-ecm: --curves requires a positive number\n");
+                        invalid_args = 1;
+                        break;
+                    }
+
+                    char *endptr = NULL;
+                    curves = strtoul(argv[++i], &endptr, 10);
+
+                    if (endptr == argv[i] || *endptr != '\0' || curves == 0) {
+                        printf("rsa-ecm: --curves requires a positive number\n");
+                        invalid_args = 1;
+                        break;
+                    }
+                } else if (strcasecmp(opt, "--bound") == 0 ||
+                           strcasecmp(opt, "--b1") == 0 ||
+                           strcasecmp(opt, "BOUND") == 0 ||
+                           strcasecmp(opt, "B1") == 0 ||
+                           strcasecmp(opt, "-b") == 0) {
+                    if (i + 1 >= argc) {
+                        printf("rsa-ecm: --bound requires a positive number\n");
+                        invalid_args = 1;
+                        break;
+                    }
+
+                    char *endptr = NULL;
+                    bound = strtoul(argv[++i], &endptr, 10);
+
+                    if (endptr == argv[i] || *endptr != '\0' || bound == 0) {
+                        printf("rsa-ecm: --bound requires a positive number\n");
+                        invalid_args = 1;
+                        break;
+                    }
+                } else {
+                    printf("rsa-ecm: unknown option '%s'\n", opt);
+                    printf("Usage: RSA-ECM <rsa_file> [--curves N] [--bound N]\n");
+                    invalid_args = 1;
+                    break;
+                }
+            }
+
+            if (invalid_args) {
+                continue;
+            }
 
             mpz_t N, e, c, f, q;
             mpz_inits(N, e, c, f, q, NULL);
@@ -3074,9 +3128,10 @@ else if (strcasecmp(cmd, "STRING") == 0) {
             }
 
             printf("[*] RSA-ECM: starting ECM factorization\n");
+            printf("[*] RSA-ECM: curves=%lu, B1=%lu\n", curves, bound);
 
-            if (!opus_rsa_ecm_factor(N, f)) {
-                printf("[-] RSA-ECM: no factor found (within bounds)\n");
+            if (!opus_rsa_ecm_factor_with_bounds(N, f, curves, bound)) {
+                printf("[-] RSA-ECM: no factor found after %lu curve(s) with B1=%lu\n", curves, bound);
                 printf("\nrsa-ecm: failed\n\n");
                 mpz_clears(N, e, c, f, q, NULL);
                 continue;

@@ -29,19 +29,27 @@ static int is_decimal_token(const char *s)
     return 1;
 }
 
-int opus_rsa_ecm_factor(const mpz_t n, mpz_t factor)
+int opus_rsa_ecm_factor_with_bounds(const mpz_t n, mpz_t factor,
+                                    unsigned long curves,
+                                    unsigned long bound)
 {
     char n_str[4096];
     gmp_snprintf(n_str, sizeof(n_str), "%Zd", n);
 
+    if (curves == 0)
+        curves = 20;
+
+    if (bound == 0)
+        bound = 5000;
+
     const char *tmp_path = "/tmp/opus_ecm_out.txt";
 
-    for (int attempt = 1; attempt <= 20; attempt++) {
+    for (unsigned long attempt = 1; attempt <= curves; attempt++) {
         char cmd[8192];
 
         snprintf(cmd, sizeof(cmd),
-                 "echo %s | ecm -c 1 5000 > %s 2>/dev/null",
-                 n_str, tmp_path);
+                 "echo %s | ecm -c 1 %lu > %s 2>/dev/null",
+                 n_str, bound, tmp_path);
 
         int status = system(cmd);
         (void)status;
@@ -89,6 +97,11 @@ int opus_rsa_ecm_factor(const mpz_t n, mpz_t factor)
 
     mpz_set_ui(factor, 0);
     return 0;
+}
+
+int opus_rsa_ecm_factor(const mpz_t n, mpz_t factor)
+{
+    return opus_rsa_ecm_factor_with_bounds(n, factor, 20, 5000);
 }
 
 
