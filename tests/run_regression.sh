@@ -721,6 +721,13 @@ fi
 pass "RSA-SMALL-E negative path completed"
 
 echo
+
+OUT=$(printf "RSA-ECM ./testdata/rsa/rsa_ecm_small_factor.txt\nEXIT\n" | $BIN 2>&1)
+printf "%s\n" "$OUT"
+require_output "RSA-ECM shell command starts" "$OUT" "[*] RSA-ECM: starting ECM factorization"
+require_output "RSA-ECM shell command finds factor" "$OUT" "[+] RSA-ECM: found factor f = 7"
+require_output "RSA-ECM shell command succeeds" "$OUT" "rsa-ecm: success"
+
 echo "[TEST] RSA Wiener negative sample"
 
 set +e
@@ -912,7 +919,7 @@ OUT=$($BIN --version 2>&1)
 echo "$OUT"
 
 require_output "VERSION reports K1Wi" "$OUT" "K1Wi Framework"
-require_output "VERSION reports v1.1.0" "$OUT" "v1.1.0"
+require_output "VERSION reports v1.2.0" "$OUT" "v1.2.0"
 require_output "VERSION reports K1Wi release" "$OUT" "Release Name: K1Wi"
 
 echo

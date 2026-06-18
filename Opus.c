@@ -2,7 +2,7 @@
 
 Codename: Opus
 
----------- K1Wi v1.1.0 -----------
+---------- K1Wi v1.2.0 -----------
 
 */
 
@@ -309,7 +309,7 @@ void opus_banner(void) {
     printf("==================================================\n");
 
     printf("\n");
-    printf("Version: 1.1.0\n");
+    printf("Version: 1.2.0\n");
     printf("\n");
 }
 
@@ -3055,6 +3055,42 @@ else if (strcasecmp(cmd, "STRING") == 0) {
         printf("\nrsa-factor: failed\n\n");
 
     continue;
+        }
+        else if (strcmp(cmd, "RSA-ECM") == 0) {
+            if (argc != 2) {
+                printf("Usage: RSA-ECM <rsa_file>\n");
+                continue;
+            }
+
+            const char *path = argv[1];
+
+            mpz_t N, e, c, f, q;
+            mpz_inits(N, e, c, f, q, NULL);
+
+            if (parse_rsa_file(path, N, e, c) != 0) {
+                printf("rsa-ecm: failed to parse RSA file\n");
+                mpz_clears(N, e, c, f, q, NULL);
+                continue;
+            }
+
+            printf("[*] RSA-ECM: starting ECM factorization\n");
+
+            if (!opus_rsa_ecm_factor(N, f)) {
+                printf("[-] RSA-ECM: no factor found (within bounds)\n");
+                printf("\nrsa-ecm: failed\n\n");
+                mpz_clears(N, e, c, f, q, NULL);
+                continue;
+            }
+
+            mpz_fdiv_q(q, N, f);
+
+            gmp_printf("[+] RSA-ECM: found factor f = %Zd\n", f);
+            gmp_printf("[+] RSA-ECM: cofactor q = %Zd\n", q);
+
+            printf("\nrsa-ecm: success\n\n");
+
+            mpz_clears(N, e, c, f, q, NULL);
+            continue;
         }
         else if (strcmp(cmd, "DIGRAPH") == 0) {
             digraphTrigraphAnalyzer();
