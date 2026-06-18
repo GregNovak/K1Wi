@@ -565,7 +565,7 @@ static const char *help_auto_lines[] = {
     "",
     "Description:",
     "  Reads a challenge or data file and attempts to identify useful fields.",
-    "  The v1.2 parser will detect RSA, ECC, hashes, encodings, and encrypted flag data.",
+    "  Detects RSA, ECC, hashes, encodings, and encrypted flag data.",
     "",
     "Examples:",
     "  AUTO challenge.txt",

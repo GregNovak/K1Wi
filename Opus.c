@@ -1662,7 +1662,7 @@ int k1wi_auto_analyze_file(const char *path)
         printf("Recommendation: Use RSA-DFROMPQ or RSA-KNOWNPQ when ciphertext is available.\n");
     } else if (has_rsa_n && has_rsa_e && has_rsa_c) {
         printf("Detected type: RSA challenge data\n");
-        printf("Recommendation: Try RSA tools such as RSA-FACTOR, RSA-SMALL-E, RSA-WIENER, or future RSA-ROOTS.\n");
+        printf("Recommendation: Try RSA tools such as RSA-FACTOR, RSA-SMALL-E, RSA-WIENER, or RSA-ROOTS.\n");
     } else if (has_ecc_point && (has_iv || has_encrypted_flag)) {
         printf("Detected type: ECC / ECDH-style encrypted challenge data\n");
         printf("Recommendation: Extract curve parameters before attempting ECC analysis.\n");
