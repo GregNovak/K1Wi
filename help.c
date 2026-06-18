@@ -294,6 +294,26 @@ static const char *help_rsa_small_e_lines[] = {
     NULL
 };
 
+static const char *help_rsa_roots_lines[] = {
+    "RSA-ROOTS - RSA Exact Root / Even-Exponent Helper",
+    "",
+    "Usage:",
+    "  RSA-ROOTS <rsa_file>",
+    "",
+    "Description:",
+    "  Checks RSA ciphertext for exact integer e-th roots.",
+    "  Also warns when the public exponent is even or non-standard.",
+    "",
+    "Notes:",
+    "  Exact integer roots are useful when m^e was not reduced modulo n.",
+    "  Even exponents may not have a normal private exponent d.",
+    "  Modular root recovery with known p/q is planned for future expansion.",
+    "",
+    "Example:",
+    "  RSA-ROOTS rsa_even_e.txt",
+    NULL
+};
+
 static const char *help_rsa_wiener_lines[] = {
     "RSA-WIENER - Wiener RSA Attack",
     "",
@@ -572,6 +592,7 @@ static const help_entry_t help_table[] = {
 
     { "RSA-KNOWNPQ", help_rsa_knownpq_lines, sizeof(help_rsa_knownpq_lines)/sizeof(char*) },
     { "RSA-SMALL-E", help_rsa_small_e_lines, sizeof(help_rsa_small_e_lines)/sizeof(char*) },
+    { "RSA-ROOTS",  help_rsa_roots_lines,  sizeof(help_rsa_roots_lines)/sizeof(char*) },
     { "RSA-WIENER",  help_rsa_wiener_lines,  sizeof(help_rsa_wiener_lines)/sizeof(char*) },
     { "RSA-ECM",     help_rsa_ecm_lines,     sizeof(help_rsa_ecm_lines)/sizeof(char*) },
     { "ELFINFO",     help_elfinfo_lines,     sizeof(help_elfinfo_lines)/sizeof(char*)  },

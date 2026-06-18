@@ -3124,6 +3124,51 @@ else if (strcasecmp(cmd, "STRING") == 0) {
 
 	    mpz_clears(N, e, c, m, NULL);
 	}
+	else if (strcmp(cmd, "RSA-ROOTS") == 0) {
+    		if (argc != 2) {
+        	printf("Usage: RSA-ROOTS <rsa_file>\n");
+        	continue;
+    	}
+	    const char *path = argv[1];
+
+	    mpz_t N, e, c, m;
+	    mpz_inits(N, e, c, m, NULL);
+
+	    if (parse_rsa_file(path, N, e, c) != 0) {
+		printf("rsa-roots: failed to parse RSA file\n");
+		mpz_clears(N, e, c, m, NULL);
+		continue;
+	    }
+
+	    unsigned long e_ul = mpz_get_ui(e);
+
+	    printf("[*] RSA-ROOTS: checking exact integer root path\n");
+	    gmp_printf("[*] N = %Zd\n", N);
+	    gmp_printf("[*] e = %Zd\n", e);
+	    gmp_printf("[*] c = %Zd\n", c);
+
+	    if (mpz_even_p(e)) {
+		printf("[!] RSA-ROOTS: even public exponent detected\n");
+		printf("[!] RSA-ROOTS: normal RSA private exponent may not exist if gcd(e, phi(n)) != 1\n");
+	    }
+
+	    if (e_ul == 0 || e_ul > 64 || mpz_cmp_ui(e, e_ul) != 0) {
+		printf("[-] RSA-ROOTS: exponent too large or invalid for exact integer root helper\n");
+		printf("[*] RSA-ROOTS: modular root support with known p/q is planned for a later expansion\n");
+		mpz_clears(N, e, c, m, NULL);
+		continue;
+	    }
+
+	    if (rsa_small_e_attack(m, c, e_ul)) {
+		printf("[+] RSA-ROOTS: recovered plaintext via exact integer %lu-th root\n", e_ul);
+		opus_print_plaintext_from_bigint(m);
+	    } else {
+		printf("[-] RSA-ROOTS: no exact integer %lu-th root found\n", e_ul);
+		printf("[*] RSA-ROOTS: if p and q are known, modular root recovery may still be possible\n");
+	    }
+
+	    mpz_clears(N, e, c, m, NULL);
+	}
 	else if (strcmp(cmd, "RSA-KNOWNPQ") == 0) {
     		if (argc != 4) {
         	printf("Usage: RSA-KNOWNPQ <rsa_file> <p> <q>\n");

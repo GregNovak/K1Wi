@@ -635,6 +635,23 @@ fi
 pass "RSA factor command completed"
 
 echo
+echo "[TEST] RSA-ROOTS exact root sample"
+
+OUT=$($BIN RSA-ROOTS ./testdata/rsa/rsa_root_e3_exact.txt 2>&1)
+printf "%s\n" "$OUT"
+require_output "RSA-ROOTS recovers exact root" "$OUT" "[+] RSA-ROOTS: recovered plaintext via exact integer 3-th root"
+require_output "RSA-ROOTS reports plaintext hex" "$OUT" "Plaintext (hex): 2a"
+require_output "RSA-ROOTS reports plaintext ASCII" "$OUT" "Plaintext (ASCII): *"
+
+OUT=$($BIN RSA-ROOTS ./testdata/rsa/rsa_root_e3_exact_spaced.txt 2>&1)
+printf "%s\n" "$OUT"
+require_output "RSA parser accepts spaced lowercase labels" "$OUT" "[+] RSA-ROOTS: recovered plaintext via exact integer 3-th root"
+
+OUT=$($BIN HELP RSA-ROOTS 2>&1)
+printf "%s\n" "$OUT"
+require_output "HELP RSA-ROOTS page" "$OUT" "RSA-ROOTS - RSA Exact Root / Even-Exponent Helper"
+
+echo
 echo "[TEST] RSA small-e negative sample"
 
 set +e

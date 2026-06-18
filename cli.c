@@ -396,6 +396,55 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 	    mpz_clears(N, e, c, m, NULL);
 	    return 1;
 
+	} else if (strcasecmp(cmd, "RSA-ROOTS") == 0) {
+		if (cli->arg_start >= argc) {
+			fprintf(stderr, "Usage: k1wi RSA-ROOTS <rsa_file>\n");
+			return 1;
+		}
+
+		const char *path = argv[cli->arg_start];
+
+		mpz_t N, e, c, m;
+		mpz_inits(N, e, c, m, NULL);
+
+		if (parse_rsa_file(path, N, e, c) != 0) {
+			printf("rsa-roots: failed to parse RSA file\n");
+			mpz_clears(N, e, c, m, NULL);
+			return 1;
+		}
+
+		unsigned long e_ul = mpz_get_ui(e);
+
+		printf("[*] RSA-ROOTS: checking exact integer root path\n");
+		gmp_printf("[*] N = %Zd\n", N);
+		gmp_printf("[*] e = %Zd\n", e);
+		gmp_printf("[*] c = %Zd\n", c);
+
+		if (mpz_even_p(e)) {
+			printf("[!] RSA-ROOTS: even public exponent detected\n");
+			printf("[!] RSA-ROOTS: normal RSA private exponent may not exist if gcd(e, phi(n)) != 1\n");
+		}
+
+		if (e_ul == 0 || e_ul > 64 || mpz_cmp_ui(e, e_ul) != 0) {
+			printf("[-] RSA-ROOTS: exponent too large or invalid for exact integer root helper\n");
+			printf("[*] RSA-ROOTS: modular root support with known p/q is planned for a later expansion\n");
+			mpz_clears(N, e, c, m, NULL);
+			return 1;
+		}
+
+		if (rsa_small_e_attack(m, c, e_ul)) {
+			printf("[+] RSA-ROOTS: recovered plaintext via exact integer %lu-th root\n", e_ul);
+			opus_print_plaintext_from_bigint(m);
+			mpz_clears(N, e, c, m, NULL);
+			return 0;
+		}
+
+		printf("[-] RSA-ROOTS: no exact integer %lu-th root found\n", e_ul);
+		printf("[*] RSA-ROOTS: if p and q are known, modular root recovery may still be possible\n");
+
+		mpz_clears(N, e, c, m, NULL);
+		return 1;
+
 	} else if (strcasecmp(cmd, "RSA-WIENER") == 0) {
 	    if (cli->arg_start >= argc) {
 		fprintf(stderr, "Usage: k1wi RSA-WIENER <rsa_file>\n");
