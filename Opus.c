@@ -3137,12 +3137,19 @@ else if (strcasecmp(cmd, "STRING") == 0) {
                 continue;
             }
 
-            mpz_fdiv_q(q, N, f);
+            if (mpz_cmp_ui(f, 1) <= 0 || mpz_cmp(f, N) >= 0 || !mpz_divisible_p(N, f)) {
+		    gmp_printf("[-] RSA-ECM: rejected invalid factor candidate f = %Zd\n", f);
+		    printf("\nrsa-ecm: failed\n\n");
+		    mpz_clears(N, e, c, f, q, NULL);
+		    continue;
+		}
 
-            gmp_printf("[+] RSA-ECM: found factor f = %Zd\n", f);
-            gmp_printf("[+] RSA-ECM: cofactor q = %Zd\n", q);
+		mpz_divexact(q, N, f);
 
-            printf("\nrsa-ecm: success\n\n");
+		gmp_printf("[+] RSA-ECM: found factor f = %Zd\n", f);
+		gmp_printf("[+] RSA-ECM: cofactor q = %Zd\n", q);
+
+		printf("\nrsa-ecm: success\n\n");
 
             mpz_clears(N, e, c, f, q, NULL);
             continue;

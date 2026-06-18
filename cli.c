@@ -637,13 +637,19 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
         return 1;
     }
 
-    mpz_fdiv_q(q, N, f);
-
-    gmp_printf("[+] RSA-ECM: found factor f = %Zd\n", f);
-    gmp_printf("[+] RSA-ECM: cofactor q = %Zd\n", q);
-
+    if (mpz_cmp_ui(f, 1) <= 0 || mpz_cmp(f, N) >= 0 || !mpz_divisible_p(N, f)) {
+    gmp_printf("[-] RSA-ECM: rejected invalid factor candidate f = %Zd\n", f);
     mpz_clears(N, e, c, f, q, NULL);
-    return 0;
+    return 1;
+    }
+
+     mpz_divexact(q, N, f);
+
+     gmp_printf("[+] RSA-ECM: found factor f = %Zd\n", f);
+     gmp_printf("[+] RSA-ECM: cofactor q = %Zd\n", q);
+
+	mpz_clears(N, e, c, f, q, NULL);
+	return 0;
 
     } else if (strcasecmp(cmd, "RSA-RHO") == 0) {
 

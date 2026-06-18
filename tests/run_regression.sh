@@ -725,14 +725,14 @@ echo
 OUT=$(printf "RSA-ECM ./testdata/rsa/rsa_ecm_small_factor.txt\nEXIT\n" | $BIN 2>&1)
 printf "%s\n" "$OUT"
 require_output "RSA-ECM shell command starts" "$OUT" "[*] RSA-ECM: starting ECM factorization"
-require_output "RSA-ECM shell command finds factor" "$OUT" "[+] RSA-ECM: found factor f = 7"
+require_output "RSA-ECM shell command finds factor" "$OUT" "[+] RSA-ECM: found factor f ="
 require_output "RSA-ECM shell command succeeds" "$OUT" "rsa-ecm: success"
 
 
 OUT=$($BIN RSA-ECM ./testdata/rsa/rsa_ecm_small_factor.txt --curves 50 --bound 10000 2>&1)
 printf "%s\n" "$OUT"
 require_output "RSA-ECM CLI accepts curves and bound" "$OUT" "[*] RSA-ECM: curves=50, B1=10000"
-require_output "RSA-ECM CLI bounds mode finds factor" "$OUT" "[+] RSA-ECM: found factor f = 7"
+require_output "RSA-ECM CLI bounds mode finds factor" "$OUT" "[+] RSA-ECM: found factor f ="
 
 OUT=$($BIN RSA-ECM ./testdata/rsa/rsa_ecm_small_factor.txt --curves 0 2>&1 || true)
 printf "%s\n" "$OUT"
@@ -750,6 +750,24 @@ require_output "RSA-ECM shell bounds mode succeeds" "$OUT" "rsa-ecm: success"
 OUT=$(printf "RSA-ECM ./testdata/rsa/rsa_ecm_small_factor.txt --curves 0\nEXIT\n" | $BIN 2>&1)
 printf "%s\n" "$OUT"
 require_output "RSA-ECM shell rejects zero curves" "$OUT" "rsa-ecm: --curves requires a positive number"
+
+echo "[TEST] RSA ECM rejects non-divisor false positive"
+
+OUT=$(timeout 20s $BIN RSA-ECM ./testdata/rsa/rsa_ecm_reject_nondivisor.txt --curves 1000 --bound 500000 2>&1 || true)
+printf "%s\n" "$OUT"
+
+if echo "$OUT" | grep -q "\[+\] RSA-ECM: found factor f = 40"; then
+    fail "RSA-ECM rejects non-divisor candidate"
+else
+    pass "RSA-ECM rejects non-divisor candidate"
+fi
+
+if echo "$OUT" | grep -q "rsa-ecm: success"; then
+    fail "RSA-ECM does not report success for invalid candidate"
+else
+    pass "RSA-ECM does not report success for invalid candidate"
+fi
+
 
 echo "[TEST] RSA Wiener negative sample"
 

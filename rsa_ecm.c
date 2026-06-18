@@ -76,14 +76,15 @@ int opus_rsa_ecm_factor_with_bounds(const mpz_t n, mpz_t factor,
                     mpz_init(candidate);
 
                     if (mpz_set_str(candidate, tok, 10) == 0 &&
-                        mpz_cmp_ui(candidate, 1) > 0 &&
-                        mpz_cmp(candidate, n) < 0) {
+			    mpz_cmp_ui(candidate, 1) > 0 &&
+			    mpz_cmp(candidate, n) < 0 &&
+			    mpz_divisible_p(n, candidate)) {
 
-                        mpz_set(factor, candidate);
-                        mpz_clear(candidate);
-                        fclose(fp);
-                        return 1;
-                    }
+			    mpz_set(factor, candidate);
+			    mpz_clear(candidate);
+			    fclose(fp);
+			    return 1;
+			}
 
                     mpz_clear(candidate);
                 }
