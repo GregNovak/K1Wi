@@ -663,6 +663,11 @@ OUT=$($BIN RSA-ROOTS ./testdata/rsa/rsa_root_e3_oneline_shuffled.txt 2>&1)
 printf "%s\n" "$OUT"
 require_output "RSA parser accepts shuffled one-line fields" "$OUT" "[+] RSA-ROOTS: recovered plaintext via exact integer 3-th root"
 
+OUT=$($BIN RSA-ROOTS ./testdata/rsa/rsa_root_even_e16.txt 2>&1)
+printf "%s\n" "$OUT"
+require_output "RSA-ROOTS warns on even exponent" "$OUT" "[!] RSA-ROOTS: even public exponent detected"
+require_output "RSA-ROOTS recovers even exponent exact root" "$OUT" "[+] RSA-ROOTS: recovered plaintext via exact integer 16-th root"
+
 OUT=$($BIN HELP RSA-ROOTS 2>&1)
 printf "%s\n" "$OUT"
 require_output "HELP RSA-ROOTS page" "$OUT" "RSA-ROOTS - RSA Exact Root / Even-Exponent Helper"
