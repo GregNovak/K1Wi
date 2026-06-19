@@ -721,6 +721,7 @@ fi
 pass "RSA-SMALL-E negative path completed"
 
 echo
+echo "[TEST] RSA ECM shell and bounds handling"
 
 OUT=$(printf "RSA-ECM ./testdata/rsa/rsa_ecm_small_factor.txt\nEXIT\n" | $BIN 2>&1)
 printf "%s\n" "$OUT"
