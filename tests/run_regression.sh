@@ -743,6 +743,16 @@ OUT=$($BIN RSA-ECM ./testdata/rsa/rsa_ecm_small_factor.txt --bound abc 2>&1 || t
 printf "%s\n" "$OUT"
 require_output "RSA-ECM CLI rejects bad bound" "$OUT" "rsa-ecm: --bound requires a positive number"
 
+OUT=$($BIN RSA-ECM ./testdata/rsa/rsa_ecm_small_factor.txt -c 50 -b 10000 2>&1)
+printf "%s\n" "$OUT"
+require_output "RSA-ECM CLI accepts short aliases" "$OUT" "[*] RSA-ECM: curves=50, B1=10000"
+require_output "RSA-ECM CLI short aliases find cofactor" "$OUT" "[+] RSA-ECM: cofactor q ="
+
+OUT=$($BIN RSA-ECM ./testdata/rsa/rsa_ecm_small_factor.txt --b1 10000 2>&1)
+printf "%s\n" "$OUT"
+require_output "RSA-ECM CLI accepts --b1 alias" "$OUT" "[*] RSA-ECM: curves=20, B1=10000"
+require_output "RSA-ECM CLI --b1 alias finds cofactor" "$OUT" "[+] RSA-ECM: cofactor q ="
+
 OUT=$(printf "RSA-ECM ./testdata/rsa/rsa_ecm_small_factor.txt --curves 50 --bound 10000\nEXIT\n" | $BIN 2>&1)
 printf "%s\n" "$OUT"
 require_output "RSA-ECM shell accepts curves and bound" "$OUT" "[*] RSA-ECM: curves=50, B1=10000"
