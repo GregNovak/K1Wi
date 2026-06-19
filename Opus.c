@@ -270,36 +270,6 @@ int isStrictDecimalList(const char *s);
 int cmd_piecalc(opus_context *ctx, int argc, char **argv);
 int cmd_version(const OpusCLI *cli, int argc, char **argv);
 
-static void dispatch_forensic(int argc, char **argv)
-{
-    // No subcommand?
-    if (argc < 2) {
-        forensicCmd("");
-        return;
-    }
-
-    // Reconstruct args string from argv[1..]
-    size_t len = 0;
-    for (int i = 1; i < argc; i++)
-        len += strlen(argv[i]) + 1;
-
-    char *buf = malloc(len + 1);
-    if (!buf) {
-        fprintf(stderr, "Memory allocation failed.\n");
-        return;
-    }
-
-    buf[0] = '\0';
-    for (int i = 1; i < argc; i++) {
-        strcat(buf, argv[i]);
-        if (i + 1 < argc)
-            strcat(buf, " ");
-    }
-
-    forensicCmd(buf);
-    free(buf);
-}
-
 void opus_banner(void) {
     printf("\n\n");
 
