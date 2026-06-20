@@ -379,7 +379,130 @@ MagicEntry magic_table[] = {
     {"ELF", elf_magic, sizeof(elf_magic)},
 };
 
-void detect_magic(const char *filename) {
+static const char *magic_name_from_bytes(const unsigned char *buffer, size_t len)
+{
+    for (size_t i = 0; i < sizeof(magic_table) / sizeof(MagicEntry); i++) {
+        if (len >= magic_table[i].length &&
+            memcmp(buffer, magic_table[i].magic, magic_table[i].length) == 0) {
+            return magic_table[i].name;
+        }
+    }
+
+    return NULL;
+}
+
+static int detect_ascii_bitstream_magic(const char *filename, const char *recover_path)
+{
+    FILE *fp = fopen(filename, "rb");
+    if (!fp) {
+        return 0;
+    }
+
+    unsigned char decoded[32];
+    memset(decoded, 0, sizeof(decoded));
+
+    FILE *out = NULL;
+    if (recover_path) {
+        out = fopen(recover_path, "wb");
+        if (!out) {
+            fclose(fp);
+            perror("Error opening recovery output");
+            return 1;
+        }
+    }
+
+    size_t bit_count = 0;
+    size_t decoded_len = 0;
+    size_t recovered_bytes = 0;
+    unsigned char cur = 0;
+    int bit_pos = 0;
+    int saw_bit = 0;
+    int invalid = 0;
+
+    int ch;
+    while ((ch = fgetc(fp)) != EOF) {
+        if (ch == '0' || ch == '1') {
+            saw_bit = 1;
+            cur = (unsigned char)((cur << 1) | (ch == '1'));
+            bit_pos++;
+            bit_count++;
+
+            if (bit_pos == 8) {
+                if (decoded_len < sizeof(decoded)) {
+                    decoded[decoded_len++] = cur;
+                }
+
+                if (out) {
+                    if (fputc(cur, out) == EOF) {
+                        invalid = 1;
+                        break;
+                    }
+                    recovered_bytes++;
+                }
+
+                cur = 0;
+                bit_pos = 0;
+            }
+
+            continue;
+        }
+
+        if (isspace((unsigned char)ch)) {
+            continue;
+        }
+
+        invalid = 1;
+        break;
+    }
+
+    fclose(fp);
+
+    if (out) {
+        fclose(out);
+    }
+
+    if (invalid || !saw_bit) {
+        if (recover_path) {
+            remove(recover_path);
+        }
+        return 0;
+    }
+
+    printf("Detected raw format: ASCII binary digit stream\n");
+    printf("Bitstream length: %zu bits\n", bit_count);
+    printf("Byte aligned: %s\n", (bit_count % 8 == 0) ? "yes" : "no");
+
+    if (decoded_len > 0) {
+        const char *decoded_magic = magic_name_from_bytes(decoded, decoded_len);
+        printf("Decoded magic: %s\n", decoded_magic ? decoded_magic : "unknown");
+
+        printf("Decoded first bytes: ");
+        for (size_t i = 0; i < decoded_len; i++) {
+            printf("%02X ", decoded[i]);
+        }
+        printf("\n");
+    }
+
+    if ((bit_count % 8) != 0) {
+        printf("Note: bitstream is not byte-aligned; decoding may need padding or trimming.\n");
+
+        if (recover_path) {
+            remove(recover_path);
+            printf("Recovery skipped: bitstream is not byte-aligned.\n");
+        }
+
+        return 1;
+    }
+
+    if (recover_path) {
+        printf("Recovered decoded bitstream to: %s\n", recover_path);
+        printf("Recovered bytes: %zu\n", recovered_bytes);
+    }
+
+    return 1;
+}
+
+void detect_magic_recover(const char *filename, const char *recover_path) {
     FILE *fp = fopen(filename, "rb");
     if (!fp) {
         perror("Error opening file");
@@ -395,24 +518,27 @@ void detect_magic(const char *filename) {
         return;
     }
 
-    int found = 0;
-    for (size_t i = 0; i < sizeof(magic_table)/sizeof(MagicEntry); i++) {
-        if (read_bytes >= magic_table[i].length &&
-            memcmp(buffer, magic_table[i].magic, magic_table[i].length) == 0) {
-            printf("Detected format: %s\n", magic_table[i].name);
-            found = 1;
-            break;
-        }
+    const char *name = magic_name_from_bytes(buffer, read_bytes);
+    if (name) {
+        printf("Detected format: %s\n", name);
+        return;
     }
 
-    if (!found) {
-        printf("Unknown format. First bytes: ");
-        for (size_t i = 0; i < read_bytes; i++) {
-            printf("%02X ", buffer[i]);
-        }
-        printf("\n");
+    if (detect_ascii_bitstream_magic(filename, recover_path)) {
+        return;
     }
+
+    printf("Unknown format. First bytes: ");
+    for (size_t i = 0; i < read_bytes; i++) {
+        printf("%02X ", buffer[i]);
+    }
+    printf("\n");
 }
+void detect_magic(const char *filename)
+{
+    detect_magic_recover(filename, NULL);
+}
+
 //------- End Magic Bytes --------------------
 
 
@@ -2479,17 +2605,37 @@ else if (strcasecmp(cmd, "STRING") == 0) {
 
 	    continue;
 	} else if (strcmp(cmd, "MAGIC") == 0) {
+	    const char *recover_path = NULL;
+	    int magic_args_ok = 1;
+
 	    if (argc < 2) {
-		printf("Usage: MAGIC <file>\n");
+		printf("Usage: MAGIC <file> [--recover <out>]\n");
 		continue;
 	    }
 
-    detect_magic(argv[1]);
-    continue;
-}
+	    for (int i = 2; i < argc; i++) {
+		if (strcmp(argv[i], "--recover") == 0) {
+		    if (i + 1 >= argc) {
+			printf("MAGIC: --recover requires an output path\n");
+			magic_args_ok = 0;
+			break;
+		    }
+		    recover_path = argv[++i];
+		} else {
+		    printf("MAGIC: unknown option '%s'\n", argv[i]);
+		    magic_args_ok = 0;
+		    break;
+		}
+	    }
 
+	    if (magic_args_ok) {
+		detect_magic_recover(argv[1], recover_path);
+	    }
 
-	else if (strcmp(cmd, "HELP") == 0) {
+	    continue;
+	}
+
+		else if (strcmp(cmd, "HELP") == 0) {
 	    if (argc == 1)
 		opus_help_general();
 	    else

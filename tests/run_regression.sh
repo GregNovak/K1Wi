@@ -100,6 +100,20 @@ OUT=$($BIN string "R2d2d2d2d2d424547494e2050524956415445204b45592d")
 echo "$OUT"
 require_output "STRING shifted hex private key detection" "$OUT" "Shifted hex encoded private key"
 
+OUT=$($BIN STRING --decode 'cGljb0NURntwdXp6bDNkX20zdGFkYXRhX2YwdW5kIV9lZTQ1NDk1MH0\075' 2>&1)
+printf "%s\n" "$OUT"
+require_output "STRING decodes escaped Base64 padding" "$OUT" "Detected Type: Base64"
+require_output "STRING escaped Base64 reveals decoded text" "$OUT" "picoCTF{puzzl3d_m3tadata_f0und!_ee454950}"
+
+OUT=$($BIN STRING --decode '111111111101100011111111111000000000000000010000010010100100011001001001010001100000000000000001000000010000000000000000000000010000000000000001000000000000000011111111110110110000000001000011000000000000100000000110000001100000011100000110000001010000100' 2>&1)
+printf "%s\n" "$OUT"
+require_output "STRING detects malformed binary bitstream" "$OUT" "Binary-like string (not byte-aligned)"
+if printf "%s\n" "$OUT" | grep -q "Shifted hex"; then
+    fail "STRING malformed binary avoids shifted hex"
+else
+    pass "STRING malformed binary avoids shifted hex"
+fi
+
 echo
 echo "[TEST] EXTRACT sample zip"
 
@@ -257,6 +271,28 @@ require_output "PIETIME reports binary" "$OUT" "binary:"
 require_output "PIETIME reports offset" "$OUT" "offset:"
 
 echo
+
+echo "[TEST] MAGIC ASCII binary digit stream"
+OUT=$($BIN MAGIC ./testdata/forensics/binary_digits_jpeg.bin 2>&1)
+printf "%s\n" "$OUT"
+require_output "MAGIC detects ASCII binary digit stream" "$OUT" "Detected raw format: ASCII binary digit stream"
+require_output "MAGIC bitstream decoded magic is JPEG" "$OUT" "Decoded magic: JPEG"
+
+echo "[TEST] MAGIC ASCII binary digit stream recovery"
+RECOVERED="/tmp/k1wi_binary_digits_recovered.jpg"
+rm -f "$RECOVERED"
+
+OUT=$($BIN MAGIC ./testdata/forensics/binary_digits_jpeg.bin --recover "$RECOVERED" 2>&1)
+printf "%s\n" "$OUT"
+require_output "MAGIC recover reports output path" "$OUT" "Recovered decoded bitstream to:"
+require_output "MAGIC recover reports byte count" "$OUT" "Recovered bytes: 8877"
+
+OUT=$($BIN MAGIC "$RECOVERED" 2>&1)
+printf "%s\n" "$OUT"
+require_output "MAGIC recovered file is JPEG" "$OUT" "Detected format: JPEG"
+
+rm -f "$RECOVERED"
+
 echo "[TEST] MAGIC sample ZIP"
 
 if [ -f "$ARCHIVE_SAMPLE" ]; then

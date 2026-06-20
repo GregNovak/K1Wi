@@ -36,6 +36,7 @@ int cmd_piecalc(opus_context *ctx, int argc, char **argv);
 int cmd_menu(opus_context *ctx, int argc, char **argv);
 int cmd_exit(opus_context *ctx, int argc, char **argv);
 void detect_magic(const char *filename);
+void detect_magic_recover(const char *filename, const char *recover_path);
 void systemTime(void);
 void opus_banner(void);
 
@@ -348,17 +349,32 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 		argv + cli->arg_start);
     }
     else if (strcasecmp(cmd, "MAGIC") == 0) {
+        const char *recover_path = NULL;
+
         if (cli->arg_start >= argc) {
-            fprintf(stderr, "Usage: k1wi magic <file>\n");
+            fprintf(stderr, "Usage: k1wi magic <file> [--recover <out>]\n");
             return 1;
         }
 
-        detect_magic(argv[cli->arg_start]);
+        for (int i = cli->arg_start + 1; i < argc; i++) {
+            if (strcmp(argv[i], "--recover") == 0) {
+                if (i + 1 >= argc) {
+                    fprintf(stderr, "MAGIC: --recover requires an output path\n");
+                    return 1;
+                }
+                recover_path = argv[++i];
+            } else {
+                fprintf(stderr, "MAGIC: unknown option '%s'\n", argv[i]);
+                return 1;
+            }
+        }
+
+        detect_magic_recover(argv[cli->arg_start], recover_path);
         return 0;
 
     
-	    
-	} else if (strcasecmp(cmd, "RSA-SMALL-E") == 0) {
+        
+        } else if (strcasecmp(cmd, "RSA-SMALL-E") == 0) {
 	    if (cli->arg_start >= argc) {
 		fprintf(stderr, "Usage: k1wi RSA-SMALL-E <rsa_file>\n");
 		return 1;
