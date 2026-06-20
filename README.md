@@ -99,6 +99,27 @@ Run:
 ./bin/k1wi
 ```
 
+## RSA-ECM Example
+
+K1Wi includes RSA-ECM support for elliptic-curve factorization of RSA moduli. The default settings use 20 curves with a stage-1 bound of B1=5000.
+
+```bash
+./bin/k1wi RSA-ECM testdata/rsa/rsa_ecm_small_factor.txt
+./bin/k1wi RSA-ECM testdata/rsa/rsa_ecm_small_factor.txt --curves 50 --bound 10000
+./bin/k1wi RSA-ECM testdata/rsa/rsa_ecm_small_factor.txt -c 50 -b 10000
+./bin/k1wi RSA-ECM testdata/rsa/rsa_ecm_small_factor.txt --b1 10000
+```
+
+Options:
+
+```text
+--curves N   Number of ECM curves to try
+--bound N    Stage-1 ECM bound, also known as B1
+--b1 N       Alias for --bound
+-c N         Alias for --curves
+-b N         Alias for --bound
+```
+
 ## Install on Linux
 
 K1Wi can be built and installed locally on Linux with:
