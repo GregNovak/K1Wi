@@ -44,6 +44,56 @@ static void print_usage(void)
     printf("\nAnalyze a string or extract strings from a file.\n");
 }
 
+static int octal_digit_value(char c)
+{
+    if (c < '0' || c > '7') {
+        return -1;
+    }
+
+    return c - '0';
+}
+
+static void normalize_string_escapes(char *s)
+{
+    size_t r = 0;
+    size_t w = 0;
+
+    while (s[r] != '\0') {
+        if (s[r] == '\\') {
+            int d0 = octal_digit_value(s[r + 1]);
+            int d1 = octal_digit_value(s[r + 2]);
+            int d2 = octal_digit_value(s[r + 3]);
+
+            if (d0 >= 0 && d1 >= 0 && d2 >= 0) {
+                int value = (d0 << 6) | (d1 << 3) | d2;
+                if (value > 0 && value <= 255) {
+                    s[w++] = (char)value;
+                    r += 4;
+                    continue;
+                }
+            }
+
+            if ((s[r + 1] == 'x' || s[r + 1] == 'X') &&
+                isxdigit((unsigned char)s[r + 2]) &&
+                isxdigit((unsigned char)s[r + 3])) {
+                char hex[3] = { s[r + 2], s[r + 3], '\0' };
+                s[w++] = (char)strtol(hex, NULL, 16);
+                r += 4;
+                continue;
+            }
+
+            if (s[r + 1] == 'n') { s[w++] = '\n'; r += 2; continue; }
+            if (s[r + 1] == 'r') { s[w++] = '\r'; r += 2; continue; }
+            if (s[r + 1] == 't') { s[w++] = '\t'; r += 2; continue; }
+            if (s[r + 1] == '\\') { s[w++] = '\\'; r += 2; continue; }
+        }
+
+        s[w++] = s[r++];
+    }
+
+    s[w] = '\0';
+}
+
 
 /*
  * ============================================================
@@ -224,6 +274,11 @@ int cmd_string(int argc, char **argv)
     while (L > 0 && isspace((unsigned char)input[L - 1])) {
         input[L - 1] = '\0';
         L--;
+    }
+
+    if (force_decode) {
+        normalize_string_escapes(input);
+        L = strlen(input);
     }
 
     if (strlen(input) == 0) {

@@ -208,6 +208,50 @@ static bool is_hex_string(const unsigned char *s, size_t len) {
     return true;
 }
 
+static bool is_binary_string(const unsigned char *s, size_t len)
+{
+    if (len == 0) {
+        return false;
+    }
+
+    for (size_t i = 0; i < len; i++) {
+        if (s[i] != '0' && s[i] != '1') {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static bool binary_decode_string(const unsigned char *in, size_t len,
+                                 unsigned char **out, size_t *out_len)
+{
+    if (!is_binary_string(in, len) || (len % 8) != 0) {
+        return false;
+    }
+
+    size_t olen = len / 8;
+    unsigned char *buf = malloc(olen + 1);
+    if (!buf) {
+        return false;
+    }
+
+    for (size_t i = 0; i < olen; i++) {
+        unsigned char v = 0;
+
+        for (size_t bit = 0; bit < 8; bit++) {
+            v = (unsigned char)((v << 1) | (in[(i * 8) + bit] == '1'));
+        }
+
+        buf[i] = v;
+    }
+
+    buf[olen] = '\0';
+    *out = buf;
+    *out_len = olen;
+    return true;
+}
+
 /* Decode sequences like: 0x48 0x65 0x6C 0x6C 0x6F */
 
 static size_t hex_prefixed_decode(const unsigned char *s, size_t len,
@@ -709,6 +753,26 @@ OpusStringIntelResult opus_string_intel(const char *input_cstr) {
     }
 
 
+
+
+    /* 4a. Binary strings must be handled before hex/shifted-hex.
+     * A long 0/1 string is also technically hex, but binary is the
+     * more specific interpretation. If not byte-aligned, report that
+     * instead of falling through to shifted hex.
+     */
+    if (is_binary_string(input, res.length)) {
+        unsigned char *bin = NULL;
+        size_t binlen = 0;
+
+        if (binary_decode_string(input, res.length, &bin, &binlen)) {
+            res.detected_type = "Binary";
+            res.decoded_output = (char *)bin;
+            return res;
+        }
+
+        res.detected_type = "Binary-like string (not byte-aligned)";
+        return res;
+    }
 
 /* 4b. Hex-Prefixed Byte Sequences: 0x48 0x65 0x6C ... */
 if (looks_like_hex_prefixed(input, res.length)) {

@@ -76,6 +76,7 @@ const opus_cmd_t opus_commands[] = {
 { "RSA-WIENER", "RSA Tools", "Wiener Attack"},
 { "RSA-SMALL-E","RSA Tools", "Small exponent attack"},
 { "RSA-ROOTS", "RSA Tools", "Exact integer / even-e root helper"},
+{ "RSA-KEY",    "RSA Tools", "Decrypt with PEM private key" },
 { "RSA-KNOWNPQ","RSA Tools", "Decrypt with p and q"},
 { "RSA-CHECKPQ","RSA Tools", "Check p and q"},
 { "RSA-DFROMPQ","RSA Tools", "Compute d from p,q,e\n"},

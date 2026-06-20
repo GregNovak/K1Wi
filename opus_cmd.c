@@ -146,7 +146,7 @@ void opus_cmd_print_help(void)
     printf("  RSA-KNOWNPQ   Decrypt with known p and q\n");
     printf("  RSA-CHECKPQ   Validate p and q\n");
     printf("  RSA-DFROMPQ   Compute d from p, q, and e\n");
-    printf("  RSA-MINI      Mini RSA solver / small-e helper\n  RSA-ROOTS     Exact root / even-exponent helper\n");
+    printf("  RSA-MINI      Mini RSA solver / small-e helper\n  RSA-ROOTS     Exact root / even-exponent helper\n  RSA-KEY       Decrypt with PEM private key\n");
     printf("\n");
 
     printf("Binary and PIE Tools:\n");

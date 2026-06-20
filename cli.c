@@ -31,6 +31,7 @@ int opus_cmd_sha256(int argc, char **argv);
 int opus_pie_time_cli(int argc, char **argv);
 int opus_lyzer_file(const char *path, const char *mode);
 int cmd_rsa(int argc, char **argv);
+int cmd_rsa_key(int argc, char **argv);
 int cmd_about(opus_context *ctx, int argc, char **argv);
 int cmd_piecalc(opus_context *ctx, int argc, char **argv);
 int cmd_menu(opus_context *ctx, int argc, char **argv);
@@ -374,6 +375,14 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
     
         
+        } else if (strcasecmp(cmd, "RSA-KEY") == 0) {
+            if (cli->arg_start >= argc) {
+                fprintf(stderr, "Usage: k1wi RSA-KEY <private_key.pem> <ciphertext_file>\n");
+                return 1;
+            }
+
+            return cmd_rsa_key(argc - cli->arg_start, argv + cli->arg_start);
+
         } else if (strcasecmp(cmd, "RSA-SMALL-E") == 0) {
 	    if (cli->arg_start >= argc) {
 		fprintf(stderr, "Usage: k1wi RSA-SMALL-E <rsa_file>\n");

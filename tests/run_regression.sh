@@ -363,6 +363,26 @@ require_output \
     "SHA256 MATCH"
     
 echo
+echo "[TEST] RSA private key decrypt helper"
+RSA_KEY_FIXTURE="/tmp/k1wi_rsa_key_test.pem"
+RSA_KEY_PLAIN="/tmp/k1wi_rsa_key_plain.txt"
+RSA_KEY_CIPHER="/tmp/k1wi_rsa_key_cipher.bin"
+
+rm -f "$RSA_KEY_FIXTURE" "$RSA_KEY_PLAIN" "$RSA_KEY_CIPHER"
+printf 'CTF{RSA_KEY_TEST}\n' > "$RSA_KEY_PLAIN"
+
+if openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "$RSA_KEY_FIXTURE" >/dev/null 2>&1 &&
+   openssl pkeyutl -encrypt -inkey "$RSA_KEY_FIXTURE" -in "$RSA_KEY_PLAIN" -out "$RSA_KEY_CIPHER" >/dev/null 2>&1; then
+    OUT=$($BIN RSA-KEY "$RSA_KEY_FIXTURE" "$RSA_KEY_CIPHER" 2>&1)
+    printf "%s\n" "$OUT"
+    require_output "RSA-KEY decrypts generated ciphertext" "$OUT" "RSA-KEY: decrypt success"
+    require_output "RSA-KEY prints recovered plaintext" "$OUT" "CTF{RSA_KEY_TEST}"
+else
+    skip "RSA-KEY generated OpenSSL fixture unavailable"
+fi
+
+rm -f "$RSA_KEY_FIXTURE" "$RSA_KEY_PLAIN" "$RSA_KEY_CIPHER"
+
 echo "[TEST] RSA known p/q sample"
 
 OUT=$($BIN RSA-KNOWNPQ ./testdata/rsa/rsa_61_53_e17.txt 61 53 2>&1)
@@ -734,6 +754,11 @@ require_output "RSA-ROOTS recovers even exponent exact root" "$OUT" "[+] RSA-ROO
 OUT=$($BIN HELP RSA-ROOTS 2>&1)
 printf "%s\n" "$OUT"
 require_output "HELP RSA-ROOTS page" "$OUT" "RSA-ROOTS - RSA Exact Root / Even-Exponent Helper"
+
+OUT=$($BIN HELP RSA-KEY 2>&1)
+printf "%s\n" "$OUT"
+require_output "HELP RSA-KEY page" "$OUT" "RSA-KEY - RSA Private Key Decrypt Helper"
+require_output "HELP RSA-KEY usage" "$OUT" "RSA-KEY <private_key.pem> <ciphertext_file>"
 
 echo
 echo "[TEST] RSA small-e negative sample"

@@ -268,6 +268,25 @@ static const char *help_entropy_lines[] = {
     NULL
 };
 
+static const char *help_rsa_key_lines[] = {
+    "RSA-KEY - RSA Private Key Decrypt Helper",
+    "",
+    "Usage:",
+    "  RSA-KEY <private_key.pem> <ciphertext_file>",
+    "",
+    "Description:",
+    "  Loads a PEM private key and decrypts an RSA ciphertext file.",
+    "  Prints recovered plaintext as both hexadecimal and safe ASCII.",
+    "",
+    "Notes:",
+    "  This helper is useful for CTF and forensic workflows where",
+    "  a private key is recovered from metadata, strings, or carving.",
+    "",
+    "Example:",
+    "  RSA-KEY recovered_private_key.pem flag.enc",
+    NULL
+};
+
 static const char *help_rsa_knownpq_lines[] = {
     "RSA-KNOWNPQ - RSA Decryption Using Known Primes",
     "",
@@ -609,6 +628,7 @@ static const help_entry_t help_table[] = {
     { "RSA-KNOWNPQ", help_rsa_knownpq_lines, sizeof(help_rsa_knownpq_lines)/sizeof(char*) },
     { "RSA-SMALL-E", help_rsa_small_e_lines, sizeof(help_rsa_small_e_lines)/sizeof(char*) },
     { "RSA-ROOTS",  help_rsa_roots_lines,  sizeof(help_rsa_roots_lines)/sizeof(char*) },
+    { "RSA-KEY",     help_rsa_key_lines,     sizeof(help_rsa_key_lines)/sizeof(char*) },
     { "RSA-WIENER",  help_rsa_wiener_lines,  sizeof(help_rsa_wiener_lines)/sizeof(char*) },
     { "RSA-ECM",     help_rsa_ecm_lines,     sizeof(help_rsa_ecm_lines)/sizeof(char*) },
     { "ELFINFO",     help_elfinfo_lines,     sizeof(help_elfinfo_lines)/sizeof(char*)  },
