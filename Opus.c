@@ -3172,6 +3172,19 @@ else if (strcasecmp(cmd, "STRING") == 0) {
 
     continue;
         }
+        else if (strcmp(cmd, "RSA-RHO") == 0) {
+            if (argc != 2) {
+                printf("Usage: RSA-RHO <rsa_file>\n");
+                continue;
+            }
+
+            if (opus_rsa_rho(argv[1]))
+                printf("\nrsa-rho: success\n\n");
+            else
+                printf("\nrsa-rho: failed\n\n");
+
+            continue;
+        }
         else if (strcmp(cmd, "RSA-ECM") == 0) {
             if (argc < 2) {
                 printf("Usage: RSA-ECM <rsa_file> [--curves N] [--bound N]\n");

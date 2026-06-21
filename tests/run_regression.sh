@@ -760,6 +760,11 @@ printf "%s\n" "$OUT"
 require_output "HELP RSA-KEY page" "$OUT" "RSA-KEY - RSA Private Key Decrypt Helper"
 require_output "HELP RSA-KEY usage" "$OUT" "RSA-KEY <private_key.pem> <ciphertext_file>"
 
+echo "[TEST] RSA-RHO interactive shell dispatch"
+OUT=$(printf 'RSA-RHO testdata/rsa/rsa_61_53_e17.txt\nEXIT\n' | "$BIN" 2>&1)
+require_output "RSA-RHO shell starts" "$OUT" "RSA-RHO: starting Pollard Rho factorization"
+require_output "RSA-RHO shell succeeds" "$OUT" "rsa-rho: success"
+
 echo
 echo "[TEST] RSA small-e negative sample"
 
