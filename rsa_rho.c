@@ -135,6 +135,8 @@ int opus_rsa_rho(const char *filename) {
 
     if (!pollard_rho(p, n)) {
         printf("[-] RSA-RHO: Pollard Rho failed to find a factor\n");
+        printf("[*] RSA-RHO: this can happen with larger or harder semiprimes\n");
+        printf("[*] RSA-RHO: try RSA-ECM with higher bounds, RSA-FACTOR for close primes, or RSA-KNOWNPQ if p/q are known\n");
         return 0;
     }
 
