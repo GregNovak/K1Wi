@@ -86,8 +86,7 @@ const opus_cmd_t opus_commands[] = {
        Utility
        =========================== */
     { "CONVERT",  "Utility", "Numeric / encoding conversion helper" },
-    { "NUMCONV",  "Utility", "Alias for CONVERT" },
-    {"TIME",    "Utility", "Show system time and timestamp utilities" }, 
+        {"TIME",    "Utility", "Show system time and timestamp utilities" }, 
     { "HELP",    "Utility", "Show general or command-specific help" },
     { "SPLASH",  "Utility", "Display the K1Wi splash banner" },
     { "MENU",    "Utility", "Show the K1Wi main menu" },
