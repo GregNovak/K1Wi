@@ -168,6 +168,8 @@ void opus_cmd_print_help(void)
     printf("\n");
 
     printf("Utility:\n");
+    printf("  CONVERT     Numeric / encoding conversion helper\n");
+    printf("  NUMCONV     Alias for CONVERT\n");
     printf("  HELP    (H)  Show command reference\n");
     printf("  MENU    (M)  Show main menu\n");
     printf("  ABOUT        Show K1Wi version/build info\n");
@@ -211,8 +213,7 @@ void opus_cmd_print_menu(void)
     printf("\n");
 
     printf("Utility\n");
-    printf("  HELP MENU ABOUT VERSION TIME EXIT\n");
-    printf("\n");
+    printf("  CONVERT NUMCONV HELP MENU ABOUT VERSION TIME EXIT\n");    printf("\n");
 
     printf("Use HELP <command> for details.\n");
     printf("WIPEFS requires --dry-run or --max-bytes <N> --yes.\n");

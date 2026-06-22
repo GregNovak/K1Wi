@@ -268,6 +268,36 @@ static const char *help_entropy_lines[] = {
     NULL
 };
 
+static const char *help_convert_lines[] = {
+    "CONVERT - Numeric / Encoding Conversion Helper",
+    "",
+    "Usage:",
+    "  CONVERT --hex-to-int <hex>",
+    "  CONVERT --int-to-hex <integer>",
+    "  CONVERT --bytes-to-long <file>",
+    "  CONVERT --long-to-bytes <integer> [--out file]",
+    "  CONVERT --ascii-to-hex <text>",
+    "  CONVERT --hex-to-ascii <hex>",
+    "  CONVERT --base64-to-hex <base64>",
+    "  CONVERT --hex-to-base64 <hex>",
+    "  CONVERT --sha256-to-int <file>",
+    "  CONVERT --sha256-text-to-int <text>",
+    "",
+    "Description:",
+    "  Converts between integers, hex, bytes, ASCII, Base64,",
+    "  and SHA-256 digest integers for crypto and CTF workflows.",
+    "",
+    "Notes:",
+    "  --bytes-to-long treats file bytes as a big-endian integer.",
+    "  --sha256-text-to-int hashes the exact text argument without a newline.",
+    "  NUMCONV may be used as an alias for CONVERT.",
+    "",
+    "Examples:",
+    "  CONVERT --hex-to-int ff",
+    "  CONVERT --bytes-to-long message.bin",
+    "  CONVERT --sha256-text-to-int crypto{test}",
+};
+
 static const char *help_rsa_key_lines[] = {
     "RSA-KEY - RSA Private Key Decrypt Helper",
     "",
@@ -614,6 +644,8 @@ static const char *help_auto_lines[] = {
 static const help_entry_t help_table[] = {
     { "SEARCH",      help_search_lines,      sizeof(help_search_lines)/sizeof(char*) },
     { "AUTO",        help_auto_lines,        sizeof(help_auto_lines)/sizeof(char*) },
+    { "CONVERT",     help_convert_lines,     sizeof(help_convert_lines)/sizeof(char*) },
+    { "NUMCONV",     help_convert_lines,     sizeof(help_convert_lines)/sizeof(char*) },
     { "LYZER", help_lyzer_lines, sizeof(help_lyzer_lines)/sizeof(char*) },
     { "PIECALC",     help_piecalc_lines,     sizeof(help_piecalc_lines)/sizeof(char*) },
     { "PIETIME",     help_pietime_lines,     sizeof(help_pietime_lines)/sizeof(char*) },

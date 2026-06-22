@@ -383,6 +383,89 @@ fi
 
 rm -f "$RSA_KEY_FIXTURE" "$RSA_KEY_PLAIN" "$RSA_KEY_CIPHER"
 
+echo "[TEST] CONVERT / NUMCONV helper"
+OUT=$("$BIN" CONVERT --hex-to-int ff 2>&1)
+echo "$OUT"
+require_output "CONVERT hex-to-int" "$OUT" "Integer: 255"
+
+OUT=$("$BIN" CONVERT --int-to-hex 255 2>&1)
+echo "$OUT"
+require_output "CONVERT int-to-hex" "$OUT" "Hex: ff"
+
+printf 'ABC' > /tmp/k1wi_convert_abc.bin
+OUT=$("$BIN" CONVERT --bytes-to-long /tmp/k1wi_convert_abc.bin 2>&1)
+echo "$OUT"
+require_output "CONVERT bytes-to-long" "$OUT" "Integer: 4276803"
+
+OUT=$("$BIN" CONVERT --long-to-bytes 4276803 2>&1)
+echo "$OUT"
+require_output "CONVERT long-to-bytes hex" "$OUT" "Hex: 414243"
+require_output "CONVERT long-to-bytes ascii" "$OUT" "ASCII: ABC"
+
+OUT=$("$BIN" CONVERT --ascii-to-hex K1Wi 2>&1)
+echo "$OUT"
+require_output "CONVERT ascii-to-hex" "$OUT" "Hex: 4b315769"
+
+OUT=$("$BIN" CONVERT --hex-to-ascii 4b315769 2>&1)
+echo "$OUT"
+require_output "CONVERT hex-to-ascii" "$OUT" "ASCII: K1Wi"
+
+OUT=$("$BIN" CONVERT --base64-to-hex SzFXaQ== 2>&1)
+echo "$OUT"
+require_output "CONVERT base64-to-hex" "$OUT" "Hex: 4b315769"
+
+OUT=$("$BIN" CONVERT --hex-to-base64 4b315769 2>&1)
+echo "$OUT"
+require_output "CONVERT hex-to-base64" "$OUT" "Base64: SzFXaQ=="
+
+printf 'crypto{Immut4ble_m3ssag1ng}' > /tmp/k1wi_convert_msg.txt
+OUT=$("$BIN" CONVERT --sha256-to-int /tmp/k1wi_convert_msg.txt 2>&1)
+echo "$OUT"
+require_output "CONVERT sha256-to-int digest" "$OUT" "SHA256: 99b4c7bb814cc630c4199e4814ffed85a835f64ffc82aadaa6388d9df9aeb2cb"
+require_output "CONVERT sha256-to-int integer" "$OUT" "Integer: 69523276807549773371481917516452638375664281433555793080445569568100703974091"
+
+OUT=$("$BIN" CONVERT --sha256-text-to-int 'crypto{Immut4ble_m3ssag1ng}' 2>&1)
+echo "$OUT"
+require_output "CONVERT sha256-text-to-int digest" "$OUT" "SHA256: 99b4c7bb814cc630c4199e4814ffed85a835f64ffc82aadaa6388d9df9aeb2cb"
+require_output "CONVERT sha256-text-to-int integer" "$OUT" "Integer: 69523276807549773371481917516452638375664281433555793080445569568100703974091"
+
+OUT=$("$BIN" NUMCONV --hex-to-int ff 2>&1)
+echo "$OUT"
+require_output "NUMCONV alias works" "$OUT" "Integer: 255"
+
+OUT=$("$BIN" CONVERT --hex-to-ascii 41 42 43 2>&1)
+echo "$OUT"
+require_output "CONVERT unquoted spaced hex to ASCII" "$OUT" "ASCII: ABC"
+
+OUT=$("$BIN" CONVERT --hex-to-ascii "41:42:43" 2>&1)
+echo "$OUT"
+require_output "CONVERT colon-separated hex to ASCII" "$OUT" "ASCII: ABC"
+
+OUT=$("$BIN" CONVERT --hex-to-ascii "41-42-43" 2>&1)
+echo "$OUT"
+require_output "CONVERT dash-separated hex to ASCII" "$OUT" "ASCII: ABC"
+
+OUT=$("$BIN" CONVERT --hex-to-ascii "41_42_43" 2>&1)
+echo "$OUT"
+require_output "CONVERT underscore-separated hex to ASCII" "$OUT" "ASCII: ABC"
+
+OUT=$("$BIN" CONVERT --hex-to-int 41 41 41 2>&1)
+echo "$OUT"
+require_output "CONVERT unquoted spaced hex to int" "$OUT" "Integer: 4276545"
+
+OUT=$("$BIN" CONVERT --ascii-to-hex A B C 2>&1)
+echo "$OUT"
+require_output "CONVERT unquoted spaced ASCII to hex" "$OUT" "Hex: 4120422043"
+
+OUT=$(printf 'CONVERT --hex-to-int ff\nNUMCONV --int-to-hex 255\nEXIT\n' | "$BIN" 2>&1)
+require_output "CONVERT shell works" "$OUT" "Integer: 255"
+require_output "NUMCONV shell works" "$OUT" "Hex: ff"
+
+OUT=$("$BIN" HELP CONVERT 2>&1)
+echo "$OUT"
+require_output "HELP CONVERT page" "$OUT" "CONVERT - Numeric / Encoding Conversion Helper"
+require_output "HELP CONVERT sha256 mode" "$OUT" "CONVERT --sha256-text-to-int <text>"
+
 echo "[TEST] RSA known p/q sample"
 
 OUT=$($BIN RSA-KNOWNPQ ./testdata/rsa/rsa_61_53_e17.txt 61 53 2>&1)

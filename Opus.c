@@ -55,6 +55,10 @@ Codename: Opus
 #include "mini_rsa.h"
 #include "rsa_factor.h"
 #include "rsa_rho.h"
+
+int cmd_convert(int argc, char **argv);
+
+int cmd_convert(int argc, char **argv);
 #include "elfinfo.h"
 #include "file_copy.h"
 #include "vigenere.h"
@@ -3121,6 +3125,36 @@ else if (strcasecmp(cmd, "STRING") == 0) {
         }
         else if (strcmp(cmd, "DESIGANALYZE") == 0) {
             opus_designation_analyze(filename);
+        }
+        else if (strcmp(cmd, "CONVERT") == 0 || strcmp(cmd, "NUMCONV") == 0) {
+            if (argc < 2) {
+                printf("Usage: CONVERT <mode> <value>\n");
+                printf("Try: HELP CONVERT\n");
+                continue;
+            }
+
+            int rc = cmd_convert(argc, argv);
+            if (rc == 0)
+                printf("\nconvert: success\n\n");
+            else
+                printf("\nconvert: failed\n\n");
+
+            continue;
+        }
+        else if (strcmp(cmd, "CONVERT") == 0 || strcmp(cmd, "NUMCONV") == 0) {
+            if (argc < 2) {
+                printf("Usage: CONVERT <mode> <value>\n");
+                printf("Try: HELP CONVERT\n");
+                continue;
+            }
+
+            int rc = cmd_convert(argc, argv);
+            if (rc == 0)
+                printf("\nconvert: success\n\n");
+            else
+                printf("\nconvert: failed\n\n");
+
+            continue;
         }
         else if (strcmp(cmd, "RSA-MINI") == 0) {
 	    if (argc != 2) {
