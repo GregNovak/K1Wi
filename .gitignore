@@ -79,3 +79,7 @@ testdata/testlogs/
 
 # Local manual screenshot backups
 Manuals/images/
+
+# LibreOffice temporary lock files
+.~lock.*#
+**/.~lock.*#
