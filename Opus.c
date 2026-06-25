@@ -1853,8 +1853,11 @@ int opus_repl(void)
                            cur_tasks,
                            cur_snapshot[0] ? cur_snapshot : "(no progress)");
             } else {
-                if (cur_snapshot[0]) printf("[No solver] %s\n", cur_snapshot);
-                else printf("[No solver tasks]\n");
+                /*
+                 * No active solver task.
+                 * Keep the default interactive prompt quiet so routine shell
+                 * sessions do not display development/status noise.
+                 */
             }
 
             /* remember snapshot */
@@ -2027,10 +2030,11 @@ int opus_repl(void)
         else if (strcmp(cmd, "SPLASH") == 0) {
             opus_banner();
         }
-	else if (strcmp(cmd, "VERSION") == 0 || strcmp(cmd, "ABOUT") == 0) {
-        cmd_version(NULL, argc, argv);
-        continue;
-	}
+        else if (strcmp(cmd, "VERSION") == 0 || strcmp(cmd, "ABOUT") == 0) {
+            printf("\n");
+            cmd_version(NULL, argc, argv);
+            continue;
+        }
         else if (strcmp(cmd, "M") == 0 || strcmp(cmd, "MENU") == 0) {
             opus_menu();
         }
