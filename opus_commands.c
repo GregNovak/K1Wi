@@ -10,7 +10,7 @@ const opus_cmd_t opus_commands[] = {
     { "OPEN",      "File Tools", "Open File" },
     { "READ", "File Tools", "File reader with raw, safe, and structured modes" },
     { "CREATE",    "File Tools", "Create File" },
-    { "COPY",      "File Tools", "File Copy (with MD5 verification)" },
+    { "COPY",      "File Tools", "Forensic file copy with SHA-256 and MD5 verification" },
     { "DEL",       "File Tools", "Secure Delete (DoD / NIST / Custom)" },
     {
       "SEARCH",

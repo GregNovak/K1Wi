@@ -120,7 +120,7 @@ void opus_cmd_print_help(void)
     printf("File Tools:\n");
     printf("  READ        File reader with raw, safe, and structured modes\n");
     printf("  CREATE      Create secure empty file\n");
-    printf("  COPY        Copy file with MD5 verification\n");
+    printf("  COPY        Forensic copy with SHA-256 and MD5 verification\n");
     printf("  DEL         Secure delete file\n");
     printf("  MD5         Compute, verify, or compare MD5 hashes\n");
     printf("  SHA256      Compute, verify, or compare SHA-256 hashes\n");

@@ -31,7 +31,7 @@ require_not_output() {
     local output="$2"
     local needle="$3"
 
-    if printf "%s" "$output" | grep -Fq "$needle"; then
+    if printf "%s" "$output" | grep -Fq -- "$needle"; then
         fail "$name"
         echo "Did not expect to find: $needle"
     else
@@ -49,7 +49,7 @@ require_output() {
     local output="$2"
     local needle="$3"
 
-    if echo "$output" | grep -Fq "$needle"; then
+    if echo "$output" | grep -Fq -- "$needle"; then
         pass "$label"
     else
         echo "$output"
@@ -74,7 +74,7 @@ require_failure_output() {
         fail "$label expected failure but command exited 0"
     fi
 
-    if echo "$OUT" | grep -Fq "$needle"; then
+    if echo "$OUT" | grep -Fq -- "$needle"; then
         pass "$label"
     else
         fail "$label missing expected error output: $needle"
@@ -550,7 +550,7 @@ pass "RSA-MINI negative path completed"
 
 
 echo
-echo "[TEST] COPY sample file"
+echo "[TEST] COPY forensic verified file copy"
 
 rm -f /tmp/k1wi_copy_test.txt
 
@@ -562,6 +562,36 @@ require_output \
     "$OUT" \
     "COPY: success"
 
+require_output \
+    "COPY verification report present" \
+    "$OUT" \
+    "COPY Verification Report"
+
+require_output \
+    "COPY SHA-256 source reported" \
+    "$OUT" \
+    "Source SHA256"
+
+require_output \
+    "COPY SHA-256 destination reported" \
+    "$OUT" \
+    "Dest SHA256"
+
+require_output \
+    "COPY MD5 source reported" \
+    "$OUT" \
+    "Source MD5"
+
+require_output \
+    "COPY MD5 destination reported" \
+    "$OUT" \
+    "Dest MD5"
+
+require_output \
+    "COPY verification passes" \
+    "$OUT" \
+    "Verification : PASS"
+
 if [ ! -f /tmp/k1wi_copy_test.txt ]; then
     fail "COPY destination file not created"
 fi
@@ -569,6 +599,40 @@ fi
 grep -Fq "CTF{TEST_FLAG}" /tmp/k1wi_copy_test.txt \
     && pass "COPY content verified" \
     || fail "COPY content verification failed"
+
+OUT=$($BIN COPY testdata/text/hello.txt /tmp/k1wi_copy_test.txt 2>&1 || true)
+echo "$OUT"
+
+require_output \
+    "COPY refuses overwrite by default" \
+    "$OUT" \
+    "refusing overwrite"
+
+OUT=$($BIN COPY testdata/text/hello.txt /tmp/k1wi_copy_test.txt --force 2>&1)
+echo "$OUT"
+
+require_output \
+    "COPY force overwrite succeeds" \
+    "$OUT" \
+    "COPY: success"
+
+require_output \
+    "COPY force verification passes" \
+    "$OUT" \
+    "Verification : PASS"
+
+require_output \
+    "COPY force MD5 match reported" \
+    "$OUT" \
+    "MD5 match    : yes"
+
+OUT=$($BIN HELP COPY 2>&1)
+echo "$OUT"
+
+require_output \
+    "COPY help documents force option" \
+    "$OUT" \
+    "--force"
 
 
 echo

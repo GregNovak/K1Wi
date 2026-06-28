@@ -701,14 +701,25 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     
     } else if (strcasecmp(cmd, "COPY") == 0) {
     if (cli->arg_start + 1 >= argc) {
-        fprintf(stderr, "Usage: k1wi COPY <src> <dst>\n");
+        fprintf(stderr, "Usage: k1wi COPY <src> <dst> [--force]\n");
         return 1;
     }
 
     const char *src = argv[cli->arg_start];
     const char *dst = argv[cli->arg_start + 1];
+    int force = 0;
 
-    int rc = opus_file_copy(src, dst);
+    for (int i = cli->arg_start + 2; i < argc; i++) {
+        if (strcasecmp(argv[i], "--force") == 0) {
+            force = 1;
+        } else {
+            fprintf(stderr, "COPY: unknown option '%s'\n", argv[i]);
+            fprintf(stderr, "Usage: k1wi COPY <src> <dst> [--force]\n");
+            return 1;
+        }
+    }
+
+    int rc = opus_file_copy_ex(src, dst, force);
 
     if (rc == 0) {
         printf("COPY: success\n");

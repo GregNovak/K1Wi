@@ -1956,16 +1956,33 @@ int opus_repl(void)
         }
         else if (strcmp(cmd, "COPY") == 0) {
             if (argc < 3) {
-                printf("Usage: COPY <src> <dst>\n");
+                printf("Usage: COPY <src> <dst> [--force]\n");
                 continue;
             }
 
             const char *src = argv[1];
             const char *dst = argv[2];
+            int force = 0;
 
-            log_info("COPY command: %s -> %s", src, dst);
+            for (int i = 3; i < argc; i++) {
+                if (strcmp(argv[i], "--force") == 0) {
+                    force = 1;
+                } else {
+                    printf("COPY: unknown option '%s'\n", argv[i]);
+                    printf("Usage: COPY <src> <dst> [--force]\n");
+                    printf("COPY: failed\n");
+                    force = -1;
+                    break;
+                }
+            }
 
-            int rc = opus_file_copy(src, dst);
+            if (force < 0) {
+                continue;
+            }
+
+            log_info("COPY command: %s -> %s%s", src, dst, force ? " [force]" : "");
+
+            int rc = opus_file_copy_ex(src, dst, force);
             if (rc == 0)
                 printf("COPY: success\n");
             else

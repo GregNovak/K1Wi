@@ -456,16 +456,19 @@ static const char *help_create_lines[] = {
 };
 
 static const char *help_copy_lines[] = {
-    "COPY - Verified File Copy",
+    "COPY - Forensic Verified File Copy",
     "",
     "Usage:",
     "  COPY <source> <destination>",
+    "  COPY <source> <destination> --force",
     "",
     "Description:",
-    "  Copies a file and verifies the result using MD5 comparison.",
+    "  Copies a regular file and verifies the result using SHA-256, MD5, and size comparison.",
+    "  COPY refuses to overwrite an existing destination unless --force is provided.",
     "",
     "Example:",
     "  COPY testdata/text/hello.txt /tmp/k1wi_copy_test.txt",
+    "  COPY testdata/text/hello.txt /tmp/k1wi_copy_test.txt --force",
     NULL
 };
 
