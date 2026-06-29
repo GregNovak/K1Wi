@@ -713,7 +713,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
         if (strcasecmp(argv[i], "--force") == 0) {
             force = 1;
         } else {
-            fprintf(stderr, "COPY: unknown option '%s'\n", argv[i]);
+            fprintf(stderr, "\033[33mCOPY: unknown option '%s'\033[0m\n", argv[i]);
             fprintf(stderr, "Usage: k1wi COPY <src> <dst> [--force]\n");
             return 1;
         }
@@ -722,11 +722,11 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     int rc = opus_file_copy_ex(src, dst, force);
 
     if (rc == 0) {
-        printf("COPY: success\n");
+        printf("\033[32mCOPY: success\033[0m\n");
         return 0;
     }
 
-    printf("COPY: failed\n");
+    printf("\033[31mCOPY: failed\033[0m\n");
     return 1;
     
     } else if (strcasecmp(cmd, "CREATE") == 0) {

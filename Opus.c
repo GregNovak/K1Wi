@@ -1968,9 +1968,9 @@ int opus_repl(void)
                 if (strcmp(argv[i], "--force") == 0) {
                     force = 1;
                 } else {
-                    printf("COPY: unknown option '%s'\n", argv[i]);
+                    printf("\033[33mCOPY: unknown option '%s'\033[0m\n", argv[i]);
                     printf("Usage: COPY <src> <dst> [--force]\n");
-                    printf("COPY: failed\n");
+                    printf("\033[31mCOPY: failed\033[0m\n");
                     force = -1;
                     break;
                 }
@@ -1984,9 +1984,9 @@ int opus_repl(void)
 
             int rc = opus_file_copy_ex(src, dst, force);
             if (rc == 0)
-                printf("COPY: success\n");
+                printf("\033[32mCOPY: success\033[0m\n");
             else
-                printf("COPY: failed\n");
+                printf("\033[31mCOPY: failed\033[0m\n");
 
             continue;
         }
