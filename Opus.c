@@ -1956,33 +1956,41 @@ int opus_repl(void)
         }
         else if (strcmp(cmd, "COPY") == 0) {
             if (argc < 3) {
-                printf("Usage: COPY <src> <dst> [--force]\n");
+                printf("Usage: COPY <src> <dst> [--force] [--recursive]\n");
                 continue;
             }
 
             const char *src = argv[1];
             const char *dst = argv[2];
             int force = 0;
+            int recursive = 0;
+            int option_error = 0;
 
             for (int i = 3; i < argc; i++) {
                 if (strcmp(argv[i], "--force") == 0) {
                     force = 1;
+                } else if (strcmp(argv[i], "--recursive") == 0) {
+                    recursive = 1;
                 } else {
                     printf("\033[33mCOPY: unknown option '%s'\033[0m\n", argv[i]);
-                    printf("Usage: COPY <src> <dst> [--force]\n");
+                    printf("Usage: COPY <src> <dst> [--force] [--recursive]\n");
                     printf("\033[31mCOPY: failed\033[0m\n");
-                    force = -1;
+                    option_error = 1;
                     break;
                 }
             }
 
-            if (force < 0) {
+            if (option_error) {
                 continue;
             }
 
-            log_info("COPY command: %s -> %s%s", src, dst, force ? " [force]" : "");
+            log_info("COPY command: %s -> %s%s%s",
+                     src,
+                     dst,
+                     force ? " [force]" : "",
+                     recursive ? " [recursive]" : "");
 
-            int rc = opus_file_copy_ex(src, dst, force);
+            int rc = opus_file_copy_ex2(src, dst, force, recursive);
             if (rc == 0)
                 printf("\033[32mCOPY: success\033[0m\n");
             else

@@ -456,19 +456,31 @@ static const char *help_create_lines[] = {
 };
 
 static const char *help_copy_lines[] = {
-    "COPY - Forensic Verified File Copy",
+    "COPY - Forensic Verified File and Directory Copy",
     "",
     "Usage:",
-    "  COPY <source> <destination>",
-    "  COPY <source> <destination> --force",
+    "  COPY <source-file> <destination-file>",
+    "  COPY <source-file> <destination-file> --force",
+    "  COPY <source-directory> <destination-directory> --recursive",
+    "  COPY <source-directory> <destination-directory> --recursive --force",
     "",
     "Description:",
-    "  Copies a regular file and verifies the result using SHA-256, MD5, and size comparison.",
+    "  Copies a regular file or directory tree and verifies the result using SHA-256, MD5, and size comparison.",
+    "  File copy prints source and destination SHA-256/MD5 values directly in the verification report.",
+    "  Directory copy requires --recursive and writes per-file SHA-256/MD5 records to .k1wi_copy_manifest.txt.",
+    "  The recursive report also prints the manifest SHA-256 and MD5 values.",
     "  COPY refuses to overwrite an existing destination unless --force is provided.",
+    "",
+    "Recursive behavior:",
+    "  --recursive copies a directory tree into the exact destination directory path.",
+    "  --force allows intentional merge/overwrite into an existing destination directory.",
+    "  Unsupported file types and symlinks are refused during recursive copy.",
     "",
     "Example:",
     "  COPY testdata/text/hello.txt /tmp/k1wi_copy_test.txt",
     "  COPY testdata/text/hello.txt /tmp/k1wi_copy_test.txt --force",
+    "  COPY testdata /tmp/k1wi_copy_tree_test --recursive",
+    "  COPY testdata /tmp/k1wi_copy_tree_test --recursive --force",
     NULL
 };
 

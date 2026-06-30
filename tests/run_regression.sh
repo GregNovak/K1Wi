@@ -634,6 +634,86 @@ require_output \
     "$OUT" \
     "--force"
 
+require_output \
+    "COPY help documents recursive option" \
+    "$OUT" \
+    "--recursive"
+
+rm -rf /tmp/k1wi_copy_tree_test
+
+OUT=$($BIN COPY testdata /tmp/k1wi_copy_tree_test 2>&1 || true)
+echo "$OUT"
+
+require_output \
+    "COPY directory requires recursive option" \
+    "$OUT" \
+    "recursive copy requires --recursive"
+
+OUT=$($BIN COPY testdata /tmp/k1wi_copy_tree_test --recursive 2>&1)
+echo "$OUT"
+
+require_output \
+    "COPY recursive report present" \
+    "$OUT" \
+    "COPY Recursive Verification Report"
+
+require_output \
+    "COPY recursive result passes" \
+    "$OUT" \
+    "Result          : PASS"
+
+require_output \
+    "COPY recursive SHA-256 manifest reported" \
+    "$OUT" \
+    "Manifest SHA256"
+
+require_output \
+    "COPY recursive MD5 manifest reported" \
+    "$OUT" \
+    "Manifest MD5"
+
+require_output \
+    "COPY recursive hash algorithm reported" \
+    "$OUT" \
+    "Hash algorithm  : SHA-256, MD5"
+
+if [ ! -f /tmp/k1wi_copy_tree_test/.k1wi_copy_manifest.txt ]; then
+    fail "COPY recursive manifest not created"
+fi
+
+pass "COPY recursive manifest created"
+
+PASS_RECORDS=$(grep -c '^PASS |' /tmp/k1wi_copy_tree_test/.k1wi_copy_manifest.txt)
+if [ "$PASS_RECORDS" != "44" ]; then
+    fail "COPY recursive manifest expected 44 PASS records, got $PASS_RECORDS"
+fi
+
+pass "COPY recursive manifest contains expected PASS records"
+
+OUT=$($BIN COPY testdata /tmp/k1wi_copy_tree_test --recursive 2>&1 || true)
+echo "$OUT"
+
+require_output \
+    "COPY recursive refuses existing destination" \
+    "$OUT" \
+    "destination directory already exists"
+
+OUT=$($BIN COPY testdata /tmp/k1wi_copy_tree_test --recursive --force 2>&1)
+echo "$OUT"
+
+require_output \
+    "COPY recursive force succeeds" \
+    "$OUT" \
+    "COPY: success"
+
+require_output \
+    "COPY recursive force result passes" \
+    "$OUT" \
+    "Result          : PASS"
+
+rm -rf /tmp/k1wi_copy_tree_test
+
+
 
 echo
 echo "[TEST] CREATE secure empty file"

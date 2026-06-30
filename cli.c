@@ -701,25 +701,29 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     
     } else if (strcasecmp(cmd, "COPY") == 0) {
     if (cli->arg_start + 1 >= argc) {
-        fprintf(stderr, "Usage: k1wi COPY <src> <dst> [--force]\n");
+        fprintf(stderr, "Usage: k1wi COPY <src> <dst> [--force] [--recursive]\n");
         return 1;
     }
 
     const char *src = argv[cli->arg_start];
     const char *dst = argv[cli->arg_start + 1];
     int force = 0;
+    int recursive = 0;
 
     for (int i = cli->arg_start + 2; i < argc; i++) {
         if (strcasecmp(argv[i], "--force") == 0) {
             force = 1;
+        } else if (strcasecmp(argv[i], "--recursive") == 0) {
+            recursive = 1;
         } else {
             fprintf(stderr, "\033[33mCOPY: unknown option '%s'\033[0m\n", argv[i]);
-            fprintf(stderr, "Usage: k1wi COPY <src> <dst> [--force]\n");
+            fprintf(stderr, "Usage: k1wi COPY <src> <dst> [--force] [--recursive]\n");
+            fprintf(stderr, "\033[31mCOPY: failed\033[0m\n");
             return 1;
         }
     }
 
-    int rc = opus_file_copy_ex(src, dst, force);
+    int rc = opus_file_copy_ex2(src, dst, force, recursive);
 
     if (rc == 0) {
         printf("\033[32mCOPY: success\033[0m\n");

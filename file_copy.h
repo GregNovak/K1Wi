@@ -27,4 +27,18 @@ int opus_file_copy(const char *src_path, const char *dst_path);
  */
 int opus_file_copy_ex(const char *src_path, const char *dst_path, int force);
 
+/*
+ * Full copy interface.
+ *
+ * recursive:
+ *   0 = regular-file copy only
+ *   1 = allow recursive directory copy
+ *
+ * Directory copy behavior:
+ *   COPY <source-directory> <destination-directory> --recursive
+ *
+ * The destination path is treated as the copied directory container.
+ */
+int opus_file_copy_ex2(const char *src_path, const char *dst_path, int force, int recursive);
+
 #endif /* OPUS_FILE_COPY_H */
