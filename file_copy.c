@@ -575,7 +575,7 @@ static int copy_verified_directory_tree(const char *src_path,
         stats.dirs_created = 1;
     }
 
-    char *manifest_path = copy_join_path(dst_path, ".k1wi_copy_manifest.txt");
+    char *manifest_path = copy_join_path(dst_path, "K1Wi_COPY_MANIFEST.txt");
     if (!manifest_path) {
         log_error("FILE_COPY: failed to allocate manifest path");
         return -1;

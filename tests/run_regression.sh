@@ -677,13 +677,13 @@ require_output \
     "$OUT" \
     "Hash algorithm  : SHA-256, MD5"
 
-if [ ! -f /tmp/k1wi_copy_tree_test/.k1wi_copy_manifest.txt ]; then
+if [ ! -f /tmp/k1wi_copy_tree_test/K1Wi_COPY_MANIFEST.txt ]; then
     fail "COPY recursive manifest not created"
 fi
 
 pass "COPY recursive manifest created"
 
-PASS_RECORDS=$(grep -c '^PASS |' /tmp/k1wi_copy_tree_test/.k1wi_copy_manifest.txt)
+PASS_RECORDS=$(grep -c '^PASS |' /tmp/k1wi_copy_tree_test/K1Wi_COPY_MANIFEST.txt)
 if [ "$PASS_RECORDS" != "44" ]; then
     fail "COPY recursive manifest expected 44 PASS records, got $PASS_RECORDS"
 fi

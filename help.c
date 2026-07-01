@@ -467,7 +467,7 @@ static const char *help_copy_lines[] = {
     "Description:",
     "  Copies a regular file or directory tree and verifies the result using SHA-256, MD5, and size comparison.",
     "  File copy prints source and destination SHA-256/MD5 values directly in the verification report.",
-    "  Directory copy requires --recursive and writes per-file SHA-256/MD5 records to .k1wi_copy_manifest.txt.",
+    "  Directory copy requires --recursive and writes per-file SHA-256/MD5 records to K1Wi_COPY_MANIFEST.txt.",
     "  The recursive report also prints the manifest SHA-256 and MD5 values.",
     "  COPY refuses to overwrite an existing destination unless --force is provided.",
     "",
