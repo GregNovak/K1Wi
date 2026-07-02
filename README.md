@@ -203,10 +203,10 @@ Run the regression suite:
 ./tests/run_regression.sh
 ```
 
-Current v1.1 development regression status:
+Current v1.2.0 release regression status:
 
 ```text
-PASS: 80
+PASS: 246
 FAIL: 0
 SKIP: 0
 ```
@@ -234,7 +234,7 @@ Always test destructive operations inside disposable directories before use on p
 
 ## Status
 
-Current Version: v1.1.0
+Current Version: v1.2.0
 
 The v1.0.0 public release passed regression testing with PASS 72 / FAIL 0 / SKIP 0.
 The v1.1.0 stable release passed regression testing with PASS 92 / FAIL 0 / SKIP 0.
