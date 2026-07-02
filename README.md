@@ -238,7 +238,7 @@ Current Version: v1.2.0
 
 The v1.0.0 public release passed regression testing with PASS 72 / FAIL 0 / SKIP 0.
 The v1.1.0 stable release passed regression testing with PASS 92 / FAIL 0 / SKIP 0.
-The stable public release is now v1.1.0.
+The v1.0.0 public release passed regression testing with PASS 72 / FAIL 0 / SKIP 0. The v1.1.0 stable release passed regression testing with PASS 92 / FAIL 0 / SKIP 0. The v1.2.0 stable release passed regression testing with PASS 246 / FAIL 0 / SKIP 0. The stable public release is now v1.2.0.
 
 ## License
 
