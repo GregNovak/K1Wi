@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <time.h>
 #include <unistd.h>   /* ftruncate, getpid, access */
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -34,23 +35,52 @@ static int prompt_for_confirmation(const char *prompt) {
     return (buf[0] == 'Y' || buf[0] == 'y');
 }
 
+#define K1WI_DEL_CUSTOM_PASS_MIN 1
+#define K1WI_DEL_CUSTOM_PASS_MAX 33
+
 /* secure_delete_file: overwrite, truncate, and unlink file
  * standard: 1 = DoD 5220.22-M (3-pass), 2 = NIST 800-88 (single zero pass)
+ * custom_passes: 0 = use standard, 1-33 = custom overwrite pass count
  * returns 0 on success, -1 on error (errno set)
  */
-int secure_delete_file(const char *filename, int standard) {
+static int secure_delete_file_ex(const char *filename, int standard, int custom_passes) {
     if (!filename) { errno = EINVAL; return -1; }
 
-    /* quick existence check for clearer diagnostics */
-    if (access(filename, F_OK) != 0) {
-        /* errno set by access */
+    struct stat st;
+    if (lstat(filename, &st) != 0) {
         fprintf(stderr, "[secure_delete_file] file not found: %s\n", filename);
         return -1;
     }
 
-    FILE *fp = fopen(filename, "r+b");
+    if (S_ISLNK(st.st_mode)) {
+        errno = ELOOP;
+        fprintf(stderr, "[secure_delete_file] refusing symlink target: %s\n", filename);
+        return -1;
+    }
+
+    if (!S_ISREG(st.st_mode)) {
+        errno = EINVAL;
+        fprintf(stderr, "[secure_delete_file] refusing non-regular file: %s\n", filename);
+        return -1;
+    }
+
+    int flags = O_RDWR;
+#ifdef O_NOFOLLOW
+    flags |= O_NOFOLLOW;
+#endif
+
+    int fd = open(filename, flags);
+    if (fd < 0) {
+        fprintf(stderr, "[secure_delete_file] open('%s') failed: %s\n", filename, strerror(errno));
+        return -1;
+    }
+
+    FILE *fp = fdopen(fd, "r+b");
     if (!fp) {
-        fprintf(stderr, "[secure_delete_file] fopen('%s') failed: %s\n", filename, strerror(errno));
+        int se = errno;
+        close(fd);
+        errno = se;
+        fprintf(stderr, "[secure_delete_file] fdopen('%s') failed: %s\n", filename, strerror(errno));
         return -1;
     }
 
@@ -61,7 +91,44 @@ int secure_delete_file(const char *filename, int standard) {
 
     unsigned char buffer[4096];
 
-    if (standard == 2) {
+    if (custom_passes > 0) {
+        if (custom_passes < K1WI_DEL_CUSTOM_PASS_MIN ||
+            custom_passes > K1WI_DEL_CUSTOM_PASS_MAX) {
+            fclose(fp);
+            errno = EINVAL;
+            fprintf(stderr, "[secure_delete_file] custom pass count must be between %d and %d\n",
+                    K1WI_DEL_CUSTOM_PASS_MIN, K1WI_DEL_CUSTOM_PASS_MAX);
+            return -1;
+        }
+
+        srand((unsigned)time(NULL) ^ (unsigned)getpid());
+        for (int pass = 0; pass < custom_passes; ++pass) {
+            size_t remaining = (size_t)fsize;
+            rewind(fp);
+            while (remaining > 0) {
+                size_t chunk = remaining < sizeof(buffer) ? remaining : sizeof(buffer);
+
+                if (pass == 0) {
+                    memset(buffer, 0x00, chunk);
+                } else if (pass == 1) {
+                    memset(buffer, 0xFF, chunk);
+                } else {
+                    for (size_t i = 0; i < chunk; ++i) {
+                        buffer[i] = (unsigned char)(rand() & 0xFF);
+                    }
+                }
+
+                if (fwrite(buffer, 1, chunk, fp) != chunk) {
+                    int se = errno;
+                    fclose(fp);
+                    errno = se;
+                    return -1;
+                }
+                remaining -= chunk;
+            }
+            fflush(fp);
+        }
+    } else if (standard == 2) {
         /* NIST: single pass zeros */
         size_t remaining = (size_t)fsize;
         while (remaining > 0) {
@@ -106,12 +173,18 @@ int secure_delete_file(const char *filename, int standard) {
     return 0;
 }
 
+int secure_delete_file(const char *filename, int standard) {
+    return secure_delete_file_ex(filename, standard, 0);
+}
+
 /* fileDeleteCmd: parse one-line args and call secure_delete_file.
  * Ownership: args is non-owning (caller frees any heap buffer it passed).
  * Supported forms:
  *   NULL or ""        -> fallback to interactive fileDelete()
  *   "<filename>"      -> prompts for confirmation, then deletes
  *   "<filename> -s 2 -y" -> standard=2 (NIST), auto-yes
+ *   "<filename> -p 7 -y" -> custom 7-pass overwrite, auto-yes
+ *   "<filename> --passes 7 -y" -> custom 7-pass overwrite, auto-yes
  */
 void fileDeleteCmd(const char *args) {
     
@@ -130,12 +203,20 @@ void fileDeleteCmd(const char *args) {
     char *tok = strtok_r(copy, " \t", &saveptr);
     char *filename = NULL;
     int standard = 1; /* 1 = DoD, 2 = NIST */
+    int custom_passes = 0; /* 0 = disabled unless custom_passes_set is true */
+    int custom_passes_set = 0;
     int auto_yes = 0;
 
     while (tok) {
         if (strcmp(tok, "-s") == 0 || strcmp(tok, "--standard") == 0) {
             char *v = strtok_r(NULL, " \t", &saveptr);
             if (v) standard = (atoi(v) == 2) ? 2 : 1;
+        } else if (strcmp(tok, "-p") == 0 || strcmp(tok, "--passes") == 0) {
+            char *v = strtok_r(NULL, " \t", &saveptr);
+            if (v) {
+                custom_passes = atoi(v);
+                custom_passes_set = 1;
+            }
         } else if (strcmp(tok, "-y") == 0 || strcmp(tok, "--yes") == 0) {
             auto_yes = 1;
         } else if (!filename) {
@@ -177,8 +258,23 @@ void fileDeleteCmd(const char *args) {
         }
     }
 
-    if (secure_delete_file(filename, standard) == 0) {
-        fprintf(stderr, "Secure deletion complete for %s\n", filename);
+    if (custom_passes_set &&
+        (custom_passes < K1WI_DEL_CUSTOM_PASS_MIN ||
+         custom_passes > K1WI_DEL_CUSTOM_PASS_MAX)) {
+        fprintf(stderr, "Error: custom pass count must be between %d and %d.\n",
+                K1WI_DEL_CUSTOM_PASS_MIN, K1WI_DEL_CUSTOM_PASS_MAX);
+        free(filename);
+        return;
+    }
+
+    if (secure_delete_file_ex(filename, standard,
+                              custom_passes_set ? custom_passes : 0) == 0) {
+        if (custom_passes_set) {
+            fprintf(stderr, "Secure deletion complete for %s using %d custom passes\n",
+                    filename, custom_passes);
+        } else {
+            fprintf(stderr, "Secure deletion complete for %s\n", filename);
+        }
     } else {
         fprintf(stderr, "Secure delete failed for %s\n", filename);
     }

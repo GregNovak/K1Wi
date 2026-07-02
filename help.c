@@ -99,6 +99,10 @@ static const char *help_rsa_factor_lines[] = {
     "",
     "Usage:",
     "  RSA-FACTOR <rsa_file>",
+    "  RSA-FACTOR <rsa_file> TIME <minutes>",
+    "  RSA-FACTOR <rsa_file> --time <minutes>",
+    "  RSA-FACTOR <rsa_file> --minutes <minutes>",
+    "  RSA-FACTOR <rsa_file> -t <minutes>",
     NULL
 };
 
@@ -217,6 +221,7 @@ static const char *help_lyzer_lines[] = {
     "  LYZER <file> ALL",
     "  LYZER <file> --summary",
     "  LYZER <file> --quiet",
+    "  LYZER <file> --json",
     "  LYZER <file> --full",
     "  LYZER <file> --verbose",
     "",
@@ -228,6 +233,7 @@ static const char *help_lyzer_lines[] = {
     "Modes:",
     "  --summary  Short report with format, entropy, stego summary, and next steps.",
     "  --quiet    Minimal report with assessment and one next step.",
+    "  --json    Machine-readable JSON summary.",
     "  --full     Full analysis.",
     "  --verbose  Alias for full analysis.",
     "  ALL        Full analysis.",
@@ -236,6 +242,7 @@ static const char *help_lyzer_lines[] = {
     "  LYZER image.jpg",
     "  LYZER image.jpg --summary",
     "  LYZER image.jpg --quiet",
+    "  LYZER image.jpg --json",
     "  LYZER image.jpg --full",
     "  LYZER image.jpg ALL",
 };
@@ -258,6 +265,55 @@ static const char *help_entropy_lines[] = {
     "  ENTROPY sample.bin",
     "  ENTROPY --window sample.bin",
     "  ENTROPY --heatmap sample.bin",
+    NULL
+};
+
+static const char *help_convert_lines[] = {
+    "CONVERT - Numeric / Encoding Conversion Helper",
+    "",
+    "Usage:",
+    "  CONVERT --hex-to-int <hex>",
+    "  CONVERT --int-to-hex <integer>",
+    "  CONVERT --bytes-to-long <file>",
+    "  CONVERT --long-to-bytes <integer> [--out file]",
+    "  CONVERT --ascii-to-hex <text>",
+    "  CONVERT --hex-to-ascii <hex>",
+    "  CONVERT --base64-to-hex <base64>",
+    "  CONVERT --hex-to-base64 <hex>",
+    "  CONVERT --sha256-to-int <file>",
+    "  CONVERT --sha256-text-to-int <text>",
+    "",
+    "Description:",
+    "  Converts between integers, hex, bytes, ASCII, Base64,",
+    "  and SHA-256 digest integers for crypto and CTF workflows.",
+    "",
+    "Notes:",
+    "  --bytes-to-long treats file bytes as a big-endian integer.",
+    "  --sha256-text-to-int hashes the exact text argument without a newline.",
+    "  NUMCONV may be used as an alias for CONVERT.",
+    "",
+    "Examples:",
+    "  CONVERT --hex-to-int ff",
+    "  CONVERT --bytes-to-long message.bin",
+    "  CONVERT --sha256-text-to-int crypto{test}",
+};
+
+static const char *help_rsa_key_lines[] = {
+    "RSA-KEY - RSA Private Key Decrypt Helper",
+    "",
+    "Usage:",
+    "  RSA-KEY <private_key.pem> <ciphertext_file>",
+    "",
+    "Description:",
+    "  Loads a PEM private key and decrypts an RSA ciphertext file.",
+    "  Prints recovered plaintext as both hexadecimal and safe ASCII.",
+    "",
+    "Notes:",
+    "  This helper is useful for CTF and forensic workflows where",
+    "  a private key is recovered from metadata, strings, or carving.",
+    "",
+    "Example:",
+    "  RSA-KEY recovered_private_key.pem flag.enc",
     NULL
 };
 
@@ -291,6 +347,26 @@ static const char *help_rsa_small_e_lines[] = {
     NULL
 };
 
+static const char *help_rsa_roots_lines[] = {
+    "RSA-ROOTS - RSA Exact Root / Even-Exponent Helper",
+    "",
+    "Usage:",
+    "  RSA-ROOTS <rsa_file>",
+    "",
+    "Description:",
+    "  Checks RSA ciphertext for exact integer e-th roots.",
+    "  Also warns when the public exponent is even or non-standard.",
+    "",
+    "Notes:",
+    "  Exact integer roots are useful when m^e was not reduced modulo n.",
+    "  Even exponents may not have a normal private exponent d.",
+    "  Modular root recovery with known p/q is planned for future expansion.",
+    "",
+    "Example:",
+    "  RSA-ROOTS rsa_even_e.txt",
+    NULL
+};
+
 static const char *help_rsa_wiener_lines[] = {
     "RSA-WIENER - Wiener RSA Attack",
     "",
@@ -311,13 +387,25 @@ static const char *help_rsa_ecm_lines[] = {
     "",
     "Usage:",
     "  RSA-ECM <rsa_file>",
+    "  RSA-ECM <rsa_file> --curves <N>",
+    "  RSA-ECM <rsa_file> --bound <N>",
+    "  RSA-ECM <rsa_file> --curves <N> --bound <N>",
     "",
     "Description:",
     "  Attempts factorization using Lenstra ECM.",
     "  Effective against some weak RSA moduli.",
+    "  Default bounds are 20 curves with B1=5000.",
+    "",
+    "Options:",
+    "  --curves N   Number of ECM curves to try.",
+    "  --bound N    Stage-1 ECM bound, also known as B1.",
+    "  --b1 N       Alias for --bound.",
+    "  -c N         Alias for --curves.",
+    "  -b N         Alias for --bound.",
     "",
     "Example:",
     "  RSA-ECM testdata/rsa/rsa_ecm_small_factor.txt",
+    "  RSA-ECM testdata/rsa/rsa_ecm_small_factor.txt --curves 100 --bound 50000",
     NULL
 };
 static const char *help_wipefs_lines[] = {
@@ -358,7 +446,9 @@ static const char *help_create_lines[] = {
     "  CREATE <file>",
     "",
     "Description:",
-    "  Creates a secure empty file with restrictive permissions.",
+    "  Creates a new empty file with restrictive permissions.",
+    "  Uses 0600 permissions on supported platforms.",
+    "  Refuses to overwrite an existing file.",
     "",
     "Example:",
     "  CREATE /tmp/k1wi_create_test.txt",
@@ -366,16 +456,31 @@ static const char *help_create_lines[] = {
 };
 
 static const char *help_copy_lines[] = {
-    "COPY - Verified File Copy",
+    "COPY - Forensic Verified File and Directory Copy",
     "",
     "Usage:",
-    "  COPY <source> <destination>",
+    "  COPY <source-file> <destination-file>",
+    "  COPY <source-file> <destination-file> --force",
+    "  COPY <source-directory> <destination-directory> --recursive",
+    "  COPY <source-directory> <destination-directory> --recursive --force",
     "",
     "Description:",
-    "  Copies a file and verifies the result using MD5 comparison.",
+    "  Copies a regular file or directory tree and verifies the result using SHA-256, MD5, and size comparison.",
+    "  File copy prints source and destination SHA-256/MD5 values directly in the verification report.",
+    "  Directory copy requires --recursive and writes per-file SHA-256/MD5 records to K1Wi_COPY_MANIFEST.txt.",
+    "  The recursive report also prints the manifest SHA-256 and MD5 values.",
+    "  COPY refuses to overwrite an existing destination unless --force is provided.",
+    "",
+    "Recursive behavior:",
+    "  --recursive copies a directory tree into the exact destination directory path.",
+    "  --force allows intentional merge/overwrite into an existing destination directory.",
+    "  Unsupported file types and symlinks are refused during recursive copy.",
     "",
     "Example:",
     "  COPY testdata/text/hello.txt /tmp/k1wi_copy_test.txt",
+    "  COPY testdata/text/hello.txt /tmp/k1wi_copy_test.txt --force",
+    "  COPY testdata /tmp/k1wi_copy_tree_test --recursive",
+    "  COPY testdata /tmp/k1wi_copy_tree_test --recursive --force",
     NULL
 };
 
@@ -384,17 +489,28 @@ static const char *help_del_lines[] = {
     "",
     "Usage:",
     "  DEL <file> [-s 1|2] [-y]",
+    "  DEL <file> -p N [-y]",
+    "  DEL <file> --passes N [-y]",
     "",
     "Description:",
-    "  Securely deletes a file using the selected wipe standard.",
-    "  -s 1 selects DoD-style overwrite behavior.",
-    "  -s 2 selects NIST-style overwrite behavior.",
+    "  Securely deletes a regular file using the selected wipe standard.",
+    "  -s 1 selects DoD-style 3-pass overwrite behavior.",
+    "  -s 2 selects NIST-style single-pass zero overwrite behavior.",
+    "  -p N or --passes N selects a custom overwrite pass count.",
+    "  Custom pass count must be between 1 and 33.",
     "  -y confirms deletion without prompting.",
+    "",
+    "Safety:",
+    "  Refuses symlink and non-regular file targets.",
+    "  SSDs, snapshots, journaling filesystems, and wear leveling may",
+    "  prevent guaranteed physical destruction of all stored copies.",
     "",
     "Example:",
     "  DEL k1wi_del_test.txt -s 2 -y",
+    "  DEL k1wi_del_test.txt --passes 7 -y",
     NULL
 };
+
 
 static const char *help_rsa_rho_lines[] = {
     "RSA-RHO - Pollard Rho Factorization",
@@ -520,11 +636,31 @@ static const char *help_exit_lines[] = {
     NULL
 };
 
+
+static const char *help_auto_lines[] = {
+    "AUTO - Input Detection and Parser",
+    "",
+    "Usage:",
+    "  AUTO <file>",
+    "",
+    "Description:",
+    "  Reads a challenge or data file and attempts to identify useful fields.",
+    "  Detects RSA, ECC, hashes, encodings, and encrypted flag data.",
+    "",
+    "Examples:",
+    "  AUTO challenge.txt",
+    "  AUTO rsa_input.txt",
+    NULL
+};
+
 /* ===========================
    HELP TABLE
    =========================== */
 static const help_entry_t help_table[] = {
     { "SEARCH",      help_search_lines,      sizeof(help_search_lines)/sizeof(char*) },
+    { "AUTO",        help_auto_lines,        sizeof(help_auto_lines)/sizeof(char*) },
+    { "CONVERT",     help_convert_lines,     sizeof(help_convert_lines)/sizeof(char*) },
+    { "NUMCONV",     help_convert_lines,     sizeof(help_convert_lines)/sizeof(char*) },
     { "LYZER", help_lyzer_lines, sizeof(help_lyzer_lines)/sizeof(char*) },
     { "PIECALC",     help_piecalc_lines,     sizeof(help_piecalc_lines)/sizeof(char*) },
     { "PIETIME",     help_pietime_lines,     sizeof(help_pietime_lines)/sizeof(char*) },
@@ -538,6 +674,8 @@ static const help_entry_t help_table[] = {
 
     { "RSA-KNOWNPQ", help_rsa_knownpq_lines, sizeof(help_rsa_knownpq_lines)/sizeof(char*) },
     { "RSA-SMALL-E", help_rsa_small_e_lines, sizeof(help_rsa_small_e_lines)/sizeof(char*) },
+    { "RSA-ROOTS",  help_rsa_roots_lines,  sizeof(help_rsa_roots_lines)/sizeof(char*) },
+    { "RSA-KEY",     help_rsa_key_lines,     sizeof(help_rsa_key_lines)/sizeof(char*) },
     { "RSA-WIENER",  help_rsa_wiener_lines,  sizeof(help_rsa_wiener_lines)/sizeof(char*) },
     { "RSA-ECM",     help_rsa_ecm_lines,     sizeof(help_rsa_ecm_lines)/sizeof(char*) },
     { "ELFINFO",     help_elfinfo_lines,     sizeof(help_elfinfo_lines)/sizeof(char*)  },

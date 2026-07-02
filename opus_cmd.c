@@ -120,7 +120,7 @@ void opus_cmd_print_help(void)
     printf("File Tools:\n");
     printf("  READ        File reader with raw, safe, and structured modes\n");
     printf("  CREATE      Create secure empty file\n");
-    printf("  COPY        Copy file with MD5 verification\n");
+    printf("  COPY        Forensic copy with SHA-256 and MD5 verification\n");
     printf("  DEL         Secure delete file\n");
     printf("  MD5         Compute, verify, or compare MD5 hashes\n");
     printf("  SHA256      Compute, verify, or compare SHA-256 hashes\n");
@@ -130,6 +130,7 @@ void opus_cmd_print_help(void)
     printf("\n");
 
     printf("Forensics and Extraction:\n");
+    printf("  AUTO        Input detection and parser for RSA, ECC, hashes, encodings, and encrypted data\n");
     printf("  LYZER   (L)  Image forensics and steganography analysis\n");
     printf("  EXTRACT (X)  Recursive extraction engine\n");
     printf("  ENTROPY (E)  Shannon entropy calculator\n");
@@ -145,7 +146,7 @@ void opus_cmd_print_help(void)
     printf("  RSA-KNOWNPQ   Decrypt with known p and q\n");
     printf("  RSA-CHECKPQ   Validate p and q\n");
     printf("  RSA-DFROMPQ   Compute d from p, q, and e\n");
-    printf("  RSA-MINI      Mini RSA solver / small-e helper\n");
+    printf("  RSA-MINI      Mini RSA solver / small-e helper\n  RSA-ROOTS     Exact root / even-exponent helper\n  RSA-KEY       Decrypt with PEM private key\n");
     printf("\n");
 
     printf("Binary and PIE Tools:\n");
@@ -167,6 +168,8 @@ void opus_cmd_print_help(void)
     printf("\n");
 
     printf("Utility:\n");
+    printf("  CONVERT     Numeric / encoding conversion helper\n");
+    printf("  NUMCONV     Alias for CONVERT\n");
     printf("  HELP    (H)  Show command reference\n");
     printf("  MENU    (M)  Show main menu\n");
     printf("  ABOUT        Show K1Wi version/build info\n");
@@ -210,8 +213,7 @@ void opus_cmd_print_menu(void)
     printf("\n");
 
     printf("Utility\n");
-    printf("  HELP MENU ABOUT VERSION TIME EXIT\n");
-    printf("\n");
+    printf("  CONVERT NUMCONV HELP MENU ABOUT VERSION TIME EXIT\n");    printf("\n");
 
     printf("Use HELP <command> for details.\n");
     printf("WIPEFS requires --dry-run or --max-bytes <N> --yes.\n");

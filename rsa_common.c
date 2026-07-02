@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <ctype.h>
+#include <string.h>
 #include <gmp.h>
 #include "rsa_common.h"
 
@@ -20,34 +22,95 @@ int parse_rsa_file(const char *path, mpz_t N, mpz_t e, mpz_t c) {
     FILE *fp = fopen(path, "r");
     if (!fp) {
         printf("[-] Could not open RSA file: %s\n", path);
-        return 1;   // failure
+        return 1;
     }
 
     char line[4096];
-    int have_N = 0, have_e = 0, have_c = 0;
+    int have_N = 0;
+    int have_e = 0;
+    int have_c = 0;
 
     while (fgets(line, sizeof(line), fp)) {
-        if (line[0] == 'N' && line[1] == '=') {
-            if (mpz_set_str(N, line + 2, 10) != 0) {
-                printf("[-] Failed to parse N.\n");
-                fclose(fp);
-                return 1;   // failure
+        char *p = line;
+
+        while (*p != '\0') {
+            while (isspace((unsigned char)*p) || *p == ',' || *p == ';') {
+                p++;
             }
-            have_N = 1;
-        } else if (line[0] == 'e' && line[1] == '=') {
-            if (mpz_set_str(e, line + 2, 10) != 0) {
-                printf("[-] Failed to parse e.\n");
-                fclose(fp);
-                return 1;   // failure
+
+            if (*p == '\0' || *p == '#') {
+                break;
             }
-            have_e = 1;
-        } else if (line[0] == 'c' && line[1] == '=') {
-            if (mpz_set_str(c, line + 2, 10) != 0) {
-                printf("[-] Failed to parse c.\n");
-                fclose(fp);
-                return 1;   // failure
+
+            char key = (char)tolower((unsigned char)*p);
+
+            if (key != 'n' && key != 'e' && key != 'c') {
+                p++;
+                continue;
             }
-            have_c = 1;
+
+            p++;
+
+            while (isspace((unsigned char)*p)) {
+                p++;
+            }
+
+            if (*p != '=' && *p != ':') {
+                continue;
+            }
+
+            p++;
+
+            while (isspace((unsigned char)*p)) {
+                p++;
+            }
+
+            if (!isdigit((unsigned char)*p) && *p != '+' && *p != '-') {
+                continue;
+            }
+
+            char value[4096];
+            size_t vi = 0;
+
+            while (*p != '\0' &&
+                   *p != '#' &&
+                   *p != ',' &&
+                   *p != ';' &&
+                   !isspace((unsigned char)*p)) {
+                if (vi + 1 < sizeof(value)) {
+                    value[vi++] = *p;
+                }
+                p++;
+            }
+
+            value[vi] = '\0';
+
+            if (value[0] == '\0') {
+                continue;
+            }
+
+            if (key == 'n') {
+                if (mpz_set_str(N, value, 10) != 0) {
+                    printf("[-] Failed to parse N.\n");
+                    fclose(fp);
+                    return 1;
+                }
+                have_N = 1;
+            } else if (key == 'e') {
+                if (mpz_set_str(e, value, 10) != 0) {
+                    printf("[-] Failed to parse e.\n");
+                    fclose(fp);
+                    return 1;
+                }
+                have_e = 1;
+            } else if (key == 'c') {
+                if (mpz_set_str(c, value, 10) != 0) {
+                    printf("[-] Failed to parse c.\n");
+                    fclose(fp);
+                    return 1;
+                }
+                have_c = 1;
+            }
         }
     }
 
@@ -55,10 +118,10 @@ int parse_rsa_file(const char *path, mpz_t N, mpz_t e, mpz_t c) {
 
     if (!have_N || !have_e || !have_c) {
         printf("[-] RSA file missing N, e, or c.\n");
-        return 1;   // failure
+        return 1;
     }
 
-    return 0;       // success
+    return 0;
 }
 
 /*

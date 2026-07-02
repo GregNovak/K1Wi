@@ -10,8 +10,8 @@ const opus_cmd_t opus_commands[] = {
     { "OPEN",      "File Tools", "Open File" },
     { "READ", "File Tools", "File reader with raw, safe, and structured modes" },
     { "CREATE",    "File Tools", "Create File" },
-    { "COPY",      "File Tools", "File Copy (with MD5 verification)" },
-    { "DEL",       "File Tools", "Secure Delete (DoD / NIST)" },
+    { "COPY",      "File Tools", "Forensic file copy with SHA-256 and MD5 verification" },
+    { "DEL",       "File Tools", "Secure Delete (DoD / NIST / Custom)" },
     {
       "SEARCH",
       "File Tools",
@@ -32,6 +32,7 @@ const opus_cmd_t opus_commands[] = {
        Analysis Tools
        =========================== */
     { "LYZER",     "Analysis Tools", "Image forensics: summary default, --full for full scan" },
+    { "AUTO",      "Analysis Tools", "Input detection and parser for RSA, ECC, hashes, encodings, and encrypted data" },
     { "STRING", "Analysis Tools", "String analyzer"},
 
 
@@ -68,20 +69,23 @@ const opus_cmd_t opus_commands[] = {
     /* ===========================
        RSA Tools
        =========================== */
-{ "RSA-FACTOR", "RSA Tools", "Fermat / classical factorization" },
-{ "RSA-RHO",    "RSA Tools", "Pollard Rho Factorization" },
-{ "RSA-ECM",    "RSA Tools", "Elliptic Curve Method"},
-{ "RSA-MINI",   "RSA Tools", "Mini RSA Solver"},
-{ "RSA-WIENER", "RSA Tools", "Wiener Attack"},
-{ "RSA-SMALL-E","RSA Tools", "Small exponent attack"},
-{ "RSA-KNOWNPQ","RSA Tools", "Decrypt with p and q"},
-{ "RSA-CHECKPQ","RSA Tools", "Check p and q"},
-{ "RSA-DFROMPQ","RSA Tools", "Compute d from p,q,e\n"},
+    { "RSA-FACTOR", "RSA Tools", "Fermat / classical factorization" },
+    { "RSA-RHO",    "RSA Tools", "Pollard Rho Factorization" },
+    { "RSA-ECM",    "RSA Tools", "Elliptic Curve Method"},
+    { "RSA-MINI",   "RSA Tools", "Mini RSA Solver"},
+    { "RSA-WIENER", "RSA Tools", "Wiener Attack"},
+    { "RSA-SMALL-E","RSA Tools", "Small exponent attack"},
+    { "RSA-ROOTS", "RSA Tools", "Exact integer / even-e root helper"},
+    { "RSA-KEY",    "RSA Tools", "Decrypt with PEM private key" },
+    { "RSA-KNOWNPQ","RSA Tools", "Decrypt with p and q"},
+    { "RSA-CHECKPQ","RSA Tools", "Check p and q"},
+    { "RSA-DFROMPQ","RSA Tools", "Compute d from p,q,e\n"},
 
 
     /* ===========================
        Utility
        =========================== */
+    { "CONVERT",  "Utility", "Numeric / encoding conversion helper" },
     { "TIME",    "Utility", "Show system time and timestamp utilities" }, 
     { "HELP",    "Utility", "Show general or command-specific help" },
     { "SPLASH",  "Utility", "Display the K1Wi splash banner" },

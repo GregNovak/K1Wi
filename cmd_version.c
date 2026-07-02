@@ -12,7 +12,7 @@ int cmd_version(const OpusCLI *cli, int argc, char **argv)
     printf("Release Name: %s\n", OPUS_RELEASE_NAME);
     printf("Build Date: %s\n", OPUS_BUILD_DATE);
     printf("Build Time: %s\n", OPUS_BUILD_TIME);
-    printf("Integrated Reverse Engineering and Cryptanalysis Framework\n");
+    printf("Integrated Reverse Engineering and Cryptanalysis Framework\n\n");
 
     return 0;
 }

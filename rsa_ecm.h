@@ -8,6 +8,7 @@
  * Returns 1 on success, 0 on failure.
  * On success, factor will contain a nontrivial divisor of n (2 <= factor < n).
  */
+int opus_rsa_ecm_factor_with_bounds(const mpz_t n, mpz_t factor, unsigned long curves, unsigned long bound);
 int opus_rsa_ecm_factor(const mpz_t n, mpz_t factor);
 
 #endif

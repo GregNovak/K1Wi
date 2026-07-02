@@ -19,6 +19,8 @@
 #include "file_ops.h"
 #include "secure_delete_cmds.h"
 
+int k1wi_auto_analyze_file(const char *path);
+
 
 typedef struct opus_context opus_context;
 
@@ -29,11 +31,14 @@ int opus_cmd_sha256(int argc, char **argv);
 int opus_pie_time_cli(int argc, char **argv);
 int opus_lyzer_file(const char *path, const char *mode);
 int cmd_rsa(int argc, char **argv);
+int cmd_rsa_key(int argc, char **argv);
+int cmd_convert(int argc, char **argv);
 int cmd_about(opus_context *ctx, int argc, char **argv);
 int cmd_piecalc(opus_context *ctx, int argc, char **argv);
 int cmd_menu(opus_context *ctx, int argc, char **argv);
 int cmd_exit(opus_context *ctx, int argc, char **argv);
 void detect_magic(const char *filename);
+void detect_magic_recover(const char *filename, const char *recover_path);
 void systemTime(void);
 void opus_banner(void);
 
@@ -165,6 +170,10 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     if (strcasecmp(cmd, "EXTRACT") == 0) {
         return cmd_extract(cli, argc, argv);
 
+    } else if (strcasecmp(cmd, "CONVERT") == 0 ||
+               strcasecmp(cmd, "NUMCONV") == 0) {
+        return cmd_convert(argc - cli->arg_start, argv + cli->arg_start);
+
     } else if (strcasecmp(cmd, "STRING") == 0) {
         return cmd_string(argc - cli->arg_start + 1, argv + cli->arg_start - 1);
        
@@ -182,7 +191,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
         if (strcmp(argv[cli->arg_start], "-in") == 0) {
             if (cli->arg_start + 1 >= argc) {
                 fprintf(stderr, "MD5 -in: need <file>\n");
-                return 1;
+        return 1;
             }
 
             const char *path = argv[cli->arg_start + 1];
@@ -199,7 +208,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
         if (strcmp(argv[cli->arg_start], "-verify") == 0) {
             if (cli->arg_start + 2 >= argc) {
                 fprintf(stderr, "MD5 -verify: need <file> <hash>\n");
-                return 1;
+        return 1;
             }
 
             const char *path = argv[cli->arg_start + 1];
@@ -207,7 +216,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
             if (opus_md5_file(path, digest) != true) {
                 fprintf(stderr, "MD5: failed to read %s\n", path);
-                return 1;
+        return 1;
             }
 
             if (strcasecmp(digest, expected) == 0) {
@@ -222,7 +231,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
         if (strcmp(argv[cli->arg_start], "-compare") == 0) {
             if (cli->arg_start + 2 >= argc) {
                 fprintf(stderr, "MD5 -compare: need <file1> <file2>\n");
-                return 1;
+        return 1;
             }
 
             char h1[33], h2[33];
@@ -231,12 +240,12 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 
             if (opus_md5_file(file1, h1) != true) {
                 fprintf(stderr, "MD5: failed to read %s\n", file1);
-                return 1;
+        return 1;
             }
 
             if (opus_md5_file(file2, h2) != true) {
                 fprintf(stderr, "MD5: failed to read %s\n", file2);
-                return 1;
+        return 1;
             }
 
             if (strcasecmp(h1, h2) == 0) {
@@ -276,7 +285,7 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 } else if (strcasecmp(cmd, "LYZER") == 0) {
     if (cli->arg_start >= argc) {
         fprintf(stderr, "ERROR: lyzer requires a file path\n");
-        fprintf(stderr, "Usage: k1wi lyzer <file> [H|R|E|C|S|J|D|ALL|--summary|--quiet|--full|--verbose]\n");
+        fprintf(stderr, "Usage: k1wi lyzer <file> [H|R|E|C|S|J|D|ALL|--summary|--quiet|--json|--full|--verbose]\n");
         return 1;
     }
 
@@ -297,6 +306,9 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 	    } else if (strcasecmp(mode, "--quiet") == 0 ||
                strcasecmp(mode, "quiet") == 0) {
         mode = "QUIET";
+    } else if (strcasecmp(mode, "--json") == 0 ||
+               strcasecmp(mode, "json") == 0) {
+        mode = "JSON";
     }
 	 }
 
@@ -343,17 +355,40 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 		argv + cli->arg_start);
     }
     else if (strcasecmp(cmd, "MAGIC") == 0) {
+        const char *recover_path = NULL;
+
         if (cli->arg_start >= argc) {
-            fprintf(stderr, "Usage: k1wi magic <file>\n");
+            fprintf(stderr, "Usage: k1wi magic <file> [--recover <out>]\n");
             return 1;
         }
 
-        detect_magic(argv[cli->arg_start]);
+        for (int i = cli->arg_start + 1; i < argc; i++) {
+            if (strcmp(argv[i], "--recover") == 0) {
+                if (i + 1 >= argc) {
+                    fprintf(stderr, "MAGIC: --recover requires an output path\n");
+                    return 1;
+                }
+                recover_path = argv[++i];
+            } else {
+                fprintf(stderr, "MAGIC: unknown option '%s'\n", argv[i]);
+                return 1;
+            }
+        }
+
+        detect_magic_recover(argv[cli->arg_start], recover_path);
         return 0;
 
     
-	    
-	} else if (strcasecmp(cmd, "RSA-SMALL-E") == 0) {
+        
+        } else if (strcasecmp(cmd, "RSA-KEY") == 0) {
+            if (cli->arg_start >= argc) {
+                fprintf(stderr, "Usage: k1wi RSA-KEY <private_key.pem> <ciphertext_file>\n");
+                return 1;
+            }
+
+            return cmd_rsa_key(argc - cli->arg_start, argv + cli->arg_start);
+
+        } else if (strcasecmp(cmd, "RSA-SMALL-E") == 0) {
 	    if (cli->arg_start >= argc) {
 		fprintf(stderr, "Usage: k1wi RSA-SMALL-E <rsa_file>\n");
 		return 1;
@@ -390,6 +425,55 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 	    printf("[-] RSA-SMALL-E: attack not applicable (no exact root)\n");
 	    mpz_clears(N, e, c, m, NULL);
 	    return 1;
+
+	} else if (strcasecmp(cmd, "RSA-ROOTS") == 0) {
+		if (cli->arg_start >= argc) {
+			fprintf(stderr, "Usage: k1wi RSA-ROOTS <rsa_file>\n");
+			return 1;
+		}
+
+		const char *path = argv[cli->arg_start];
+
+		mpz_t N, e, c, m;
+		mpz_inits(N, e, c, m, NULL);
+
+		if (parse_rsa_file(path, N, e, c) != 0) {
+			printf("rsa-roots: failed to parse RSA file\n");
+			mpz_clears(N, e, c, m, NULL);
+			return 1;
+		}
+
+		unsigned long e_ul = mpz_get_ui(e);
+
+		printf("[*] RSA-ROOTS: checking exact integer root path\n");
+		gmp_printf("[*] N = %Zd\n", N);
+		gmp_printf("[*] e = %Zd\n", e);
+		gmp_printf("[*] c = %Zd\n", c);
+
+		if (mpz_even_p(e)) {
+			printf("[!] RSA-ROOTS: even public exponent detected\n");
+			printf("[!] RSA-ROOTS: normal RSA private exponent may not exist if gcd(e, phi(n)) != 1\n");
+		}
+
+		if (e_ul == 0 || e_ul > 64 || mpz_cmp_ui(e, e_ul) != 0) {
+			printf("[-] RSA-ROOTS: exponent too large or invalid for exact integer root helper\n");
+			printf("[*] RSA-ROOTS: modular root support with known p/q is planned for a later expansion\n");
+			mpz_clears(N, e, c, m, NULL);
+			return 1;
+		}
+
+		if (rsa_small_e_attack(m, c, e_ul)) {
+			printf("[+] RSA-ROOTS: recovered plaintext via exact integer %lu-th root\n", e_ul);
+			opus_print_plaintext_from_bigint(m);
+			mpz_clears(N, e, c, m, NULL);
+			return 0;
+		}
+
+		printf("[-] RSA-ROOTS: no exact integer %lu-th root found\n", e_ul);
+		printf("[*] RSA-ROOTS: if p and q are known, modular root recovery may still be possible\n");
+
+		mpz_clears(N, e, c, m, NULL);
+		return 1;
 
 	} else if (strcasecmp(cmd, "RSA-WIENER") == 0) {
 	    if (cli->arg_start >= argc) {
@@ -429,11 +513,43 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
 	} 
         else if (strcasecmp(cmd, "RSA-FACTOR") == 0) {
           if (cli->arg_start >= argc) {
-            fprintf(stderr, "Usage: k1wi rsa-factor <rsa_file>\n");
+            fprintf(stderr, "Usage: k1wi RSA-FACTOR <rsa_file> [TIME <minutes>|--time <minutes>|--minutes <minutes>|-t <minutes>]\n");
             return 1;
         }
 
-        return opus_rsa_factor(argv[cli->arg_start]);
+        unsigned long time_limit_minutes = 0;
+
+        if (cli->arg_start + 1 < argc) {
+            const char *opt = argv[cli->arg_start + 1];
+
+            if (cli->arg_start + 2 >= argc) {
+                fprintf(stderr, "Usage: k1wi RSA-FACTOR <rsa_file> [TIME <minutes>|--time <minutes>|--minutes <minutes>|-t <minutes>]\n");
+        return 1;
+            }
+
+            if (strcasecmp(opt, "TIME") == 0 ||
+                strcasecmp(opt, "--time") == 0 ||
+                strcasecmp(opt, "--minutes") == 0 ||
+                strcasecmp(opt, "-t") == 0) {
+                char *end = NULL;
+                time_limit_minutes = strtoul(argv[cli->arg_start + 2], &end, 10);
+
+                if (end == argv[cli->arg_start + 2] || *end != '\0' || time_limit_minutes == 0) {
+                    fprintf(stderr, "rsa-factor: time limit must be a positive number of minutes\n");
+            return 1;
+                }
+            } else {
+                fprintf(stderr, "rsa-factor: unknown option '%s'\n", opt);
+                fprintf(stderr, "Usage: k1wi RSA-FACTOR <rsa_file> [TIME <minutes>|--time <minutes>|--minutes <minutes>|-t <minutes>]\n");
+        return 1;
+            }
+        }
+
+        if (opus_rsa_factor_with_time(argv[cli->arg_start], time_limit_minutes)) {
+            return 0;
+        }
+
+        return 1;
 
    } else if (strcasecmp(cmd, "RSA-KNOWNPQ") == 0) {
     if (cli->arg_start + 2 >= argc) {
@@ -481,37 +597,90 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     
     } else if (strcasecmp(cmd, "RSA-ECM") == 0) {
     if (cli->arg_start >= argc) {
-        fprintf(stderr, "Usage: k1wi RSA-ECM <rsa_file>\n");
+        fprintf(stderr, "Usage: k1wi RSA-ECM <rsa_file> [--curves N] [--bound N]\n");
         return 1;
     }
 
     const char *path = argv[cli->arg_start];
+    unsigned long curves = 20;
+    unsigned long bound = 5000;
+
+    for (int i = cli->arg_start + 1; i < argc; i++) {
+        const char *opt = argv[i];
+
+        if (strcasecmp(opt, "--curves") == 0 ||
+            strcasecmp(opt, "CURVES") == 0 ||
+            strcasecmp(opt, "-c") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr, "rsa-ecm: --curves requires a positive number\n");
+        return 1;
+            }
+
+            char *endptr = NULL;
+            curves = strtoul(argv[++i], &endptr, 10);
+
+            if (endptr == argv[i] || *endptr != '\0' || curves == 0) {
+                fprintf(stderr, "rsa-ecm: --curves requires a positive number\n");
+        return 1;
+            }
+        } else if (strcasecmp(opt, "--bound") == 0 ||
+                   strcasecmp(opt, "--b1") == 0 ||
+                   strcasecmp(opt, "BOUND") == 0 ||
+                   strcasecmp(opt, "B1") == 0 ||
+                   strcasecmp(opt, "-b") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr, "rsa-ecm: --bound requires a positive number\n");
+        return 1;
+            }
+
+            char *endptr = NULL;
+            bound = strtoul(argv[++i], &endptr, 10);
+
+            if (endptr == argv[i] || *endptr != '\0' || bound == 0) {
+                fprintf(stderr, "rsa-ecm: --bound requires a positive number\n");
+        return 1;
+            }
+        } else {
+            fprintf(stderr, "rsa-ecm: unknown option '%s'\n", opt);
+            fprintf(stderr, "Usage: k1wi RSA-ECM <rsa_file> [--curves N] [--bound N]\n");
+            return 1;
+        }
+    }
+
+    const char *path_for_parse = path;
 
     mpz_t N, e, c, f, q;
     mpz_inits(N, e, c, f, q, NULL);
 
-    if (parse_rsa_file(path, N, e, c) != 0) {
+    if (parse_rsa_file(path_for_parse, N, e, c) != 0) {
         printf("rsa-ecm: failed to parse RSA file\n");
         mpz_clears(N, e, c, f, q, NULL);
         return 1;
     }
 
     printf("[*] RSA-ECM: starting ECM factorization\n");
+    printf("[*] RSA-ECM: curves=%lu, B1=%lu\n", curves, bound);
 
-    if (!opus_rsa_ecm_factor(N, f)) {
-        printf("[-] RSA-ECM: no factor found (within bounds)\n");
+    if (!opus_rsa_ecm_factor_with_bounds(N, f, curves, bound)) {
+        printf("[-] RSA-ECM: no factor found after %lu curve(s) with B1=%lu\n", curves, bound);
         mpz_clears(N, e, c, f, q, NULL);
         return 1;
     }
 
-    mpz_fdiv_q(q, N, f);
+    if (mpz_cmp_ui(f, 1) <= 0 || mpz_cmp(f, N) >= 0 || !mpz_divisible_p(N, f)) {
+        gmp_printf("[-] RSA-ECM: rejected invalid factor candidate f = %Zd\n", f);
+        mpz_clears(N, e, c, f, q, NULL);
+        return 1;
+    }
+
+    mpz_divexact(q, N, f);
 
     gmp_printf("[+] RSA-ECM: found factor f = %Zd\n", f);
     gmp_printf("[+] RSA-ECM: cofactor q = %Zd\n", q);
 
-    mpz_clears(N, e, c, f, q, NULL);
-    return 0;
-    
+	mpz_clears(N, e, c, f, q, NULL);
+	return 0;
+
     } else if (strcasecmp(cmd, "RSA-RHO") == 0) {
 
     if (cli->arg_start >= argc) {
@@ -532,21 +701,36 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     
     } else if (strcasecmp(cmd, "COPY") == 0) {
     if (cli->arg_start + 1 >= argc) {
-        fprintf(stderr, "Usage: k1wi COPY <src> <dst>\n");
+        fprintf(stderr, "Usage: k1wi COPY <src> <dst> [--force] [--recursive]\n");
         return 1;
     }
 
     const char *src = argv[cli->arg_start];
     const char *dst = argv[cli->arg_start + 1];
+    int force = 0;
+    int recursive = 0;
 
-    int rc = opus_file_copy(src, dst);
+    for (int i = cli->arg_start + 2; i < argc; i++) {
+        if (strcasecmp(argv[i], "--force") == 0) {
+            force = 1;
+        } else if (strcasecmp(argv[i], "--recursive") == 0) {
+            recursive = 1;
+        } else {
+            fprintf(stderr, "\033[33mCOPY: unknown option '%s'\033[0m\n", argv[i]);
+            fprintf(stderr, "Usage: k1wi COPY <src> <dst> [--force] [--recursive]\n");
+            fprintf(stderr, "\033[31mCOPY: failed\033[0m\n");
+            return 1;
+        }
+    }
+
+    int rc = opus_file_copy_ex2(src, dst, force, recursive);
 
     if (rc == 0) {
-        printf("COPY: success\n");
+        printf("\033[32mCOPY: success\033[0m\n");
         return 0;
     }
 
-    printf("COPY: failed\n");
+    printf("\033[31mCOPY: failed\033[0m\n");
     return 1;
     
     } else if (strcasecmp(cmd, "CREATE") == 0) {
@@ -580,6 +764,16 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     
     }
     
+
+    else if (strcasecmp(cmd, "AUTO") == 0) {
+        if (cli->arg_start >= argc) {
+            fprintf(stderr, "Usage: k1wi AUTO <file>\n");
+            return 1;
+        }
+
+        return k1wi_auto_analyze_file(argv[cli->arg_start]);
+    }
+
     else if (strcasecmp(cmd, "TIME") == 0) {
         systemTime();
         return 0;

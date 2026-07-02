@@ -2,7 +2,7 @@
 
 Codename: Opus
 
----------- K1Wi v1.1.0 -----------
+---------- K1Wi v1.2.0 -----------
 
 */
 
@@ -55,6 +55,10 @@ Codename: Opus
 #include "mini_rsa.h"
 #include "rsa_factor.h"
 #include "rsa_rho.h"
+
+int cmd_convert(int argc, char **argv);
+
+int cmd_convert(int argc, char **argv);
 #include "elfinfo.h"
 #include "file_copy.h"
 #include "vigenere.h"
@@ -270,36 +274,6 @@ int isStrictDecimalList(const char *s);
 int cmd_piecalc(opus_context *ctx, int argc, char **argv);
 int cmd_version(const OpusCLI *cli, int argc, char **argv);
 
-static void dispatch_forensic(int argc, char **argv)
-{
-    // No subcommand?
-    if (argc < 2) {
-        forensicCmd("");
-        return;
-    }
-
-    // Reconstruct args string from argv[1..]
-    size_t len = 0;
-    for (int i = 1; i < argc; i++)
-        len += strlen(argv[i]) + 1;
-
-    char *buf = malloc(len + 1);
-    if (!buf) {
-        fprintf(stderr, "Memory allocation failed.\n");
-        return;
-    }
-
-    buf[0] = '\0';
-    for (int i = 1; i < argc; i++) {
-        strcat(buf, argv[i]);
-        if (i + 1 < argc)
-            strcat(buf, " ");
-    }
-
-    forensicCmd(buf);
-    free(buf);
-}
-
 void opus_banner(void) {
     printf("\n\n");
 
@@ -309,7 +283,7 @@ void opus_banner(void) {
     printf("==================================================\n");
 
     printf("\n");
-    printf("Version: 1.1.0\n");
+    printf("Version: 1.2.0\n");
     printf("\n");
 }
 
@@ -409,7 +383,130 @@ MagicEntry magic_table[] = {
     {"ELF", elf_magic, sizeof(elf_magic)},
 };
 
-void detect_magic(const char *filename) {
+static const char *magic_name_from_bytes(const unsigned char *buffer, size_t len)
+{
+    for (size_t i = 0; i < sizeof(magic_table) / sizeof(MagicEntry); i++) {
+        if (len >= magic_table[i].length &&
+            memcmp(buffer, magic_table[i].magic, magic_table[i].length) == 0) {
+            return magic_table[i].name;
+        }
+    }
+
+    return NULL;
+}
+
+static int detect_ascii_bitstream_magic(const char *filename, const char *recover_path)
+{
+    FILE *fp = fopen(filename, "rb");
+    if (!fp) {
+        return 0;
+    }
+
+    unsigned char decoded[32];
+    memset(decoded, 0, sizeof(decoded));
+
+    FILE *out = NULL;
+    if (recover_path) {
+        out = fopen(recover_path, "wb");
+        if (!out) {
+            fclose(fp);
+            perror("Error opening recovery output");
+            return 1;
+        }
+    }
+
+    size_t bit_count = 0;
+    size_t decoded_len = 0;
+    size_t recovered_bytes = 0;
+    unsigned char cur = 0;
+    int bit_pos = 0;
+    int saw_bit = 0;
+    int invalid = 0;
+
+    int ch;
+    while ((ch = fgetc(fp)) != EOF) {
+        if (ch == '0' || ch == '1') {
+            saw_bit = 1;
+            cur = (unsigned char)((cur << 1) | (ch == '1'));
+            bit_pos++;
+            bit_count++;
+
+            if (bit_pos == 8) {
+                if (decoded_len < sizeof(decoded)) {
+                    decoded[decoded_len++] = cur;
+                }
+
+                if (out) {
+                    if (fputc(cur, out) == EOF) {
+                        invalid = 1;
+                        break;
+                    }
+                    recovered_bytes++;
+                }
+
+                cur = 0;
+                bit_pos = 0;
+            }
+
+            continue;
+        }
+
+        if (isspace((unsigned char)ch)) {
+            continue;
+        }
+
+        invalid = 1;
+        break;
+    }
+
+    fclose(fp);
+
+    if (out) {
+        fclose(out);
+    }
+
+    if (invalid || !saw_bit) {
+        if (recover_path) {
+            remove(recover_path);
+        }
+        return 0;
+    }
+
+    printf("Detected raw format: ASCII binary digit stream\n");
+    printf("Bitstream length: %zu bits\n", bit_count);
+    printf("Byte aligned: %s\n", (bit_count % 8 == 0) ? "yes" : "no");
+
+    if (decoded_len > 0) {
+        const char *decoded_magic = magic_name_from_bytes(decoded, decoded_len);
+        printf("Decoded magic: %s\n", decoded_magic ? decoded_magic : "unknown");
+
+        printf("Decoded first bytes: ");
+        for (size_t i = 0; i < decoded_len; i++) {
+            printf("%02X ", decoded[i]);
+        }
+        printf("\n");
+    }
+
+    if ((bit_count % 8) != 0) {
+        printf("Note: bitstream is not byte-aligned; decoding may need padding or trimming.\n");
+
+        if (recover_path) {
+            remove(recover_path);
+            printf("Recovery skipped: bitstream is not byte-aligned.\n");
+        }
+
+        return 1;
+    }
+
+    if (recover_path) {
+        printf("Recovered decoded bitstream to: %s\n", recover_path);
+        printf("Recovered bytes: %zu\n", recovered_bytes);
+    }
+
+    return 1;
+}
+
+void detect_magic_recover(const char *filename, const char *recover_path) {
     FILE *fp = fopen(filename, "rb");
     if (!fp) {
         perror("Error opening file");
@@ -425,24 +522,27 @@ void detect_magic(const char *filename) {
         return;
     }
 
-    int found = 0;
-    for (size_t i = 0; i < sizeof(magic_table)/sizeof(MagicEntry); i++) {
-        if (read_bytes >= magic_table[i].length &&
-            memcmp(buffer, magic_table[i].magic, magic_table[i].length) == 0) {
-            printf("Detected format: %s\n", magic_table[i].name);
-            found = 1;
-            break;
-        }
+    const char *name = magic_name_from_bytes(buffer, read_bytes);
+    if (name) {
+        printf("Detected format: %s\n", name);
+        return;
     }
 
-    if (!found) {
-        printf("Unknown format. First bytes: ");
-        for (size_t i = 0; i < read_bytes; i++) {
-            printf("%02X ", buffer[i]);
-        }
-        printf("\n");
+    if (detect_ascii_bitstream_magic(filename, recover_path)) {
+        return;
     }
+
+    printf("Unknown format. First bytes: ");
+    for (size_t i = 0; i < read_bytes; i++) {
+        printf("%02X ", buffer[i]);
+    }
+    printf("\n");
 }
+void detect_magic(const char *filename)
+{
+    detect_magic_recover(filename, NULL);
+}
+
 //------- End Magic Bytes --------------------
 
 
@@ -1217,6 +1317,471 @@ int cmd_search(int argc, char **argv) {
 /* ======== MAIN FUNCTION STARTS HERE ======== */
 /* =========================================== */
 
+
+
+static int k1wi_auto_hex_token_len(const char *buf, size_t want_len)
+{
+    const unsigned char *p = (const unsigned char *)buf;
+
+    while (*p) {
+        while (*p && !isxdigit(*p)) {
+            p++;
+        }
+
+        const unsigned char *start = p;
+        size_t len = 0;
+
+        while (*p && isxdigit(*p)) {
+            len++;
+            p++;
+        }
+
+        if (len == want_len) {
+            int left_ok = (start == (const unsigned char *)buf) || !isxdigit((unsigned char)*(start - 1));
+            int right_ok = (*p == '\0') || !isxdigit(*p);
+
+            if (left_ok && right_ok) {
+                return 1;
+            }
+        }
+    }
+
+    return 0;
+}
+
+static int k1wi_auto_hex_blob_present(const char *buf)
+{
+    const unsigned char *p = (const unsigned char *)buf;
+
+    while (*p) {
+        while (*p && !isxdigit(*p)) {
+            p++;
+        }
+
+        size_t len = 0;
+
+        while (*p && isxdigit(*p)) {
+            len++;
+            p++;
+        }
+
+        if (len >= 32U && (len % 2U) == 0U) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+
+
+static int k1wi_auto_is_base64_char(unsigned char c)
+{
+    return isalnum(c) || c == '+' || c == '/' || c == '=';
+}
+
+static int k1wi_auto_base64_blob_present(const char *buf)
+{
+    const unsigned char *p = (const unsigned char *)buf;
+
+    while (*p) {
+        while (*p && !k1wi_auto_is_base64_char(*p)) {
+            p++;
+        }
+
+        size_t len = 0;
+        size_t pad = 0;
+        size_t non_alnum_symbol = 0;
+        size_t non_hex_char = 0;
+
+        while (*p && k1wi_auto_is_base64_char(*p)) {
+            if (*p == '=') {
+                pad++;
+            }
+
+            if (*p == '+' || *p == '/' || *p == '=') {
+                non_alnum_symbol++;
+            }
+
+            if (!isxdigit(*p)) {
+                non_hex_char++;
+            }
+
+            len++;
+            p++;
+        }
+
+        if (len >= 16U && (len % 4U) == 0U && pad <= 2U) {
+            /*
+             * Avoid treating raw MD5/SHA-style pure hex strings as base64.
+             * Base64 should include padding/symbols or at least non-hex letters.
+             */
+            if (non_hex_char > 0U && (non_alnum_symbol > 0U || len >= 24U)) {
+                return 1;
+            }
+        }
+    }
+
+    return 0;
+}
+
+
+
+static void k1wi_auto_print_field_preview(const char *name,
+                                          const char *buf,
+                                          const char *const *labels,
+                                          size_t label_count,
+                                          int *printed_header)
+{
+    size_t i;
+
+    if (!name || !buf || !labels || !printed_header) {
+        return;
+    }
+
+    for (i = 0; i < label_count; i++) {
+        const char *hit = strstr(buf, labels[i]);
+        const char *start;
+        const char *end;
+        size_t len;
+
+        if (!hit) {
+            continue;
+        }
+
+        start = hit + strlen(labels[i]);
+
+        while (*start == ' ' || *start == '\t' || *start == '\r' ||
+               *start == '\n' || *start == ':' || *start == '=' ||
+               *start == '"' || *start == '\'') {
+            start++;
+        }
+
+        end = start;
+
+        while (*end != '\0' &&
+               *end != ' ' &&
+               *end != '\t' &&
+               *end != '\r' &&
+               *end != '\n' &&
+               *end != ',' &&
+               *end != '"' &&
+               *end != '\'' &&
+               *end != '}' &&
+               *end != ']' &&
+               *end != ';') {
+            end++;
+        }
+
+        len = (size_t)(end - start);
+
+        if (len == 0U) {
+            continue;
+        }
+
+        if (!*printed_header) {
+            printf("\nField previews\n");
+            printf("------------------\n");
+            *printed_header = 1;
+        }
+
+        printf("%-21s: ", name);
+
+        if (len <= 40U) {
+            printf("%.*s\n", (int)len, start);
+        } else {
+            printf("%.*s...%.*s\n",
+                   20,
+                   start,
+                   12,
+                   end - 12);
+        }
+
+        return;
+    }
+}
+
+
+int k1wi_auto_analyze_file(const char *path)
+{
+    FILE *fp = NULL;
+    long size = 0;
+    char *buf = NULL;
+
+    int has_rsa_n = 0;
+    int has_rsa_e = 0;
+    int has_rsa_d = 0;
+    int has_rsa_p = 0;
+    int has_rsa_q = 0;
+    int has_rsa_phi = 0;
+    int has_rsa_c = 0;
+    int has_generic_ciphertext = 0;
+    int has_ecc_point = 0;
+    int has_iv = 0;
+    int has_encrypted_flag = 0;
+    int has_md5 = 0;
+    int has_sha1 = 0;
+    int has_sha256 = 0;
+    int has_sha512 = 0;
+    int has_hex_blob = 0;
+    int has_base64_blob = 0;
+    int printed_preview_header = 0;
+
+    if (!path || path[0] == '\0') {
+        fprintf(stderr, "AUTO: missing input file.\n");
+        return 1;
+    }
+
+    fp = fopen(path, "rb");
+    if (!fp) {
+        perror("AUTO");
+        return 1;
+    }
+
+    if (fseek(fp, 0, SEEK_END) != 0) {
+        fclose(fp);
+        fprintf(stderr, "AUTO: failed to seek input file.\n");
+        return 1;
+    }
+
+    size = ftell(fp);
+    if (size < 0) {
+        fclose(fp);
+        fprintf(stderr, "AUTO: failed to determine input size.\n");
+        return 1;
+    }
+
+    rewind(fp);
+
+    buf = calloc((size_t)size + 1U, 1U);
+    if (!buf) {
+        fclose(fp);
+        fprintf(stderr, "AUTO: memory allocation failed.\n");
+        return 1;
+    }
+
+    if (size > 0 && fread(buf, 1U, (size_t)size, fp) != (size_t)size) {
+        free(buf);
+        fclose(fp);
+        fprintf(stderr, "AUTO: failed to read input file.\n");
+        return 1;
+    }
+
+    fclose(fp);
+
+    has_rsa_n = strstr(buf, "n =") != NULL ||
+                strstr(buf, "N =") != NULL ||
+                strstr(buf, "\"n\"") != NULL ||
+                strstr(buf, "\"N\"") != NULL ||
+                strstr(buf, "modulus") != NULL ||
+                strstr(buf, "Modulus") != NULL;
+
+    has_rsa_e = strstr(buf, "e =") != NULL ||
+                strstr(buf, "E =") != NULL ||
+                strstr(buf, "\"e\"") != NULL ||
+                strstr(buf, "\"E\"") != NULL;
+
+    has_rsa_d = strstr(buf, "d =") != NULL ||
+                strstr(buf, "D =") != NULL ||
+                strstr(buf, "\"d\"") != NULL ||
+                strstr(buf, "\"D\"") != NULL ||
+                strstr(buf, "private exponent") != NULL ||
+                strstr(buf, "Private exponent") != NULL;
+
+    has_rsa_p = strstr(buf, "p =") != NULL ||
+                strstr(buf, "P =") != NULL ||
+                strstr(buf, "\"p\"") != NULL ||
+                strstr(buf, "\"P\"") != NULL;
+
+    has_rsa_q = strstr(buf, "q =") != NULL ||
+                strstr(buf, "Q =") != NULL ||
+                strstr(buf, "\"q\"") != NULL ||
+                strstr(buf, "\"Q\"") != NULL;
+
+    has_rsa_phi = strstr(buf, "phi") != NULL ||
+                  strstr(buf, "Phi") != NULL ||
+                  strstr(buf, "totient") != NULL ||
+                  strstr(buf, "Totient") != NULL;
+
+    has_rsa_c = strstr(buf, "c =") != NULL ||
+                strstr(buf, "ct =") != NULL ||
+                strstr(buf, "ciphertext =") != NULL ||
+                strstr(buf, "ciphertext:") != NULL;
+
+    has_generic_ciphertext = strstr(buf, "ciphertext") != NULL ||
+                             strstr(buf, "encrypted") != NULL ||
+                             strstr(buf, "encrypted_flag") != NULL ||
+                             strstr(buf, "Encrypted flag") != NULL;
+
+    has_ecc_point = strstr(buf, "Point(x=") != NULL ||
+                    strstr(buf, "Point(") != NULL ||
+                    strstr(buf, "public key") != NULL ||
+                    strstr(buf, "Public key") != NULL;
+
+    has_iv = strstr(buf, "iv") != NULL || strstr(buf, "IV") != NULL;
+    has_encrypted_flag = strstr(buf, "encrypted_flag") != NULL ||
+                         strstr(buf, "Encrypted flag") != NULL ||
+                         strstr(buf, "encrypted flag") != NULL;
+
+    has_md5 = strstr(buf, "MD5") != NULL ||
+              strstr(buf, "md5") != NULL ||
+              (!has_iv && k1wi_auto_hex_token_len(buf, 32U));
+
+    has_sha1 = strstr(buf, "SHA1") != NULL ||
+               strstr(buf, "sha1") != NULL ||
+               k1wi_auto_hex_token_len(buf, 40U);
+
+    has_sha256 = strstr(buf, "SHA256") != NULL ||
+                 strstr(buf, "sha256") != NULL ||
+                 k1wi_auto_hex_token_len(buf, 64U);
+
+    has_sha512 = strstr(buf, "SHA512") != NULL ||
+                 strstr(buf, "sha512") != NULL ||
+                 k1wi_auto_hex_token_len(buf, 128U);
+
+    has_hex_blob = strstr(buf, "hex:") != NULL ||
+                   strstr(buf, "HEX:") != NULL ||
+                   strstr(buf, "hex =") != NULL ||
+                   k1wi_auto_hex_blob_present(buf);
+
+    has_base64_blob = strstr(buf, "base64") != NULL ||
+                      strstr(buf, "Base64") != NULL ||
+                      strstr(buf, "BASE64") != NULL ||
+                      k1wi_auto_base64_blob_present(buf);
+
+    printf("\nK1Wi AUTO Analysis\n");
+    printf("------------------\n");
+    printf("Input file: %s\n", path);
+    printf("Bytes read : %ld\n", size);
+
+    printf("\nDetected fields\n");
+    printf("------------------\n");
+    printf("RSA modulus n        : %s\n", has_rsa_n ? "yes" : "no");
+    printf("RSA exponent e       : %s\n", has_rsa_e ? "yes" : "no");
+    printf("RSA private d        : %s\n", has_rsa_d ? "yes" : "no");
+    printf("RSA prime p          : %s\n", has_rsa_p ? "yes" : "no");
+    printf("RSA prime q          : %s\n", has_rsa_q ? "yes" : "no");
+    printf("RSA phi/totient      : %s\n", has_rsa_phi ? "yes" : "no");
+    printf("RSA ciphertext field : %s\n", has_rsa_c ? "yes" : "no");
+    printf("Generic ciphertext   : %s\n", has_generic_ciphertext ? "yes" : "no");
+    printf("ECC point/public key : %s\n", has_ecc_point ? "yes" : "no");
+    printf("IV / nonce field     : %s\n", has_iv ? "yes" : "no");
+    printf("Encrypted flag field : %s\n", has_encrypted_flag ? "yes" : "no");
+    printf("MD5 hash             : %s\n", has_md5 ? "yes" : "no");
+    printf("SHA1 hash            : %s\n", has_sha1 ? "yes" : "no");
+    printf("SHA256 hash          : %s\n", has_sha256 ? "yes" : "no");
+    printf("SHA512 hash          : %s\n", has_sha512 ? "yes" : "no");
+    printf("Hex blob             : %s\n", has_hex_blob ? "yes" : "no");
+    printf("Base64 blob          : %s\n", has_base64_blob ? "yes" : "no");
+
+
+    {
+        static const char *const rsa_n_labels[] = { "n =", "N =", "modulus", "Modulus" };
+        static const char *const rsa_e_labels[] = { "e =", "E =" };
+        static const char *const rsa_d_labels[] = { "d =", "D =", "private exponent", "Private exponent" };
+        static const char *const rsa_c_labels[] = { "c =", "ct =", "ciphertext =", "ciphertext:" };
+        static const char *const iv_labels[] = { "'iv':", "\"iv\":", "iv =", "IV =" };
+        static const char *const encrypted_flag_labels[] = { "encrypted_flag", "Encrypted flag", "encrypted flag" };
+        static const char *const md5_labels[] = { "MD5:", "md5:", "MD5 =", "md5 =" };
+        static const char *const sha256_labels[] = { "SHA256:", "sha256:", "SHA256 =", "sha256 =" };
+        static const char *const base64_labels[] = { "base64:", "Base64:", "BASE64:", "base64 =", "Base64 =", "BASE64 =" };
+        static const char *const hex_labels[] = { "hex:", "HEX:", "hex =", "HEX =" };
+
+        if (has_rsa_n) {
+            k1wi_auto_print_field_preview("RSA modulus n", buf, rsa_n_labels,
+                                          sizeof(rsa_n_labels) / sizeof(rsa_n_labels[0]),
+                                          &printed_preview_header);
+        }
+
+        if (has_rsa_e) {
+            k1wi_auto_print_field_preview("RSA exponent e", buf, rsa_e_labels,
+                                          sizeof(rsa_e_labels) / sizeof(rsa_e_labels[0]),
+                                          &printed_preview_header);
+        }
+
+        if (has_rsa_d) {
+            k1wi_auto_print_field_preview("RSA private d", buf, rsa_d_labels,
+                                          sizeof(rsa_d_labels) / sizeof(rsa_d_labels[0]),
+                                          &printed_preview_header);
+        }
+
+        if (has_rsa_c) {
+            k1wi_auto_print_field_preview("RSA ciphertext", buf, rsa_c_labels,
+                                          sizeof(rsa_c_labels) / sizeof(rsa_c_labels[0]),
+                                          &printed_preview_header);
+        }
+
+        if (has_iv) {
+            k1wi_auto_print_field_preview("IV / nonce", buf, iv_labels,
+                                          sizeof(iv_labels) / sizeof(iv_labels[0]),
+                                          &printed_preview_header);
+        }
+
+        if (has_encrypted_flag) {
+            k1wi_auto_print_field_preview("Encrypted flag", buf, encrypted_flag_labels,
+                                          sizeof(encrypted_flag_labels) / sizeof(encrypted_flag_labels[0]),
+                                          &printed_preview_header);
+        }
+
+        if (has_md5) {
+            k1wi_auto_print_field_preview("MD5", buf, md5_labels,
+                                          sizeof(md5_labels) / sizeof(md5_labels[0]),
+                                          &printed_preview_header);
+        }
+
+        if (has_sha256) {
+            k1wi_auto_print_field_preview("SHA256", buf, sha256_labels,
+                                          sizeof(sha256_labels) / sizeof(sha256_labels[0]),
+                                          &printed_preview_header);
+        }
+
+        if (has_base64_blob) {
+            k1wi_auto_print_field_preview("Base64", buf, base64_labels,
+                                          sizeof(base64_labels) / sizeof(base64_labels[0]),
+                                          &printed_preview_header);
+        }
+
+        if (has_hex_blob) {
+            k1wi_auto_print_field_preview("Hex", buf, hex_labels,
+                                          sizeof(hex_labels) / sizeof(hex_labels[0]),
+                                          &printed_preview_header);
+        }
+    }
+
+    printf("\nAssessment\n");
+    printf("------------------\n");
+
+    if (has_rsa_n && has_rsa_d && has_rsa_c) {
+        printf("Detected type: RSA private exponent decrypt candidate\n");
+        printf("Recommendation: Use N and d with ciphertext to recover plaintext, or provide e/p/q for validation.\n");
+    } else if (has_rsa_n && has_rsa_d) {
+        printf("Detected type: RSA private exponent data\n");
+        printf("Recommendation: Provide ciphertext to decrypt, or provide e/p/q for validation and key reconstruction.\n");
+    } else if (has_rsa_p && has_rsa_q && has_rsa_e) {
+        printf("Detected type: RSA key reconstruction data\n");
+        printf("Recommendation: Use RSA-DFROMPQ or RSA-KNOWNPQ when ciphertext is available.\n");
+    } else if (has_rsa_n && has_rsa_e && has_rsa_c) {
+        printf("Detected type: RSA challenge data\n");
+        printf("Recommendation: Try RSA tools such as RSA-FACTOR, RSA-SMALL-E, RSA-WIENER, or RSA-ROOTS.\n");
+    } else if (has_ecc_point && (has_iv || has_encrypted_flag)) {
+        printf("Detected type: ECC / ECDH-style encrypted challenge data\n");
+        printf("Recommendation: Extract curve parameters before attempting ECC analysis.\n");
+    } else if (has_md5 || has_sha1 || has_sha256 || has_sha512 || has_hex_blob || has_base64_blob) {
+        printf("Detected type: hash / encoded data\n");
+        printf("Recommendation: Use MD5, SHA256, STRING, or decoding helpers depending on the field.\n");
+    } else if (has_generic_ciphertext || has_iv || has_encrypted_flag) {
+        printf("Detected type: encrypted payload data\n");
+        printf("Recommendation: Identify cipher, key source, IV/nonce, and encoding.\n");
+    } else {
+        printf("Detected type: unknown / mixed input\n");
+        printf("Recommendation: Use STRING, MAGIC, ENTROPY, or add more AUTO detectors.\n");
+    }
+
+    free(buf);
+    return 0;
+}
+
+
 int opus_repl(void)
 {
 
@@ -1288,8 +1853,11 @@ int opus_repl(void)
                            cur_tasks,
                            cur_snapshot[0] ? cur_snapshot : "(no progress)");
             } else {
-                if (cur_snapshot[0]) printf("[No solver] %s\n", cur_snapshot);
-                else printf("[No solver tasks]\n");
+                /*
+                 * No active solver task.
+                 * Keep the default interactive prompt quiet so routine shell
+                 * sessions do not display development/status noise.
+                 */
             }
 
             /* remember snapshot */
@@ -1305,7 +1873,7 @@ int opus_repl(void)
         fd_set rfds;
 
         /* show prompt and block until input arrives */
-        printf("\nCommand: ");
+        printf("\nK1Wi Command: ");
         fflush(stdout);
 
         FD_ZERO(&rfds);
@@ -1388,20 +1956,45 @@ int opus_repl(void)
         }
         else if (strcmp(cmd, "COPY") == 0) {
             if (argc < 3) {
-                printf("Usage: COPY <src> <dst>\n");
+                printf("Usage: COPY <src> <dst> [--force] [--recursive]\n");
                 continue;
             }
 
             const char *src = argv[1];
             const char *dst = argv[2];
+            int force = 0;
+            int recursive = 0;
+            int option_error = 0;
 
-            log_info("COPY command: %s -> %s", src, dst);
+            for (int i = 3; i < argc; i++) {
+                if (strcmp(argv[i], "--force") == 0) {
+                    force = 1;
+                } else if (strcmp(argv[i], "--recursive") == 0) {
+                    recursive = 1;
+                } else {
+                    printf("\033[33mCOPY: unknown option '%s'\033[0m\n", argv[i]);
+                    printf("Usage: COPY <src> <dst> [--force] [--recursive]\n");
+                    printf("\033[31mCOPY: failed\033[0m\n");
+                    option_error = 1;
+                    break;
+                }
+            }
 
-            int rc = opus_file_copy(src, dst);
+            if (option_error) {
+                continue;
+            }
+
+            log_info("COPY command: %s -> %s%s%s",
+                     src,
+                     dst,
+                     force ? " [force]" : "",
+                     recursive ? " [recursive]" : "");
+
+            int rc = opus_file_copy_ex2(src, dst, force, recursive);
             if (rc == 0)
-                printf("COPY: success\n");
+                printf("\033[32mCOPY: success\033[0m\n");
             else
-                printf("COPY: failed\n");
+                printf("\033[31mCOPY: failed\033[0m\n");
 
             continue;
         }
@@ -1462,14 +2055,47 @@ int opus_repl(void)
         else if (strcmp(cmd, "SPLASH") == 0) {
             opus_banner();
         }
-	else if (strcmp(cmd, "VERSION") == 0 || strcmp(cmd, "ABOUT") == 0) {
-        cmd_version(NULL, argc, argv);
-        continue;
-	}
+        else if (strcmp(cmd, "VERSION") == 0 || strcmp(cmd, "ABOUT") == 0) {
+            printf("\n");
+            cmd_version(NULL, argc, argv);
+            continue;
+        }
         else if (strcmp(cmd, "M") == 0 || strcmp(cmd, "MENU") == 0) {
             opus_menu();
         }
 	
+
+        else if (strcmp(cmd, "AUTO") == 0) {
+            const char *path = NULL;
+
+            if (argc >= 2) {
+                path = argv[1];
+            }
+
+            if (!path) {
+                char input_path[4096];
+
+                printf("Enter input file: ");
+                if (!fgets(input_path, sizeof(input_path), stdin)) {
+                    printf("Input error.\n");
+                    continue;
+                }
+
+                input_path[strcspn(input_path, "\r\n")] = '\0';
+
+                if (input_path[0] == '\0') {
+                    printf("AUTO: no input file provided.\n");
+                    continue;
+                }
+
+                k1wi_auto_analyze_file(input_path);
+            } else {
+                k1wi_auto_analyze_file(path);
+            }
+
+            continue;
+        }
+
     else if (strcmp(cmd, "R") == 0 || strcmp(cmd, "READ") == 0) {
 
     char path_buf[4096];
@@ -2012,17 +2638,37 @@ else if (strcasecmp(cmd, "STRING") == 0) {
 
 	    continue;
 	} else if (strcmp(cmd, "MAGIC") == 0) {
+	    const char *recover_path = NULL;
+	    int magic_args_ok = 1;
+
 	    if (argc < 2) {
-		printf("Usage: MAGIC <file>\n");
+		printf("Usage: MAGIC <file> [--recover <out>]\n");
 		continue;
 	    }
 
-    detect_magic(argv[1]);
-    continue;
-}
+	    for (int i = 2; i < argc; i++) {
+		if (strcmp(argv[i], "--recover") == 0) {
+		    if (i + 1 >= argc) {
+			printf("MAGIC: --recover requires an output path\n");
+			magic_args_ok = 0;
+			break;
+		    }
+		    recover_path = argv[++i];
+		} else {
+		    printf("MAGIC: unknown option '%s'\n", argv[i]);
+		    magic_args_ok = 0;
+		    break;
+		}
+	    }
 
+	    if (magic_args_ok) {
+		detect_magic_recover(argv[1], recover_path);
+	    }
 
-	else if (strcmp(cmd, "HELP") == 0) {
+	    continue;
+	}
+
+		else if (strcmp(cmd, "HELP") == 0) {
 	    if (argc == 1)
 		opus_help_general();
 	    else
@@ -2509,6 +3155,36 @@ else if (strcasecmp(cmd, "STRING") == 0) {
         else if (strcmp(cmd, "DESIGANALYZE") == 0) {
             opus_designation_analyze(filename);
         }
+        else if (strcmp(cmd, "CONVERT") == 0 || strcmp(cmd, "NUMCONV") == 0) {
+            if (argc < 2) {
+                printf("Usage: CONVERT <mode> <value>\n");
+                printf("Try: HELP CONVERT\n");
+                continue;
+            }
+
+            int rc = cmd_convert(argc, argv);
+            if (rc == 0)
+                printf("\nconvert: success\n\n");
+            else
+                printf("\nconvert: failed\n\n");
+
+            continue;
+        }
+        else if (strcmp(cmd, "CONVERT") == 0 || strcmp(cmd, "NUMCONV") == 0) {
+            if (argc < 2) {
+                printf("Usage: CONVERT <mode> <value>\n");
+                printf("Try: HELP CONVERT\n");
+                continue;
+            }
+
+            int rc = cmd_convert(argc, argv);
+            if (rc == 0)
+                printf("\nconvert: success\n\n");
+            else
+                printf("\nconvert: failed\n\n");
+
+            continue;
+        }
         else if (strcmp(cmd, "RSA-MINI") == 0) {
 	    if (argc != 2) {
 		printf("Usage: RSA-MINI <rsa_file>\n");
@@ -2523,219 +3199,152 @@ else if (strcasecmp(cmd, "STRING") == 0) {
         fprintf(stderr, "rsa-mini: success\n");
 }
         else if (strcmp(cmd, "RSA-FACTOR") == 0) {
-    if (argc != 2) {
-        printf("Usage: RSA-FACTOR <rsa_file>\n");
+    if (argc != 2 && argc != 4) {
+        printf("Usage: RSA-FACTOR <rsa_file> [TIME <minutes>|--time <minutes>|--minutes <minutes>|-t <minutes>]\n");
         continue;
     }
 
     const char *fname = argv[1];
+    unsigned long time_limit_minutes = 0;
+
+    if (argc == 4) {
+        if (strcasecmp(argv[2], "TIME") == 0 ||
+            strcasecmp(argv[2], "--time") == 0 ||
+            strcasecmp(argv[2], "--minutes") == 0 ||
+            strcasecmp(argv[2], "-t") == 0) {
+            char *endptr = NULL;
+            time_limit_minutes = strtoul(argv[3], &endptr, 10);
+
+            if (endptr == argv[3] || *endptr != '\0' || time_limit_minutes == 0) {
+                printf("rsa-factor: time limit must be a positive number of minutes\n");
+                continue;
+            }
+        } else {
+            printf("rsa-factor: unknown option '%s'\n", argv[2]);
+            printf("Usage: RSA-FACTOR <rsa_file> [TIME <minutes>|--time <minutes>|--minutes <minutes>|-t <minutes>]\n");
+            continue;
+        }
+    }
 
     printf("[*] Input file: %s\n", fname);
 
-        if (opus_rsa_factor(fname))
+    if (opus_rsa_factor_with_time(fname, time_limit_minutes))
         printf("\nrsa-factor: success\n\n");
-	else
-	    printf("\nrsa-factor: failed\n\n");
+    else
+        printf("\nrsa-factor: failed\n\n");
 
     continue;
-	}
-	else if (strcmp(cmd, "RSA-RHO") == 0) {
-	    if (argc != 2) {
-		printf("Usage: RSA-RHO <rsa_file>\n");
-		continue;
-	    }
-
-	    const char *fname = argv[1];
-
-	    printf("[*] Input file: %s\n", fname);
-
-	    if (opus_rsa_rho(fname))
-		printf("\nrsa-rho: success\n\n");
-	    else
-		printf("\nrsa-rho: failed\n\n");
-
-	    continue;
-	}
-        else if (strcmp(cmd, "RSA-WIENER") == 0) {
-    		if (argc != 2) {
-        	printf("Usage: RSA-WIENER <rsa_file>\n");
-        	continue;
-    	}
-	    const char *path = argv[1];
-	    printf("[*] Input file: %s\n", path);
-	    mpz_t N, e, c, d, m;
-	    mpz_inits(N, e, c, d, m, NULL);
-
-	    if (parse_rsa_file(path, N, e, c) != 0) {
-		printf("rsa-wiener: failed to parse RSA file\n");
-		mpz_clears(N, e, c, d, m, NULL);
-		continue;
-	    }
-
-	    printf("[*] RSA-WIENER: starting Wiener attack\n");
-
-	    if (opus_rsa_wiener_attack(N, e, d) != 0) {
-		printf("[-] RSA-WIENER: Wiener attack failed (d not small)\n");
-		mpz_clears(N, e, c, d, m, NULL);
-		continue;
-	    }
-
-	    printf("[+] RSA-WIENER: recovered d\n");
-
-	    /* m = c^d mod N */
-	    
-	    mpz_powm(m, c, d, N);
-
-	    opus_print_plaintext_from_bigint(m);
-	    putchar('\n');
-
-	    mpz_clears(N, e, c, d, m, NULL);
-	    continue;
-	}
-	else if (strcmp(cmd, "RSA-SMALL-E") == 0) {
-    		if (argc != 2) {
-        	printf("Usage: RSA-SMALL-E <rsa_file>\n");
-        	continue;
-    	}
-	    const char *path = argv[1];
-
-	    mpz_t N, e, c, m;
-	    mpz_inits(N, e, c, m, NULL);
-
-	    if (parse_rsa_file(path, N, e, c) != 0) {
-		printf("rsa-small-e: failed to parse RSA file\n");
-		mpz_clears(N, e, c, m, NULL);
-		continue;
-	    }
-
-	    unsigned long e_ul = mpz_get_ui(e);
-
-	    printf("[*] RSA-SMALL-E: checking for small exponent attack (e = %lu)\n", e_ul);
-
-	    if (e_ul == 0 || e_ul > 64) {
-		printf("[-] RSA-SMALL-E: exponent too large or invalid\n");
-		mpz_clears(N, e, c, m, NULL);
-		continue;
-	    }
-
-	    if (rsa_small_e_attack(m, c, e_ul)) {
-		printf("[+] RSA-SMALL-E: recovered plaintext via integer %lu-th root\n", e_ul);
-		opus_print_plaintext_from_bigint(m);
-	    } else {
-		printf("[-] RSA-SMALL-E: attack not applicable (no exact root)\n");
-	    }
-
-	    mpz_clears(N, e, c, m, NULL);
-	}
-	else if (strcmp(cmd, "RSA-KNOWNPQ") == 0) {
-    		if (argc != 4) {
-        	printf("Usage: RSA-KNOWNPQ <rsa_file> <p> <q>\n");
-        	continue;
-    	}
-            const char *path = argv[1];
-            const char *p_str = argv[2];
-            const char *q_str = argv[3];
-
-            printf("[*] RSA-KNOWNPQ: starting known-pq decryption\n");
-            if (opus_rsa_knownpq(path, p_str, q_str)) {
-                printf("rsa-knownpq: success\n");
-            } else {
-                printf("rsa-knownpq: failed\n");
-            }
         }
-	else if (strcmp(cmd, "RSA-CHECKPQ") == 0) {
-	    if (argc != 3) {
-		printf("Usage: RSA-CHECKPQ <p> <q>\n");
-		fflush(stdout);
-		continue;
-	    }
+        else if (strcmp(cmd, "RSA-RHO") == 0) {
+            if (argc != 2) {
+                printf("Usage: RSA-RHO <rsa_file>\n");
+                continue;
+            }
 
-	    opus_rsa_checkpq(argv[1], argv[2]);
-	}
-	else if (strcmp(cmd, "RSA-DFROMPQ") == 0) {
-	    if (argc != 4) {
-		printf("Usage: RSA-DFROMPQ <p> <q> <e>\n");
-		continue;
-	    }
+            if (opus_rsa_rho(argv[1]))
+                printf("\nrsa-rho: success\n\n");
+            else
+                printf("\nrsa-rho: failed\n\n");
 
-	    if (opus_rsa_dfrompq(argv[1], argv[2], argv[3])) {
-		printf("rsa-dfrompq: success\n");
-	    } else {
-		printf("rsa-dfrompq: failed\n");
-	    }
-	}
+            continue;
+        }
+        else if (strcmp(cmd, "RSA-ECM") == 0) {
+            if (argc < 2) {
+                printf("Usage: RSA-ECM <rsa_file> [--curves N] [--bound N]\n");
+                continue;
+            }
 
-	else if (strcmp(cmd, "RSA-ECM") == 0) {
-    		if (argc != 2) {
-        	printf("Usage: RSA-ECM <rsa_file>\n");
-        continue;
-    	}	
-	    const char *path = argv[1];
+            const char *path = argv[1];
+            unsigned long curves = 20;
+            unsigned long bound = 5000;
+            int invalid_args = 0;
 
-	    mpz_t N, e, c, f, q;
-	    mpz_inits(N, e, c, f, q, NULL);
+            for (int i = 2; i < argc; i++) {
+                const char *opt = argv[i];
 
-	    if (parse_rsa_file(path, N, e, c) != 0) {
-		printf("rsa-ecm: failed to parse RSA file\n");
-		mpz_clears(N, e, c, f, q, NULL);
-		continue;
-	    }
+                if (strcasecmp(opt, "--curves") == 0 ||
+                    strcasecmp(opt, "CURVES") == 0 ||
+                    strcasecmp(opt, "-c") == 0) {
+                    if (i + 1 >= argc) {
+                        printf("rsa-ecm: --curves requires a positive number\n");
+                        invalid_args = 1;
+                        break;
+                    }
 
-	    printf("[*] RSA-ECM: starting ECM factorization\n");
+                    char *endptr = NULL;
+                    curves = strtoul(argv[++i], &endptr, 10);
 
-	    if (!opus_rsa_ecm_factor(N, f)) {
-		printf("[-] RSA-ECM: no factor found (within bounds)\n");
-		mpz_clears(N, e, c, f, q, NULL);
-		continue;
-	    }
+                    if (endptr == argv[i] || *endptr != '\0' || curves == 0) {
+                        printf("rsa-ecm: --curves requires a positive number\n");
+                        invalid_args = 1;
+                        break;
+                    }
+                } else if (strcasecmp(opt, "--bound") == 0 ||
+                           strcasecmp(opt, "--b1") == 0 ||
+                           strcasecmp(opt, "BOUND") == 0 ||
+                           strcasecmp(opt, "B1") == 0 ||
+                           strcasecmp(opt, "-b") == 0) {
+                    if (i + 1 >= argc) {
+                        printf("rsa-ecm: --bound requires a positive number\n");
+                        invalid_args = 1;
+                        break;
+                    }
 
-	    mpz_fdiv_q(q, N, f);
+                    char *endptr = NULL;
+                    bound = strtoul(argv[++i], &endptr, 10);
 
-	    gmp_printf("[+] RSA-ECM: found factor f = %Zd\n", f);
-	    gmp_printf("[+] RSA-ECM: cofactor q = %Zd\n", q);
+                    if (endptr == argv[i] || *endptr != '\0' || bound == 0) {
+                        printf("rsa-ecm: --bound requires a positive number\n");
+                        invalid_args = 1;
+                        break;
+                    }
+                } else {
+                    printf("rsa-ecm: unknown option '%s'\n", opt);
+                    printf("Usage: RSA-ECM <rsa_file> [--curves N] [--bound N]\n");
+                    invalid_args = 1;
+                    break;
+                }
+            }
 
-	    // from here you can compute phi, d, and decrypt like RSA-FACTOR
-	    mpz_clears(N, e, c, f, q, NULL);
-	}
+            if (invalid_args) {
+                continue;
+            }
 
+            mpz_t N, e, c, f, q;
+            mpz_inits(N, e, c, f, q, NULL);
 
-	else if (strcasecmp(cmd, "FORENSIC") == 0) {
-	    dispatch_forensic(argc, argv);
-	    continue;
-	}
+            if (parse_rsa_file(path, N, e, c) != 0) {
+                printf("rsa-ecm: failed to parse RSA file\n");
+                mpz_clears(N, e, c, f, q, NULL);
+                continue;
+            }
 
-	else if (strcmp(cmd, "SOLVE") == 0) {
+            printf("[*] RSA-ECM: starting ECM factorization\n");
+            printf("[*] RSA-ECM: curves=%lu, B1=%lu\n", curves, bound);
 
-	    if (argc < 2) {
-		printf("Usage: solve <cipherfile> [forced_spec]\n");
-		continue;
-	    }
+            if (!opus_rsa_ecm_factor_with_bounds(N, f, curves, bound)) {
+                printf("[-] RSA-ECM: no factor found after %lu curve(s) with B1=%lu\n", curves, bound);
+                printf("\nrsa-ecm: failed\n\n");
+                mpz_clears(N, e, c, f, q, NULL);
+                continue;
+            }
 
-	    const char *cipherfile   = argv[1];
-	    const char *forced_spec  = (argc >= 3) ? argv[2] : NULL;
+            if (mpz_cmp_ui(f, 1) <= 0 || mpz_cmp(f, N) >= 0 || !mpz_divisible_p(N, f)) {
+                gmp_printf("[-] RSA-ECM: rejected invalid factor candidate f = %Zd\n", f);
+                printf("\nrsa-ecm: failed\n\n");
+                mpz_clears(N, e, c, f, q, NULL);
+                continue;
+            }
 
-	    if (forced_spec)
-		printf("Launching solver on '%s' with forced substitutions: %s\n",
-		       cipherfile, forced_spec);
-	    else
-		printf("Launching solver on '%s'...\n", cipherfile);
+            mpz_divexact(q, N, f);
 
-	    run_solver_from_opus(cipherfile, forced_spec);
-	    continue;
-	}
+            gmp_printf("[+] RSA-ECM: found factor f = %Zd\n", f);
+            gmp_printf("[+] RSA-ECM: cofactor q = %Zd\n", q);
 
+		printf("\nrsa-ecm: success\n\n");
 
-        else if (strcmp(cmd, "X") == 0 || strcmp(cmd, "EXTRACT") == 0) {
-            fileName();
-            printf("\nRunning recursive extraction on: %s\n", filename);
-
-		/* call the public wrapper instead of the internal extract_layers */
-		if (opus_extract_recursive(filename) != 0) {
-		    fprintf(stderr, "EXTRACT: failed for %s\n", filename);
-		} else {
-		    fprintf(stderr, "EXTRACT: completed for %s\n", filename);
-		}
-
+            mpz_clears(N, e, c, f, q, NULL);
+            continue;
         }
         else if (strcmp(cmd, "DIGRAPH") == 0) {
             digraphTrigraphAnalyzer();
@@ -2910,6 +3519,161 @@ void run_dct_analysis(const char *path) {
     }
 }
 
+
+static void k1wi_json_print_escaped(const char *text)
+{
+    const unsigned char *p = (const unsigned char *)text;
+
+    putchar('"');
+
+    if (text) {
+        while (*p) {
+            switch (*p) {
+                case '\\': printf("\\\\"); break;
+                case '"':  printf("\\\""); break;
+                case '\b': printf("\\b");  break;
+                case '\f': printf("\\f");  break;
+                case '\n': printf("\\n");  break;
+                case '\r': printf("\\r");  break;
+                case '\t': printf("\\t");  break;
+                default:
+                    if (*p < 0x20U) {
+                        printf("\\u%04x", (unsigned int)*p);
+                    } else {
+                        putchar((int)*p);
+                    }
+                    break;
+            }
+
+            p++;
+        }
+    }
+
+    putchar('"');
+}
+
+static const char *k1wi_lyzer_format_from_magic(const unsigned char *magic, size_t n)
+{
+    if (n >= 2U && magic[0] == 0xffU && magic[1] == 0xd8U) {
+        return "JPEG";
+    }
+
+    if (n >= 8U &&
+        magic[0] == 0x89U && magic[1] == 'P' &&
+        magic[2] == 'N' && magic[3] == 'G') {
+        return "PNG";
+    }
+
+    if (n >= 6U &&
+        magic[0] == 'G' && magic[1] == 'I' && magic[2] == 'F') {
+        return "GIF";
+    }
+
+    if (n >= 4U &&
+        magic[0] == 'P' && magic[1] == 'K' &&
+        magic[2] == 0x03U && magic[3] == 0x04U) {
+        return "ZIP";
+    }
+
+    if (n >= 4U &&
+        magic[0] == 0x7fU && magic[1] == 'E' &&
+        magic[2] == 'L' && magic[3] == 'F') {
+        return "ELF";
+    }
+
+    return "UNKNOWN";
+}
+
+static void k1wi_lyzer_json_summary(const char *path)
+{
+    FILE *fp = NULL;
+    unsigned char magic[16] = {0};
+    unsigned long long counts[256] = {0};
+    unsigned char buf[4096];
+    size_t magic_len = 0U;
+    size_t nread = 0U;
+    unsigned long long total = 0ULL;
+    double entropy = 0.0;
+    const char *format = "UNKNOWN";
+    const char *assessment = "LOW";
+    int read_error = 0;
+
+    fp = fopen(path, "rb");
+    if (!fp) {
+        printf("{\n");
+        printf("  \"tool\": \"LYZER\",\n");
+        printf("  \"mode\": \"json\",\n");
+        printf("  \"file\": ");
+        k1wi_json_print_escaped(path);
+        printf(",\n");
+        printf("  \"error\": \"could not open file\"\n");
+        printf("}\n");
+        return;
+    }
+
+    magic_len = fread(magic, 1U, sizeof(magic), fp);
+    format = k1wi_lyzer_format_from_magic(magic, magic_len);
+
+    rewind(fp);
+
+    while ((nread = fread(buf, 1U, sizeof(buf), fp)) > 0U) {
+        size_t i;
+
+        total += (unsigned long long)nread;
+
+        for (i = 0U; i < nread; i++) {
+            counts[buf[i]]++;
+        }
+    }
+
+    if (ferror(fp)) {
+        read_error = 1;
+    }
+
+    fclose(fp);
+
+    if (!read_error && total > 0ULL) {
+        size_t i;
+
+        for (i = 0U; i < 256U; i++) {
+            if (counts[i] > 0ULL) {
+                double probability = (double)counts[i] / (double)total;
+                entropy -= probability * (log(probability) / log(2.0));
+            }
+        }
+    }
+
+    if (entropy >= 7.5) {
+        assessment = "HIGH";
+    } else if (entropy >= 6.5) {
+        assessment = "MEDIUM";
+    }
+
+    printf("{\n");
+    printf("  \"tool\": \"LYZER\",\n");
+    printf("  \"mode\": \"json\",\n");
+    printf("  \"file\": ");
+    k1wi_json_print_escaped(path);
+    printf(",\n");
+    printf("  \"format\": ");
+    k1wi_json_print_escaped(format);
+    printf(",\n");
+    printf("  \"size_bytes\": %llu,\n", total);
+    printf("  \"entropy\": %.4f,\n", entropy);
+    printf("  \"assessment\": ");
+    k1wi_json_print_escaped(assessment);
+    printf(",\n");
+    printf("  \"error\": ");
+    if (read_error) {
+        k1wi_json_print_escaped("read error");
+    } else {
+        printf("null");
+    }
+    printf("\n");
+    printf("}\n");
+}
+
+
 static void ctf_Analyzer_run(const char *path, const char *mode)
 {
     if (!path || path[0] == '\0') {
@@ -2928,6 +3692,15 @@ static void ctf_Analyzer_run(const char *path, const char *mode)
             is_jpeg = (magic[0] == 0xFF && magic[1] == 0xD8);
         }
         fclose(fp);
+    }
+
+
+    if (mode &&
+        (strcasecmp(mode, "JSON") == 0 ||
+         strcasecmp(mode, "--json") == 0 ||
+         strcasecmp(mode, "json") == 0)) {
+        k1wi_lyzer_json_summary(filename);
+        return;
     }
 
     if (mode && strcasecmp(mode, "QUIET") == 0) {
@@ -4901,71 +5674,64 @@ void fileClose(FILE *fp)
 
 void fileDelete(void)
 {
-    
     char buf[64];
-    char choice;
-    int mode = -1; /* 0 = DoD, 1 = NIST */
+    char args_buf[1024];
 
-    /* Prompt for filename */
     printf("Enter the name of the file to securely delete: ");
     if (fgets(filename, sizeof(filename), stdin) == NULL) {
         printf("No filename provided.\n");
         return;
     }
+
     filename[strcspn(filename, "\r\n")] = '\0';
 
-    /* Basic safety checks: non-empty, no absolute paths, no directory traversal */
     if (filename[0] == '\0') {
         printf("No filename provided.\n");
         return;
     }
+
     if (filename[0] == '/' || strstr(filename, "..")) {
         printf("Unsafe filename. Deletion aborted.\n");
         return;
     }
 
-    /* Choose deletion standard */
     printf("Choose deletion standard:\n");
-    printf("  1 = DoD 5220.22-M (3-pass overwrite)\n");
-    printf("  2 = NIST 800-88 Rev.1 (single-pass zero overwrite)\n");
+    printf("  1 = DoD-style 3-pass overwrite\n");
+    printf("  2 = NIST-style single-pass zero overwrite\n");
+    printf("  3 = Custom pass count (1-33)\n");
     printf("Selection: ");
 
     if (fgets(buf, sizeof(buf), stdin) == NULL) {
         printf("No selection. Deletion aborted.\n");
         return;
     }
+
     if (buf[0] == '1') {
-        mode = 0; /* DoD */
+        snprintf(args_buf, sizeof(args_buf), "%s -s 1", filename);
     } else if (buf[0] == '2') {
-        mode = 1; /* NIST */
+        snprintf(args_buf, sizeof(args_buf), "%s -s 2", filename);
+    } else if (buf[0] == '3') {
+        int passes;
+
+        printf("Enter custom pass count (1-33): ");
+        if (fgets(buf, sizeof(buf), stdin) == NULL) {
+            printf("No custom pass count. Deletion aborted.\n");
+            return;
+        }
+
+        passes = atoi(buf);
+        if (passes < 1 || passes > 33) {
+            printf("Error: custom pass count must be between 1 and 33.\n");
+            return;
+        }
+
+        snprintf(args_buf, sizeof(args_buf), "%s -p %d", filename, passes);
     } else {
         printf("Invalid selection. Deletion aborted.\n");
         return;
     }
 
-    /* Confirm */
-    printf("Are you sure you want to SECURELY DELETE '%s'? [Y/N]: ", filename);
-    if (fgets(buf, sizeof(buf), stdin) == NULL) {
-        printf("No confirmation. Deletion aborted.\n");
-        return;
-    }
-    choice = buf[0];
-    if (!(choice == 'Y' || choice == 'y')) {
-        printf("File deletion canceled.\n");
-        return;
-    }
-
-    /* Map interactive mode to secure_delete_file standard:
-       secure_delete_file: 1 = DoD, 2 = NIST */
-    int standard = (mode == 1) ? 2 : 1;
-
-    /* Call shared secure-delete core (must be implemented elsewhere) */
-    if (secure_delete_file(filename, standard) == 0) {
-        printf("Secure deletion complete.\n");
-    } else {
-        /* secure_delete_file sets errno on failure */
-        perror("Error deleting file");
-    }
+    fileDeleteCmd(args_buf);
 }
 
 

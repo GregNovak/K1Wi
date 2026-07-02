@@ -970,6 +970,67 @@ Users should validate significant findings independently.
 The EXTRACT engine serves as the primary artifact discovery and recursive processing component of K1Wi. By combining extraction, carving, recursion, and string intelligence into a unified workflow, the engine provides investigators with an efficient method for locating hidden or nested content.
 
 
+
+## COPY Verified File Copy
+
+The COPY command performs a forensic-style verified file copy. Unlike a basic file copy operation, K1Wi COPY verifies that the destination file matches the source file after the copy completes.
+
+### Basic Usage
+
+Copy a file:
+
+    ./bin/k1wi COPY <source> <destination>
+
+Overwrite an existing destination intentionally:
+
+    ./bin/k1wi COPY <source> <destination> --force
+
+### Verification Behavior
+
+COPY verifies the copied file using:
+
+* Source and destination file size comparison
+* Source and destination SHA-256 comparison
+* Source and destination MD5 comparison
+
+SHA-256 is the primary integrity hash. MD5 is reported for compatibility with legacy forensic workflows and existing hash records.
+
+### Safety Behavior
+
+COPY includes several safety checks:
+
+* Refuses to overwrite an existing destination by default
+* Requires --force for intentional overwrite
+* Rejects missing source files
+* Rejects directory sources
+* Rejects same source and destination paths
+* Rejects unknown command options
+* Reports verification failure if size, SHA-256, or MD5 values do not match
+
+### Example
+
+    ./bin/k1wi COPY testdata/text/hello.txt /tmp/k1wi_copy_test.txt
+
+Example successful result:
+
+    COPY Verification Report
+    ------------------------
+    Source       : testdata/text/hello.txt
+    Destination  : /tmp/k1wi_copy_test.txt
+    Source SHA256: ...
+    Dest SHA256  : ...
+    Source MD5   : ...
+    Dest MD5     : ...
+    Size match   : yes
+    SHA256 match : yes
+    MD5 match    : yes
+    Verification : PASS
+
+### Summary
+
+COPY is intended for verified local file copying during forensic, testing, and evidence-handling workflows. Remote SSH transfer is not currently part of COPY and may be considered separately in a future release.
+
+
 # Chapter 6: LYZER Forensic Analysis Engine
 
 ## Overview

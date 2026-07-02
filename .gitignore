@@ -76,3 +76,10 @@ testdata/testlogs/
 /ziptest/
 /ciphertext3
 /Flag.pdf.shar.extracted/
+
+# Local manual screenshot backups
+Manuals/images/
+
+# LibreOffice temporary lock files
+.~lock.*#
+**/.~lock.*#

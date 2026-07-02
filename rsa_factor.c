@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <gmp.h>
 #include <ctype.h>
+#include <time.h>
 #include "rsa_factor.h"
 #include "rsa_common.h"
 
@@ -18,9 +19,17 @@ extern void stringAnalyzerFromBuffer(const char *buf);
  *
  * Returns 1 on success, 0 on failure.
  */
-static int fermat_factor(mpz_t p, mpz_t q, const mpz_t n) {
+static int fermat_factor(mpz_t p, mpz_t q, const mpz_t n, unsigned long time_limit_minutes) {
     mpz_t a, b2, b;
     mpz_inits(a, b2, b, NULL);
+
+    time_t start_time = time(NULL);
+    unsigned long time_limit_seconds = 0;
+
+    if (time_limit_minutes > 0) {
+        time_limit_seconds = time_limit_minutes * 60UL;
+        printf("[*] RSA-Factor: time limit set to %lu minute(s)\n", time_limit_minutes);
+    }
 
     // a = ceil(sqrt(n))
     mpz_sqrt(a, n);
@@ -53,7 +62,19 @@ static int fermat_factor(mpz_t p, mpz_t q, const mpz_t n) {
             gmp_printf("[DEBUG] Fermat: a=%Zd (steps=%ld)\n", a, iter);
         }
 
-        if (iter > max_iter) {
+        if (time_limit_minutes > 0 && iter % 10000 == 0) {
+            time_t now = time(NULL);
+            if (now != (time_t)-1 && start_time != (time_t)-1) {
+                unsigned long elapsed = (unsigned long)difftime(now, start_time);
+                if (elapsed >= time_limit_seconds) {
+                    printf("[-] RSA-Factor: time limit reached after %lu minute(s)\n", time_limit_minutes);
+                    mpz_clears(a, b2, b, NULL);
+                    return 0;
+                }
+            }
+        }
+
+        if (time_limit_minutes == 0 && iter > max_iter) {
             printf("[-] RSA-Factor: Fermat exceeded %ld iterations, giving up\n", max_iter);
             mpz_clears(a, b2, b, NULL);
             return 0;
@@ -74,7 +95,7 @@ static int fermat_factor(mpz_t p, mpz_t q, const mpz_t n) {
  *   e: <decimal>
  *   c: <decimal>
  */
-int opus_rsa_factor(const char *filename) {
+int opus_rsa_factor_with_time(const char *filename, unsigned long time_limit_minutes) {
     mpz_t n, c, p, q, phi, d, m, e_mpz;
    
     
@@ -105,7 +126,7 @@ int opus_rsa_factor(const char *filename) {
 
     printf("[*] RSA-Factor: starting Fermat factorization\n");
 
-    if (!fermat_factor(p, q, n)) {
+    if (!fermat_factor(p, q, n, time_limit_minutes)) {
         printf("[-] RSA-Factor: Fermat failed (no factors found within limit)\n");
         return 0;
     }
@@ -183,3 +204,7 @@ int opus_rsa_factor(const char *filename) {
     return 1;
 }
 
+
+int opus_rsa_factor(const char *filename) {
+    return opus_rsa_factor_with_time(filename, 0);
+}
