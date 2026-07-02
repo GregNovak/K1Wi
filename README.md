@@ -236,9 +236,21 @@ Always test destructive operations inside disposable directories before use on p
 
 Current Version: v1.2.0
 
-The v1.0.0 public release passed regression testing with PASS 72 / FAIL 0 / SKIP 0.
-The v1.1.0 stable release passed regression testing with PASS 92 / FAIL 0 / SKIP 0.
-The v1.0.0 public release passed regression testing with PASS 72 / FAIL 0 / SKIP 0. The v1.1.0 stable release passed regression testing with PASS 92 / FAIL 0 / SKIP 0. The v1.2.0 stable release passed regression testing with PASS 246 / FAIL 0 / SKIP 0. The stable public release is now v1.2.0.
+K1Wi Framework v1.2.0 is the current stable public release.
+
+Release validation:
+
+```text
+PASS: 246
+FAIL: 0
+SKIP: 0
+```
+
+Previous stable releases:
+
+- v1.0.0 passed regression testing with PASS 72 / FAIL 0 / SKIP 0.
+- v1.1.0 passed regression testing with PASS 92 / FAIL 0 / SKIP 0.
+- v1.2.0 passed regression testing with PASS 246 / FAIL 0 / SKIP 0.
 
 ## License
 
