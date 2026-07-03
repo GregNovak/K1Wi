@@ -83,3 +83,6 @@ Manuals/images/
 # LibreOffice temporary lock files
 .~lock.*#
 **/.~lock.*#
+
+# Local planning notes
+K1Wi_v1.3_LOCAL_PLAN.md
