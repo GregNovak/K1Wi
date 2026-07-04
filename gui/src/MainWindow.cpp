@@ -1,5 +1,5 @@
 #include "MainWindow.h"
-
+#include <QRegularExpression>
 #include <QCheckBox>
 #include <QFileDialog>
 #include <QHBoxLayout>
@@ -11,6 +11,17 @@
 #include <QTextEdit>
 #include <QVBoxLayout>
 #include <QWidget>
+
+static QString stripAnsiCodes(const QString &text)
+{
+    static const QRegularExpression ansiPattern(
+        QStringLiteral("\\x1B\\[[0-?]*[ -/]*[@-~]")
+    );
+
+    QString cleaned = text;
+    cleaned.remove(ansiPattern);
+    return cleaned;
+}
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -112,11 +123,11 @@ void MainWindow::runCopyCommand()
     QProcess *process = new QProcess(this);
 
     connect(process, &QProcess::readyReadStandardOutput, this, [this, process]() {
-        outputLog->append(QString::fromLocal8Bit(process->readAllStandardOutput()));
+        outputLog->append(stripAnsiCodes(QString::fromLocal8Bit(process->readAllStandardOutput())));
     });
 
     connect(process, &QProcess::readyReadStandardError, this, [this, process]() {
-        outputLog->append(QString::fromLocal8Bit(process->readAllStandardError()));
+        outputLog->append(stripAnsiCodes(QString::fromLocal8Bit(process->readAllStandardError())));
     });
 
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
