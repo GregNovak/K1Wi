@@ -5,6 +5,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMessageBox>
 #include <QProcess>
 #include <QPushButton>
 #include <QTextEdit>
@@ -73,6 +74,16 @@ MainWindow::MainWindow(QWidget *parent)
 void MainWindow::runCopyCommand()
 {
     outputLog->clear();
+
+    if (sourcePath->text().trimmed().isEmpty()) {
+        QMessageBox::warning(this, "K1Wi COPY", "Please select a source path.");
+        return;
+    }
+
+    if (destPath->text().trimmed().isEmpty()) {
+        QMessageBox::warning(this, "K1Wi COPY", "Please select a destination path.");
+        return;
+    }
 
     QStringList args;
     args << "COPY";
