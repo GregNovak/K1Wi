@@ -11,6 +11,10 @@
 #include <QTextEdit>
 #include <QVBoxLayout>
 #include <QWidget>
+#include <QDir>
+#include <QFileInfo>
+
+
 
 static QString stripAnsiCodes(const QString &text)
 {
@@ -95,20 +99,35 @@ void MainWindow::runCopyCommand()
 {
     outputLog->clear();
 
-    if (sourcePath->text().trimmed().isEmpty()) {
+    const QString source = sourcePath->text().trimmed();
+    const QString destination = destPath->text().trimmed();
+
+    if (source.isEmpty()) {
         QMessageBox::warning(this, "K1Wi COPY", "Please select a source path.");
         return;
     }
 
-    if (destPath->text().trimmed().isEmpty()) {
+    if (destination.isEmpty()) {
         QMessageBox::warning(this, "K1Wi COPY", "Please select a destination path.");
+        return;
+    }
+
+    if (QFileInfo::exists(destination) && !forceCheck->isChecked()) {
+        QMessageBox::warning(
+            this,
+            "K1Wi COPY",
+            "Destination already exists.\n\nCheck \"Force overwrite\" to intentionally merge into the existing destination."
+        );
+
+        outputLog->append("[GUI] Destination already exists.");
+        outputLog->append("[GUI] Check \"Force overwrite\" to intentionally merge into the existing destination.");
         return;
     }
 
     QStringList args;
     args << "COPY";
-    args << sourcePath->text();
-    args << destPath->text();
+    args << source;
+    args << destination;
 
     if (forceCheck->isChecked()) {
         args << "--force";
