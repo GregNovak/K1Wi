@@ -41,12 +41,19 @@ MainWindow::MainWindow(QWidget *parent)
     mainLayout->addLayout(destLayout);
 
     recursiveCheck = new QCheckBox("Recursive", central);
+    recursiveCheck->setChecked(true);
+
     forceCheck = new QCheckBox("Force overwrite", central);
     mainLayout->addWidget(recursiveCheck);
     mainLayout->addWidget(forceCheck);
 
     QPushButton *runButton = new QPushButton("Run COPY", central);
-    mainLayout->addWidget(runButton);
+    QPushButton *clearButton = new QPushButton("Clear Output", central);
+
+    QHBoxLayout *buttonLayout = new QHBoxLayout();
+    buttonLayout->addWidget(runButton);
+    buttonLayout->addWidget(clearButton);
+    mainLayout->addLayout(buttonLayout);
 
     outputLog = new QTextEdit(central);
     outputLog->setReadOnly(true);
@@ -69,6 +76,8 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     connect(runButton, &QPushButton::clicked, this, &MainWindow::runCopyCommand);
+
+    connect(clearButton, &QPushButton::clicked, outputLog, &QTextEdit::clear);
 }
 
 void MainWindow::runCopyCommand()
