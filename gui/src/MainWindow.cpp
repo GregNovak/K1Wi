@@ -14,7 +14,7 @@
 #include <QDir>
 #include <QFileInfo>
 
-
+static const QString k1wiBinary = QStringLiteral("../bin/k1wi");
 
 static QString stripAnsiCodes(const QString &text)
 {
@@ -107,24 +107,24 @@ void MainWindow::runCopyCommand()
         return;
     }
 
-	if (destination.isEmpty()) {
-	    QMessageBox::warning(this, "K1Wi COPY", "Please select a destination path.");
-	    return;
-	}
+    if (destination.isEmpty()) {
+        QMessageBox::warning(this, "K1Wi COPY", "Please select a destination path.");
+        return;
+    }
 
-	if (!QFileInfo::exists(source)) {
-	    QMessageBox::warning(
-		this,
-		"K1Wi COPY",
-		"Source path does not exist.\n\nPlease select a valid source file or directory."
-	    );
+    if (!QFileInfo::exists(source)) {
+        QMessageBox::warning(
+            this,
+            "K1Wi COPY",
+            "Source path does not exist.\n\nPlease select a valid source file or directory."
+        );
 
-	    outputLog->append("[GUI] Source path does not exist.");
-	    outputLog->append("[GUI] Please select a valid source file or directory.");
-	    return;
-	}
+        outputLog->append("[GUI] Source path does not exist.");
+        outputLog->append("[GUI] Please select a valid source file or directory.");
+        return;
+    }
 
-	if (QFileInfo::exists(destination) && !forceCheck->isChecked()) {
+    if (QFileInfo::exists(destination) && !forceCheck->isChecked()) {
         QMessageBox::warning(
             this,
             "K1Wi COPY",
@@ -133,6 +133,21 @@ void MainWindow::runCopyCommand()
 
         outputLog->append("[GUI] Destination already exists.");
         outputLog->append("[GUI] Check \"Force overwrite\" to intentionally merge into the existing destination.");
+        return;
+    }
+
+    if (!QFileInfo::exists(k1wiBinary) || !QFileInfo(k1wiBinary).isExecutable()) {
+        QMessageBox::critical(
+            this,
+            "K1Wi COPY",
+            "K1Wi CLI binary was not found or is not executable.\n\n"
+            "Expected: ../bin/k1wi\n\n"
+            "Build the CLI first from the project root."
+        );
+
+        outputLog->append("[GUI] K1Wi CLI binary was not found or is not executable.");
+        outputLog->append("[GUI] Expected: ../bin/k1wi");
+        outputLog->append("[GUI] Build the CLI first from the project root.");
         return;
     }
 
@@ -149,7 +164,7 @@ void MainWindow::runCopyCommand()
         args << "--recursive";
     }
 
-    outputLog->append("Running: ../bin/k1wi " + args.join(" "));
+    outputLog->append("Running: " + k1wiBinary + " " + args.join(" "));
 
     QProcess *process = new QProcess(this);
 
@@ -167,5 +182,5 @@ void MainWindow::runCopyCommand()
         process->deleteLater();
     });
 
-    process->start("../bin/k1wi", args);
+    process->start(k1wiBinary, args);
 }
