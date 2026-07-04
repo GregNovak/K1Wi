@@ -107,12 +107,24 @@ void MainWindow::runCopyCommand()
         return;
     }
 
-    if (destination.isEmpty()) {
-        QMessageBox::warning(this, "K1Wi COPY", "Please select a destination path.");
-        return;
-    }
+	if (destination.isEmpty()) {
+	    QMessageBox::warning(this, "K1Wi COPY", "Please select a destination path.");
+	    return;
+	}
 
-    if (QFileInfo::exists(destination) && !forceCheck->isChecked()) {
+	if (!QFileInfo::exists(source)) {
+	    QMessageBox::warning(
+		this,
+		"K1Wi COPY",
+		"Source path does not exist.\n\nPlease select a valid source file or directory."
+	    );
+
+	    outputLog->append("[GUI] Source path does not exist.");
+	    outputLog->append("[GUI] Please select a valid source file or directory.");
+	    return;
+	}
+
+	if (QFileInfo::exists(destination) && !forceCheck->isChecked()) {
         QMessageBox::warning(
             this,
             "K1Wi COPY",
