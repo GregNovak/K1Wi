@@ -76,19 +76,18 @@ void MainWindow::runCopyCommand()
 
     QStringList args;
     args << "COPY";
-
-    if (recursiveCheck->isChecked()) {
-        args << "-r";
-    }
+    args << sourcePath->text();
+    args << destPath->text();
 
     if (forceCheck->isChecked()) {
         args << "--force";
     }
 
-    args << sourcePath->text();
-    args << destPath->text();
+    if (recursiveCheck->isChecked()) {
+        args << "--recursive";
+    }
 
-    outputLog->append("Running: ./bin/k1wi " + args.join(" "));
+    outputLog->append("Running: ../bin/k1wi " + args.join(" "));
 
     QProcess *process = new QProcess(this);
 
