@@ -227,7 +227,15 @@ void MainWindow::buildDelTab()
     delConfirmCheck = new QCheckBox("I understand DEL is destructive", delTab);
     mainLayout->addWidget(delConfirmCheck);
 
+    QHBoxLayout *confirmLayout = new QHBoxLayout();
+    delConfirmText = new QLineEdit(delTab);
+    delConfirmText->setPlaceholderText("Type DELETE to enable Run DEL");
+    confirmLayout->addWidget(new QLabel("Confirm:", delTab));
+    confirmLayout->addWidget(delConfirmText);
+    mainLayout->addLayout(confirmLayout);
+
     QPushButton *runButton = new QPushButton("Run DEL", delTab);
+    
     QPushButton *clearButton = new QPushButton("Clear Output", delTab);
 
     runButton->setEnabled(false);
