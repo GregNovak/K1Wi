@@ -39,10 +39,12 @@ MainWindow::MainWindow(QWidget *parent)
     buildCopyTab();
     buildLyzerTab();
     buildExtractTab();
+    buildDelTab();
 
     tabs->addTab(copyTab, "COPY");
     tabs->addTab(lyzerTab, "LYZER");
     tabs->addTab(extractTab, "EXTRACT");
+    tabs->addTab(delTab, "DEL");
 
     setCentralWidget(tabs);
 }
@@ -197,6 +199,66 @@ void MainWindow::buildExtractTab()
 
     connect(clearButton, &QPushButton::clicked, extractOutputLog, &QTextEdit::clear);
 }
+
+void MainWindow::buildDelTab()
+{
+    delTab = new QWidget(this);
+    QVBoxLayout *mainLayout = new QVBoxLayout(delTab);
+
+    QLabel *title = new QLabel("K1Wi Framework - DEL Prototype", delTab);
+    mainLayout->addWidget(title);
+
+    QLabel *warning = new QLabel(
+        "WARNING: DEL is a destructive file operation. "
+        "This GUI panel is scaffolded with safety controls before command wiring.",
+        delTab
+    );
+    warning->setWordWrap(true);
+    mainLayout->addWidget(warning);
+
+    QHBoxLayout *targetLayout = new QHBoxLayout();
+    delTargetPath = new QLineEdit(delTab);
+    QPushButton *targetBrowse = new QPushButton("Browse Target", delTab);
+    targetLayout->addWidget(new QLabel("Target:", delTab));
+    targetLayout->addWidget(delTargetPath);
+    targetLayout->addWidget(targetBrowse);
+    mainLayout->addLayout(targetLayout);
+
+    delConfirmCheck = new QCheckBox("I understand DEL is destructive", delTab);
+    mainLayout->addWidget(delConfirmCheck);
+
+    QPushButton *runButton = new QPushButton("Run DEL", delTab);
+    QPushButton *clearButton = new QPushButton("Clear Output", delTab);
+
+    runButton->setEnabled(false);
+
+    QHBoxLayout *buttonLayout = new QHBoxLayout();
+    buttonLayout->addWidget(runButton);
+    buttonLayout->addWidget(clearButton);
+    mainLayout->addLayout(buttonLayout);
+
+    delOutputLog = new QTextEdit(delTab);
+    delOutputLog->setReadOnly(true);
+    delOutputLog->append("[GUI] DEL panel ready.");
+    delOutputLog->append("[GUI] DEL command wiring will be added after safety controls are verified.");
+    mainLayout->addWidget(delOutputLog);
+
+    connect(targetBrowse, &QPushButton::clicked, this, [this]() {
+        QString path = QFileDialog::getOpenFileName(this, "Select DEL Target");
+        if (!path.isEmpty()) {
+            delTargetPath->setText(path);
+        }
+    });
+
+    connect(delConfirmCheck, &QCheckBox::toggled, runButton, &QPushButton::setEnabled);
+
+    connect(runButton, &QPushButton::clicked, this, [this]() {
+        delOutputLog->append("[GUI] Run DEL wiring will be added next.");
+    });
+
+    connect(clearButton, &QPushButton::clicked, delOutputLog, &QTextEdit::clear);
+}
+
 
 void MainWindow::runCopyCommand()
 {
