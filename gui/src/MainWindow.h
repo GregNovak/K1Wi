@@ -7,6 +7,8 @@ class QTextEdit;
 class QPushButton;
 class QLineEdit;
 class QCheckBox;
+class QTabWidget;
+class QWidget;
 
 class MainWindow : public QMainWindow
 {
@@ -16,12 +18,20 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
 
 private:
+    QTabWidget *tabs;
+
+    QWidget *copyTab;
     QLineEdit *sourcePath;
     QLineEdit *destPath;
     QCheckBox *recursiveCheck;
     QCheckBox *forceCheck;
     QTextEdit *outputLog;
 
+    QWidget *lyzerTab;
+    QTextEdit *lyzerOutputLog;
+
+    void buildCopyTab();
+    void buildLyzerTab();
     void runCopyCommand();
 };
 

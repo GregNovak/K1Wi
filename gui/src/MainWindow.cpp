@@ -33,48 +33,59 @@ MainWindow::MainWindow(QWidget *parent)
     setWindowTitle("K1Wi Framework GUI");
     resize(900, 600);
 
-    QWidget *central = new QWidget(this);
-    QVBoxLayout *mainLayout = new QVBoxLayout(central);
+    tabs = new QTabWidget(this);
 
-    QLabel *title = new QLabel("K1Wi Framework - COPY Prototype", central);
+    buildCopyTab();
+    buildLyzerTab();
+
+    tabs->addTab(copyTab, "COPY");
+    tabs->addTab(lyzerTab, "LYZER");
+
+    setCentralWidget(tabs);
+}
+
+void MainWindow::buildCopyTab()
+{
+    copyTab = new QWidget(this);
+    QVBoxLayout *mainLayout = new QVBoxLayout(copyTab);
+
+    QLabel *title = new QLabel("K1Wi Framework - COPY Prototype", copyTab);
     mainLayout->addWidget(title);
 
     QHBoxLayout *sourceLayout = new QHBoxLayout();
-    sourcePath = new QLineEdit(central);
-    QPushButton *sourceBrowse = new QPushButton("Browse Source", central);
-    sourceLayout->addWidget(new QLabel("Source:", central));
+    sourcePath = new QLineEdit(copyTab);
+    QPushButton *sourceBrowse = new QPushButton("Browse Source", copyTab);
+    sourceLayout->addWidget(new QLabel("Source:", copyTab));
     sourceLayout->addWidget(sourcePath);
     sourceLayout->addWidget(sourceBrowse);
     mainLayout->addLayout(sourceLayout);
 
     QHBoxLayout *destLayout = new QHBoxLayout();
-    destPath = new QLineEdit(central);
-    QPushButton *destBrowse = new QPushButton("Browse Destination", central);
-    destLayout->addWidget(new QLabel("Destination:", central));
+    destPath = new QLineEdit(copyTab);
+    QPushButton *destBrowse = new QPushButton("Browse Destination", copyTab);
+    destLayout->addWidget(new QLabel("Destination:", copyTab));
     destLayout->addWidget(destPath);
     destLayout->addWidget(destBrowse);
     mainLayout->addLayout(destLayout);
 
-    recursiveCheck = new QCheckBox("Recursive", central);
+    recursiveCheck = new QCheckBox("Recursive", copyTab);
     recursiveCheck->setChecked(true);
 
-    forceCheck = new QCheckBox("Force overwrite", central);
+    forceCheck = new QCheckBox("Force overwrite", copyTab);
     mainLayout->addWidget(recursiveCheck);
     mainLayout->addWidget(forceCheck);
 
-    QPushButton *runButton = new QPushButton("Run COPY", central);
-    QPushButton *clearButton = new QPushButton("Clear Output", central);
+    QPushButton *runButton = new QPushButton("Run COPY", copyTab);
+    QPushButton *clearButton = new QPushButton("Clear Output", copyTab);
 
     QHBoxLayout *buttonLayout = new QHBoxLayout();
     buttonLayout->addWidget(runButton);
     buttonLayout->addWidget(clearButton);
     mainLayout->addLayout(buttonLayout);
 
-    outputLog = new QTextEdit(central);
+    outputLog = new QTextEdit(copyTab);
     outputLog->setReadOnly(true);
     mainLayout->addWidget(outputLog);
-
-    setCentralWidget(central);
 
     connect(sourceBrowse, &QPushButton::clicked, this, [this]() {
         QString path = QFileDialog::getExistingDirectory(this, "Select Source");
@@ -91,8 +102,24 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     connect(runButton, &QPushButton::clicked, this, &MainWindow::runCopyCommand);
-
     connect(clearButton, &QPushButton::clicked, outputLog, &QTextEdit::clear);
+}
+
+void MainWindow::buildLyzerTab()
+{
+    lyzerTab = new QWidget(this);
+    QVBoxLayout *mainLayout = new QVBoxLayout(lyzerTab);
+
+    QLabel *title = new QLabel("K1Wi Framework - LYZER Prototype", lyzerTab);
+    mainLayout->addWidget(title);
+
+    QLabel *placeholder = new QLabel("LYZER GUI panel scaffold. Controls will be added next.", lyzerTab);
+    mainLayout->addWidget(placeholder);
+
+    lyzerOutputLog = new QTextEdit(lyzerTab);
+    lyzerOutputLog->setReadOnly(true);
+    lyzerOutputLog->append("[GUI] LYZER panel ready.");
+    mainLayout->addWidget(lyzerOutputLog);
 }
 
 void MainWindow::runCopyCommand()
