@@ -193,9 +193,7 @@ void MainWindow::buildExtractTab()
         }
     });
 
-    connect(runButton, &QPushButton::clicked, this, [this]() {
-        extractOutputLog->append("[GUI] Run EXTRACT wiring will be added next.");
-    });
+    connect(runButton, &QPushButton::clicked, this, &MainWindow::runExtractCommand);
 
     connect(clearButton, &QPushButton::clicked, extractOutputLog, &QTextEdit::clear);
 }
@@ -375,6 +373,84 @@ void MainWindow::runLyzerCommand()
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
             this, [this, process](int exitCode, QProcess::ExitStatus) {
         lyzerOutputLog->append(QString("\nProcess finished with exit code %1").arg(exitCode));
+        process->deleteLater();
+    });
+
+    process->start(k1wiBinary, args);
+}
+
+void MainWindow::runExtractCommand()
+{
+    extractOutputLog->clear();
+
+    const QString target = extractTargetPath->text().trimmed();
+
+    if (target.isEmpty()) {
+        QMessageBox::warning(this, "K1Wi EXTRACT", "Please select a target file.");
+        return;
+    }
+
+    if (!QFileInfo::exists(target)) {
+        QMessageBox::warning(
+            this,
+            "K1Wi EXTRACT",
+            "Target file does not exist.\n\nPlease select a valid file."
+        );
+
+        extractOutputLog->append("[GUI] EXTRACT target file does not exist.");
+        extractOutputLog->append("[GUI] Please select a valid file.");
+        return;
+    }
+
+    if (!QFileInfo(target).isFile()) {
+        QMessageBox::warning(
+            this,
+            "K1Wi EXTRACT",
+            "Target path is not a regular file.\n\nPlease select a valid file."
+        );
+
+        extractOutputLog->append("[GUI] EXTRACT target path is not a regular file.");
+        extractOutputLog->append("[GUI] Please select a valid file.");
+        return;
+    }
+
+    if (!QFileInfo::exists(k1wiBinary) || !QFileInfo(k1wiBinary).isExecutable()) {
+        QMessageBox::critical(
+            this,
+            "K1Wi EXTRACT",
+            "K1Wi CLI binary was not found or is not executable.\n\n"
+            "Expected: ../bin/k1wi\n\n"
+            "Build the CLI first from the project root."
+        );
+
+        extractOutputLog->append("[GUI] K1Wi CLI binary was not found or is not executable.");
+        extractOutputLog->append("[GUI] Expected: ../bin/k1wi");
+        extractOutputLog->append("[GUI] Build the CLI first from the project root.");
+        return;
+    }
+
+    QStringList args;
+    args << "EXTRACT";
+    args << target;
+
+    extractOutputLog->append("[GUI] EXTRACT run summary");
+    extractOutputLog->append("[GUI] Target: " + target);
+    extractOutputLog->append("");
+    extractOutputLog->append("Running: " + k1wiBinary + " " + args.join(" "));
+
+    QProcess *process = new QProcess(this);
+
+    connect(process, &QProcess::readyReadStandardOutput, this, [this, process]() {
+        extractOutputLog->append(stripAnsiCodes(QString::fromLocal8Bit(process->readAllStandardOutput())));
+    });
+
+    connect(process, &QProcess::readyReadStandardError, this, [this, process]() {
+        extractOutputLog->append(stripAnsiCodes(QString::fromLocal8Bit(process->readAllStandardError())));
+    });
+
+    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+            this, [this, process](int exitCode, QProcess::ExitStatus) {
+        extractOutputLog->append(QString("\nProcess finished with exit code %1").arg(exitCode));
         process->deleteLater();
     });
 

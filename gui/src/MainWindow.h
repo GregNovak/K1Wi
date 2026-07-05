@@ -37,11 +37,12 @@ private:
     QLineEdit *extractTargetPath;
     QTextEdit *extractOutputLog;
 
-    void buildExtractTab();
     void buildCopyTab();
     void buildLyzerTab();
+    void buildExtractTab();
     void runCopyCommand();
     void runLyzerCommand();
+    void runExtractCommand();
     
 };
 
