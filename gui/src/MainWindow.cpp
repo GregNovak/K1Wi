@@ -13,6 +13,7 @@
 #include <QWidget>
 #include <QDir>
 #include <QFileInfo>
+#include <QComboBox>
 
 static const QString k1wiBinary = QStringLiteral("../bin/k1wi");
 
@@ -113,13 +114,47 @@ void MainWindow::buildLyzerTab()
     QLabel *title = new QLabel("K1Wi Framework - LYZER Prototype", lyzerTab);
     mainLayout->addWidget(title);
 
-    QLabel *placeholder = new QLabel("LYZER GUI panel scaffold. Controls will be added next.", lyzerTab);
-    mainLayout->addWidget(placeholder);
+    QHBoxLayout *targetLayout = new QHBoxLayout();
+    lyzerTargetPath = new QLineEdit(lyzerTab);
+    QPushButton *targetBrowse = new QPushButton("Browse Target", lyzerTab);
+    targetLayout->addWidget(new QLabel("Target:", lyzerTab));
+    targetLayout->addWidget(lyzerTargetPath);
+    targetLayout->addWidget(targetBrowse);
+    mainLayout->addLayout(targetLayout);
+
+    QHBoxLayout *modeLayout = new QHBoxLayout();
+    lyzerModeCombo = new QComboBox(lyzerTab);
+    lyzerModeCombo->addItem("Summary");
+    lyzerModeCombo->addItem("Full");
+    modeLayout->addWidget(new QLabel("Mode:", lyzerTab));
+    modeLayout->addWidget(lyzerModeCombo);
+    mainLayout->addLayout(modeLayout);
+
+    QPushButton *runButton = new QPushButton("Run LYZER", lyzerTab);
+    QPushButton *clearButton = new QPushButton("Clear Output", lyzerTab);
+
+    QHBoxLayout *buttonLayout = new QHBoxLayout();
+    buttonLayout->addWidget(runButton);
+    buttonLayout->addWidget(clearButton);
+    mainLayout->addLayout(buttonLayout);
 
     lyzerOutputLog = new QTextEdit(lyzerTab);
     lyzerOutputLog->setReadOnly(true);
     lyzerOutputLog->append("[GUI] LYZER panel ready.");
     mainLayout->addWidget(lyzerOutputLog);
+
+    connect(targetBrowse, &QPushButton::clicked, this, [this]() {
+        QString path = QFileDialog::getOpenFileName(this, "Select LYZER Target");
+        if (!path.isEmpty()) {
+            lyzerTargetPath->setText(path);
+        }
+    });
+
+    connect(runButton, &QPushButton::clicked, this, [this]() {
+        lyzerOutputLog->append("[GUI] Run LYZER wiring will be added next.");
+    });
+
+    connect(clearButton, &QPushButton::clicked, lyzerOutputLog, &QTextEdit::clear);
 }
 
 void MainWindow::runCopyCommand()

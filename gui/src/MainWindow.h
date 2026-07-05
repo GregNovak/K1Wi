@@ -9,6 +9,7 @@ class QLineEdit;
 class QCheckBox;
 class QTabWidget;
 class QWidget;
+class QComboBox;
 
 class MainWindow : public QMainWindow
 {
@@ -28,6 +29,8 @@ private:
     QTextEdit *outputLog;
 
     QWidget *lyzerTab;
+    QLineEdit *lyzerTargetPath;
+    QComboBox *lyzerModeCombo;
     QTextEdit *lyzerOutputLog;
 
     void buildCopyTab();
