@@ -150,11 +150,9 @@ void MainWindow::buildLyzerTab()
         }
     });
 
-    connect(runButton, &QPushButton::clicked, this, [this]() {
-        lyzerOutputLog->append("[GUI] Run LYZER wiring will be added next.");
-    });
-
+    connect(runButton, &QPushButton::clicked, this, &MainWindow::runLyzerCommand);
     connect(clearButton, &QPushButton::clicked, lyzerOutputLog, &QTextEdit::clear);
+
 }
 
 void MainWindow::runCopyCommand()
@@ -247,6 +245,91 @@ void MainWindow::runCopyCommand()
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
             this, [this, process](int exitCode, QProcess::ExitStatus) {
         outputLog->append(QString("\nProcess finished with exit code %1").arg(exitCode));
+        process->deleteLater();
+    });
+
+    process->start(k1wiBinary, args);
+}
+
+void MainWindow::runLyzerCommand()
+{
+    lyzerOutputLog->clear();
+
+    const QString target = lyzerTargetPath->text().trimmed();
+
+    if (target.isEmpty()) {
+        QMessageBox::warning(this, "K1Wi LYZER", "Please select a target file.");
+        return;
+    }
+
+    if (!QFileInfo::exists(target)) {
+        QMessageBox::warning(
+            this,
+            "K1Wi LYZER",
+            "Target file does not exist.\n\nPlease select a valid file."
+        );
+
+        lyzerOutputLog->append("[GUI] LYZER target file does not exist.");
+        lyzerOutputLog->append("[GUI] Please select a valid file.");
+        return;
+    }
+
+    if (!QFileInfo(target).isFile()) {
+        QMessageBox::warning(
+            this,
+            "K1Wi LYZER",
+            "Target path is not a regular file.\n\nPlease select a valid file."
+        );
+
+        lyzerOutputLog->append("[GUI] LYZER target path is not a regular file.");
+        lyzerOutputLog->append("[GUI] Please select a valid file.");
+        return;
+    }
+
+    if (!QFileInfo::exists(k1wiBinary) || !QFileInfo(k1wiBinary).isExecutable()) {
+        QMessageBox::critical(
+            this,
+            "K1Wi LYZER",
+            "K1Wi CLI binary was not found or is not executable.\n\n"
+            "Expected: ../bin/k1wi\n\n"
+            "Build the CLI first from the project root."
+        );
+
+        lyzerOutputLog->append("[GUI] K1Wi CLI binary was not found or is not executable.");
+        lyzerOutputLog->append("[GUI] Expected: ../bin/k1wi");
+        lyzerOutputLog->append("[GUI] Build the CLI first from the project root.");
+        return;
+    }
+
+    QStringList args;
+    args << "LYZER";
+    args << target;
+
+    if (lyzerModeCombo->currentText() == "Summary") {
+        args << "--summary";
+    } else {
+        args << "--full";
+    }
+
+    lyzerOutputLog->append("[GUI] LYZER run summary");
+    lyzerOutputLog->append("[GUI] Target: " + target);
+    lyzerOutputLog->append("[GUI] Mode: " + lyzerModeCombo->currentText());
+    lyzerOutputLog->append("");
+    lyzerOutputLog->append("Running: " + k1wiBinary + " " + args.join(" "));
+
+    QProcess *process = new QProcess(this);
+
+    connect(process, &QProcess::readyReadStandardOutput, this, [this, process]() {
+        lyzerOutputLog->append(stripAnsiCodes(QString::fromLocal8Bit(process->readAllStandardOutput())));
+    });
+
+    connect(process, &QProcess::readyReadStandardError, this, [this, process]() {
+        lyzerOutputLog->append(stripAnsiCodes(QString::fromLocal8Bit(process->readAllStandardError())));
+    });
+
+    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+            this, [this, process](int exitCode, QProcess::ExitStatus) {
+        lyzerOutputLog->append(QString("\nProcess finished with exit code %1").arg(exitCode));
         process->deleteLater();
     });
 

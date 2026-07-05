@@ -36,6 +36,7 @@ private:
     void buildCopyTab();
     void buildLyzerTab();
     void runCopyCommand();
+    void runLyzerCommand();
 };
 
 #endif
