@@ -38,9 +38,11 @@ MainWindow::MainWindow(QWidget *parent)
 
     buildCopyTab();
     buildLyzerTab();
+    buildExtractTab();
 
     tabs->addTab(copyTab, "COPY");
     tabs->addTab(lyzerTab, "LYZER");
+    tabs->addTab(extractTab, "EXTRACT");
 
     setCentralWidget(tabs);
 }
@@ -153,6 +155,49 @@ void MainWindow::buildLyzerTab()
     connect(runButton, &QPushButton::clicked, this, &MainWindow::runLyzerCommand);
     connect(clearButton, &QPushButton::clicked, lyzerOutputLog, &QTextEdit::clear);
 
+}
+
+void MainWindow::buildExtractTab()
+{
+    extractTab = new QWidget(this);
+    QVBoxLayout *mainLayout = new QVBoxLayout(extractTab);
+
+    QLabel *title = new QLabel("K1Wi Framework - EXTRACT Prototype", extractTab);
+    mainLayout->addWidget(title);
+
+    QHBoxLayout *targetLayout = new QHBoxLayout();
+    extractTargetPath = new QLineEdit(extractTab);
+    QPushButton *targetBrowse = new QPushButton("Browse Target", extractTab);
+    targetLayout->addWidget(new QLabel("Target:", extractTab));
+    targetLayout->addWidget(extractTargetPath);
+    targetLayout->addWidget(targetBrowse);
+    mainLayout->addLayout(targetLayout);
+
+    QPushButton *runButton = new QPushButton("Run EXTRACT", extractTab);
+    QPushButton *clearButton = new QPushButton("Clear Output", extractTab);
+
+    QHBoxLayout *buttonLayout = new QHBoxLayout();
+    buttonLayout->addWidget(runButton);
+    buttonLayout->addWidget(clearButton);
+    mainLayout->addLayout(buttonLayout);
+
+    extractOutputLog = new QTextEdit(extractTab);
+    extractOutputLog->setReadOnly(true);
+    extractOutputLog->append("[GUI] EXTRACT panel ready.");
+    mainLayout->addWidget(extractOutputLog);
+
+    connect(targetBrowse, &QPushButton::clicked, this, [this]() {
+        QString path = QFileDialog::getOpenFileName(this, "Select EXTRACT Target");
+        if (!path.isEmpty()) {
+            extractTargetPath->setText(path);
+        }
+    });
+
+    connect(runButton, &QPushButton::clicked, this, [this]() {
+        extractOutputLog->append("[GUI] Run EXTRACT wiring will be added next.");
+    });
+
+    connect(clearButton, &QPushButton::clicked, extractOutputLog, &QTextEdit::clear);
 }
 
 void MainWindow::runCopyCommand()

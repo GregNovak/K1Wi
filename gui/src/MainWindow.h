@@ -33,10 +33,16 @@ private:
     QComboBox *lyzerModeCombo;
     QTextEdit *lyzerOutputLog;
 
+    QWidget *extractTab;
+    QLineEdit *extractTargetPath;
+    QTextEdit *extractOutputLog;
+
+    void buildExtractTab();
     void buildCopyTab();
     void buildLyzerTab();
     void runCopyCommand();
     void runLyzerCommand();
+    
 };
 
 #endif
