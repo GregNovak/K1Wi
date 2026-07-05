@@ -164,6 +164,12 @@ void MainWindow::runCopyCommand()
         args << "--recursive";
     }
 
+    outputLog->append("[GUI] COPY run summary");
+    outputLog->append("[GUI] Source: " + source);
+    outputLog->append("[GUI] Destination: " + destination);
+    outputLog->append("[GUI] Recursive: " + QString(recursiveCheck->isChecked() ? "enabled" : "disabled"));
+    outputLog->append("[GUI] Force overwrite: " + QString(forceCheck->isChecked() ? "enabled" : "disabled"));
+    outputLog->append("");
     outputLog->append("Running: " + k1wiBinary + " " + args.join(" "));
 
     QProcess *process = new QProcess(this);
