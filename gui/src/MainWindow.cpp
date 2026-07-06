@@ -73,11 +73,15 @@ void MainWindow::buildCopyTab()
     destLayout->addWidget(destBrowse);
     mainLayout->addLayout(destLayout);
 
-    recursiveCheck = new QCheckBox("Recursive", copyTab);
-    recursiveCheck->setChecked(true);
+    QHBoxLayout *modeLayout = new QHBoxLayout();
+    copyModeCombo = new QComboBox(copyTab);
+    copyModeCombo->addItem("File copy", "file");
+    copyModeCombo->addItem("Recursive directory copy", "recursive");
+    modeLayout->addWidget(new QLabel("COPY mode:", copyTab));
+    modeLayout->addWidget(copyModeCombo);
+    mainLayout->addLayout(modeLayout);
 
-    forceCheck = new QCheckBox("Force overwrite", copyTab);
-    mainLayout->addWidget(recursiveCheck);
+    forceCheck = new QCheckBox("Force overwrite / merge existing destination", copyTab);
     mainLayout->addWidget(forceCheck);
 
     QPushButton *runButton = new QPushButton("Run COPY", copyTab);
@@ -330,6 +334,32 @@ void MainWindow::runCopyCommand()
         outputLog->append("[GUI] Please select a valid source file or directory.");
         return;
     }
+    
+    const QFileInfo sourceInfo(source);
+const bool recursiveMode =
+    copyModeCombo->currentData().toString() == QStringLiteral("recursive");
+
+if (recursiveMode && !sourceInfo.isDir()) {
+    QMessageBox::warning(
+        this,
+        "K1Wi COPY",
+        "Recursive directory copy requires a source directory."
+    );
+
+    outputLog->append("[GUI] Recursive directory copy requires a source directory.");
+    return;
+    }
+
+    if (!recursiveMode && !sourceInfo.isFile()) {
+        QMessageBox::warning(
+        this,
+        "K1Wi COPY",
+        "File copy requires a regular source file."
+        );
+
+        outputLog->append("[GUI] File copy requires a regular source file.");
+        return;
+    } 
 
     if (QFileInfo::exists(destination) && !forceCheck->isChecked()) {
         QMessageBox::warning(
@@ -367,15 +397,16 @@ void MainWindow::runCopyCommand()
         args << "--force";
     }
 
-    if (recursiveCheck->isChecked()) {
-        args << "--recursive";
-    }
-
+    if (recursiveMode) {
+    args << "--recursive";
+    } 
+    
     outputLog->append("[GUI] COPY run summary");
     outputLog->append("[GUI] Source: " + source);
     outputLog->append("[GUI] Destination: " + destination);
-    outputLog->append("[GUI] Recursive: " + QString(recursiveCheck->isChecked() ? "enabled" : "disabled"));
-    outputLog->append("[GUI] Force overwrite: " + QString(forceCheck->isChecked() ? "enabled" : "disabled"));
+    outputLog->append("[GUI] Mode: " + copyModeCombo->currentText());
+    outputLog->append("[GUI] Force overwrite / merge: " + QString(forceCheck->isChecked() ? "enabled" : "disabled"));
+    
     outputLog->append("");
     outputLog->append("Running: " + k1wiBinary + " " + args.join(" "));
 

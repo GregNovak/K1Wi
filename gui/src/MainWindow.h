@@ -24,7 +24,7 @@ private:
     QWidget *copyTab;
     QLineEdit *sourcePath;
     QLineEdit *destPath;
-    QCheckBox *recursiveCheck;
+    QComboBox *copyModeCombo;
     QCheckBox *forceCheck;
     QTextEdit *outputLog;
 
