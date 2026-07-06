@@ -40,6 +40,7 @@ private:
     QWidget *delTab;
     QLineEdit *delTargetPath;
     QComboBox *delStandardCombo;
+    QLineEdit *delCustomPassCount;
     QCheckBox *delConfirmCheck;
     QLineEdit *delConfirmText;
     QTextEdit *delOutputLog;

@@ -225,12 +225,22 @@ void MainWindow::buildDelTab()
     mainLayout->addLayout(targetLayout);
 
     QHBoxLayout *standardLayout = new QHBoxLayout();
+    
     delStandardCombo = new QComboBox(delTab);
-    delStandardCombo->addItem("DoD-style overwrite", "1");
-    delStandardCombo->addItem("NIST-style sanitization", "2");
+    delStandardCombo->addItem("DoD-style 3-pass overwrite", "1");
+    delStandardCombo->addItem("NIST-style single-pass zero overwrite", "2");
+    delStandardCombo->addItem("Custom pass count", "3");
     standardLayout->addWidget(new QLabel("Deletion standard:", delTab));
     standardLayout->addWidget(delStandardCombo);
     mainLayout->addLayout(standardLayout);
+
+    QHBoxLayout *customPassLayout = new QHBoxLayout();
+    delCustomPassCount = new QLineEdit(delTab);
+    delCustomPassCount->setPlaceholderText("1-33");
+    delCustomPassCount->setEnabled(false);
+    customPassLayout->addWidget(new QLabel("Custom passes:", delTab));
+    customPassLayout->addWidget(delCustomPassCount);
+    mainLayout->addLayout(customPassLayout);
 
     delConfirmCheck = new QCheckBox("Confirm file deletion", delTab);
     mainLayout->addWidget(delConfirmCheck);
@@ -258,10 +268,21 @@ void MainWindow::buildDelTab()
     delOutputLog->append("[GUI] DEL command wiring will be added after safety controls are verified.");
     mainLayout->addWidget(delOutputLog);
 
-    connect(targetBrowse, &QPushButton::clicked, this, [this]() {
+        connect(targetBrowse, &QPushButton::clicked, this, [this]() {
         QString path = QFileDialog::getOpenFileName(this, "Select DEL Target");
         if (!path.isEmpty()) {
             delTargetPath->setText(path);
+        }
+    });
+
+    connect(delStandardCombo, &QComboBox::currentIndexChanged, this, [this](int) {
+        const bool customSelected =
+            delStandardCombo->currentData().toString() == QStringLiteral("3");
+
+        delCustomPassCount->setEnabled(customSelected);
+
+        if (!customSelected) {
+            delCustomPassCount->clear();
         }
     });
 
