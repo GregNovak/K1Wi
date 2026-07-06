@@ -297,9 +297,7 @@ void MainWindow::buildDelTab()
     connect(delConfirmCheck, &QCheckBox::toggled, this, updateDelRunButton);
     connect(delConfirmText, &QLineEdit::textChanged, this, updateDelRunButton);
 
-    connect(runButton, &QPushButton::clicked, this, [this]() {
-        delOutputLog->append("[GUI] Run DEL wiring will be added next.");
-    });
+    connect(runButton, &QPushButton::clicked, this, &MainWindow::runDelCommand);
 
     connect(clearButton, &QPushButton::clicked, delOutputLog, &QTextEdit::clear);
 }
@@ -561,4 +559,159 @@ void MainWindow::runExtractCommand()
     });
 
     process->start(k1wiBinary, args);
+}
+
+void MainWindow::runDelCommand()
+{
+    delOutputLog->clear();
+
+    const QString target = delTargetPath->text().trimmed();
+    const QString standard = delStandardCombo->currentData().toString();
+    const QString customPasses = delCustomPassCount->text().trimmed();
+
+    if (target.isEmpty()) {
+        QMessageBox::warning(this, "K1Wi DEL", "Please select a target file.");
+        return;
+    }
+
+    QFileInfo targetInfo(target);
+
+    if (!targetInfo.exists()) {
+        QMessageBox::warning(
+            this,
+            "K1Wi DEL",
+            "Target file does not exist.\n\nPlease select a valid file."
+        );
+
+        delOutputLog->append("[GUI] DEL target file does not exist.");
+        delOutputLog->append("[GUI] Please select a valid file.");
+        return;
+    }
+
+    if (!targetInfo.isFile()) {
+        QMessageBox::warning(
+            this,
+            "K1Wi DEL",
+            "DEL GUI currently supports files only.\n\nDirectory deletion is intentionally disabled."
+        );
+
+        delOutputLog->append("[GUI] DEL GUI currently supports files only.");
+        delOutputLog->append("[GUI] Directory deletion is intentionally disabled.");
+        return;
+    }
+
+    if (!delConfirmCheck->isChecked() ||
+        delConfirmText->text().trimmed() != QStringLiteral("DELETE")) {
+        QMessageBox::warning(
+            this,
+            "K1Wi DEL",
+            "DEL confirmation is incomplete.\n\nCheck Confirm file deletion and type DELETE."
+        );
+
+        delOutputLog->append("[GUI] DEL confirmation is incomplete.");
+        delOutputLog->append("[GUI] Check Confirm file deletion and type DELETE.");
+        return;
+    }
+
+    if (standard == QStringLiteral("3")) {
+        bool ok = false;
+        const int passCount = customPasses.toInt(&ok);
+
+        if (!ok || passCount < 1 || passCount > 33) {
+            QMessageBox::warning(
+                this,
+                "K1Wi DEL",
+                "Custom pass count must be a number from 1 to 33."
+            );
+
+            delOutputLog->append("[GUI] Invalid custom pass count.");
+            delOutputLog->append("[GUI] Custom pass count must be 1-33.");
+            return;
+        }
+    }
+
+    QFileInfo binaryInfo(k1wiBinary);
+    const QString binaryPath = binaryInfo.absoluteFilePath();
+
+    if (!binaryInfo.exists() || !binaryInfo.isExecutable()) {
+        QMessageBox::critical(
+            this,
+            "K1Wi DEL",
+            "K1Wi CLI binary was not found or is not executable.\n\n"
+            "Expected: ../bin/k1wi\n\n"
+            "Build the CLI first from the project root."
+        );
+
+        delOutputLog->append("[GUI] K1Wi CLI binary was not found or is not executable.");
+        delOutputLog->append("[GUI] Expected: ../bin/k1wi");
+        delOutputLog->append("[GUI] Build the CLI first from the project root.");
+        return;
+    }
+
+    QString standardLabel = delStandardCombo->currentText();
+    if (standard == QStringLiteral("3")) {
+        standardLabel += " (" + customPasses + " pass(es))";
+    }
+
+    QMessageBox::StandardButton confirm = QMessageBox::warning(
+        this,
+        "Confirm K1Wi DEL",
+        "This will securely delete the selected file.\n\n"
+        "Target:\n" + targetInfo.absoluteFilePath() + "\n\n"
+        "Deletion standard:\n" + standardLabel + "\n\n"
+        "This operation is destructive. Continue?",
+        QMessageBox::Yes | QMessageBox::No,
+        QMessageBox::No
+    );
+
+    if (confirm != QMessageBox::Yes) {
+        delOutputLog->append("[GUI] DEL cancelled by user.");
+        return;
+    }
+
+    QStringList inputLines;
+    inputLines << "DEL";
+    inputLines << targetInfo.fileName();
+    inputLines << standard;
+
+    if (standard == QStringLiteral("3")) {
+        inputLines << customPasses;
+    }
+
+    inputLines << "Y";
+    inputLines << "EXIT";
+
+    const QString inputScript = inputLines.join("\n") + "\n";
+
+    delOutputLog->append("[GUI] DEL run summary");
+    delOutputLog->append("[GUI] Target: " + targetInfo.absoluteFilePath());
+    delOutputLog->append("[GUI] Working directory: " + targetInfo.absolutePath());
+    delOutputLog->append("[GUI] Filename passed to DEL: " + targetInfo.fileName());
+    delOutputLog->append("[GUI] Deletion standard: " + standardLabel);
+    delOutputLog->append("");
+    delOutputLog->append("Running interactive: " + binaryPath);
+
+    QProcess *process = new QProcess(this);
+    process->setWorkingDirectory(targetInfo.absolutePath());
+
+    connect(process, &QProcess::readyReadStandardOutput, this, [this, process]() {
+        delOutputLog->append(stripAnsiCodes(QString::fromLocal8Bit(process->readAllStandardOutput())));
+    });
+
+    connect(process, &QProcess::readyReadStandardError, this, [this, process]() {
+        delOutputLog->append(stripAnsiCodes(QString::fromLocal8Bit(process->readAllStandardError())));
+    });
+
+    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+            this, [this, process](int exitCode, QProcess::ExitStatus) {
+        delOutputLog->append(QString("\nProcess finished with exit code %1").arg(exitCode));
+        process->deleteLater();
+    });
+
+    connect(process, &QProcess::started, this, [process, inputScript]() {
+        process->write(inputScript.toLocal8Bit());
+        process->closeWriteChannel();
+    });
+
+    process->start(binaryPath);
 }

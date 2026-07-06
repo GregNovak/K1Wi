@@ -54,7 +54,7 @@ private:
     void runCopyCommand();
     void runLyzerCommand();
     void runExtractCommand();
-    
+    void runDelCommand();
 };
 
 #endif
