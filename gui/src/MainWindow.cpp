@@ -184,6 +184,9 @@ void MainWindow::buildExtractTab()
     targetLayout->addWidget(targetBrowse);
     mainLayout->addLayout(targetLayout);
 
+    extractRecursiveCheck = new QCheckBox("Recursive extraction", extractTab);
+    mainLayout->addWidget(extractRecursiveCheck);
+
     QPushButton *runButton = new QPushButton("Run EXTRACT", extractTab);
     QPushButton *clearButton = new QPushButton("Clear Output", extractTab);
 
@@ -570,14 +573,20 @@ void MainWindow::runExtractCommand()
 
     QStringList args;
     args << "EXTRACT";
+
+    if (extractRecursiveCheck->isChecked()) {
+        args << "--recursive";
+    }
+
     args << target;
 
     extractOutputLog->append("[GUI] EXTRACT run summary");
     extractOutputLog->append("[GUI] Target: " + target);
+    extractOutputLog->append("[GUI] Recursive: " + QString(extractRecursiveCheck->isChecked() ? "enabled" : "disabled"));
     extractOutputLog->append("");
     extractOutputLog->append("Running: " + k1wiBinary + " " + args.join(" "));
 
-    QProcess *process = new QProcess(this);
+    QProcess *process = new QProcess(this);  
 
     connect(process, &QProcess::readyReadStandardOutput, this, [this, process]() {
         extractOutputLog->append(stripAnsiCodes(QString::fromLocal8Bit(process->readAllStandardOutput())));

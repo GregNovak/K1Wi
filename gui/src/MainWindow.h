@@ -35,6 +35,7 @@ private:
 
     QWidget *extractTab;
     QLineEdit *extractTargetPath;
+    QCheckBox *extractRecursiveCheck;
     QTextEdit *extractOutputLog;
     
     QWidget *delTab;
