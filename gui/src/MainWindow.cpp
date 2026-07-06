@@ -268,7 +268,7 @@ void MainWindow::buildDelTab()
     delOutputLog->append("[GUI] DEL command wiring will be added after safety controls are verified.");
     mainLayout->addWidget(delOutputLog);
 
-        connect(targetBrowse, &QPushButton::clicked, this, [this]() {
+    connect(targetBrowse, &QPushButton::clicked, this, [this]() {
         QString path = QFileDialog::getOpenFileName(this, "Select DEL Target");
         if (!path.isEmpty()) {
             delTargetPath->setText(path);
