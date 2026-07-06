@@ -221,10 +221,11 @@ void MainWindow::buildDelTab()
     mainLayout->addWidget(title);
 
     QLabel *warning = new QLabel(
-    "DEL permanently removes the selected file using the chosen deletion standard. "
-    "Select the target carefully before continuing.",
+    "DEL securely deletes one selected file using the chosen overwrite method. "
+    "Directory deletion is intentionally disabled in this GUI. "
+    "You will be asked to confirm before deletion begins.",
     delTab
-    );
+);
     warning->setWordWrap(true);
     mainLayout->addWidget(warning);
 
@@ -254,20 +255,10 @@ void MainWindow::buildDelTab()
     customPassLayout->addWidget(delCustomPassCount);
     mainLayout->addLayout(customPassLayout);
 
-    delConfirmCheck = new QCheckBox("Confirm file deletion", delTab);
-    mainLayout->addWidget(delConfirmCheck);
-
-    QHBoxLayout *confirmLayout = new QHBoxLayout();
-    delConfirmText = new QLineEdit(delTab);
-    delConfirmText->setPlaceholderText("Type DELETE to enable Run DEL");
-    confirmLayout->addWidget(new QLabel("Confirm:", delTab));
-    confirmLayout->addWidget(delConfirmText);
-    mainLayout->addLayout(confirmLayout);
-
     QPushButton *runButton = new QPushButton("Run DEL", delTab);
     QPushButton *clearButton = new QPushButton("Clear Output", delTab);
 
-    runButton->setEnabled(false);
+    
 
     QHBoxLayout *buttonLayout = new QHBoxLayout();
     buttonLayout->addWidget(runButton);
@@ -298,16 +289,7 @@ void MainWindow::buildDelTab()
         }
     });
 
-    auto updateDelRunButton = [this, runButton]() {
-        const bool confirmed =
-            delConfirmCheck->isChecked() &&
-            delConfirmText->text().trimmed() == QStringLiteral("DELETE");
-
-        runButton->setEnabled(confirmed);
-    };
-
-    connect(delConfirmCheck, &QCheckBox::toggled, this, updateDelRunButton);
-    connect(delConfirmText, &QLineEdit::textChanged, this, updateDelRunButton);
+    
 
     connect(runButton, &QPushButton::clicked, this, &MainWindow::runDelCommand);
 
@@ -644,18 +626,7 @@ void MainWindow::runDelCommand()
         return;
     }
 
-    if (!delConfirmCheck->isChecked() ||
-        delConfirmText->text().trimmed() != QStringLiteral("DELETE")) {
-        QMessageBox::warning(
-            this,
-            "K1Wi DEL",
-            "DEL confirmation is incomplete.\n\nCheck Confirm file deletion and type DELETE."
-        );
-
-        delOutputLog->append("[GUI] DEL confirmation is incomplete.");
-        delOutputLog->append("[GUI] Check Confirm file deletion and type DELETE.");
-        return;
-    }
+    
 
     if (standard == QStringLiteral("3")) {
         bool ok = false;
