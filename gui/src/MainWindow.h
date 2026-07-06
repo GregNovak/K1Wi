@@ -36,11 +36,15 @@ private:
     QWidget *extractTab;
     QLineEdit *extractTargetPath;
     QTextEdit *extractOutputLog;
+    
     QWidget *delTab;
     QLineEdit *delTargetPath;
+    QComboBox *delStandardCombo;
     QCheckBox *delConfirmCheck;
     QLineEdit *delConfirmText;
     QTextEdit *delOutputLog;
+    
+    
 
     void buildCopyTab();
     void buildLyzerTab();

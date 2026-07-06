@@ -209,9 +209,9 @@ void MainWindow::buildDelTab()
     mainLayout->addWidget(title);
 
     QLabel *warning = new QLabel(
-        "WARNING: DEL is a destructive file operation. "
-        "This GUI panel is scaffolded with safety controls before command wiring.",
-        delTab
+    "DEL permanently removes the selected file using the chosen deletion standard. "
+    "Select the target carefully before continuing.",
+    delTab
     );
     warning->setWordWrap(true);
     mainLayout->addWidget(warning);
@@ -224,7 +224,15 @@ void MainWindow::buildDelTab()
     targetLayout->addWidget(targetBrowse);
     mainLayout->addLayout(targetLayout);
 
-    delConfirmCheck = new QCheckBox("I understand DEL is destructive", delTab);
+    QHBoxLayout *standardLayout = new QHBoxLayout();
+    delStandardCombo = new QComboBox(delTab);
+    delStandardCombo->addItem("DoD-style overwrite", "1");
+    delStandardCombo->addItem("NIST-style sanitization", "2");
+    standardLayout->addWidget(new QLabel("Deletion standard:", delTab));
+    standardLayout->addWidget(delStandardCombo);
+    mainLayout->addLayout(standardLayout);
+
+    delConfirmCheck = new QCheckBox("Confirm file deletion", delTab);
     mainLayout->addWidget(delConfirmCheck);
 
     QHBoxLayout *confirmLayout = new QHBoxLayout();
@@ -235,7 +243,6 @@ void MainWindow::buildDelTab()
     mainLayout->addLayout(confirmLayout);
 
     QPushButton *runButton = new QPushButton("Run DEL", delTab);
-    
     QPushButton *clearButton = new QPushButton("Clear Output", delTab);
 
     runButton->setEnabled(false);
@@ -258,7 +265,16 @@ void MainWindow::buildDelTab()
         }
     });
 
-    connect(delConfirmCheck, &QCheckBox::toggled, runButton, &QPushButton::setEnabled);
+    auto updateDelRunButton = [this, runButton]() {
+        const bool confirmed =
+            delConfirmCheck->isChecked() &&
+            delConfirmText->text().trimmed() == QStringLiteral("DELETE");
+
+        runButton->setEnabled(confirmed);
+    };
+
+    connect(delConfirmCheck, &QCheckBox::toggled, this, updateDelRunButton);
+    connect(delConfirmText, &QLineEdit::textChanged, this, updateDelRunButton);
 
     connect(runButton, &QPushButton::clicked, this, [this]() {
         delOutputLog->append("[GUI] Run DEL wiring will be added next.");
@@ -266,7 +282,6 @@ void MainWindow::buildDelTab()
 
     connect(clearButton, &QPushButton::clicked, delOutputLog, &QTextEdit::clear);
 }
-
 
 void MainWindow::runCopyCommand()
 {
