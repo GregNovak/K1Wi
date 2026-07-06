@@ -132,9 +132,14 @@ void MainWindow::buildLyzerTab()
 
     QHBoxLayout *modeLayout = new QHBoxLayout();
     lyzerModeCombo = new QComboBox(lyzerTab);
-    lyzerModeCombo->addItem("Summary");
-    lyzerModeCombo->addItem("Full");
-    modeLayout->addWidget(new QLabel("Mode:", lyzerTab));
+    lyzerModeCombo->addItem("Default analysis", "");
+    lyzerModeCombo->addItem("Summary report", "--summary");
+    lyzerModeCombo->addItem("Quiet report", "--quiet");
+    lyzerModeCombo->addItem("JSON summary", "--json");
+    lyzerModeCombo->addItem("Full analysis", "--full");
+    lyzerModeCombo->addItem("Verbose analysis", "--verbose");
+    lyzerModeCombo->addItem("ALL full analysis", "ALL");
+    modeLayout->addWidget(new QLabel("LYZER mode:", lyzerTab));
     modeLayout->addWidget(lyzerModeCombo);
     mainLayout->addLayout(modeLayout);
 
@@ -483,10 +488,9 @@ void MainWindow::runLyzerCommand()
     args << "LYZER";
     args << target;
 
-    if (lyzerModeCombo->currentText() == "Summary") {
-        args << "--summary";
-    } else {
-        args << "--full";
+    const QString lyzerMode = lyzerModeCombo->currentData().toString();
+    if (!lyzerMode.isEmpty()) {
+       args << lyzerMode;
     }
 
     lyzerOutputLog->append("[GUI] LYZER run summary");
