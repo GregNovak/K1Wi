@@ -28,6 +28,54 @@ static QString stripAnsiCodes(const QString &text)
     return cleaned;
 }
 
+static void appendStyledLine(
+    QTextEdit *log,
+    const QString &text,
+    const QString &color,
+    bool bold = false
+)
+{
+    QString style = QStringLiteral("color: %1;").arg(color);
+
+    if (bold) {
+        style += QStringLiteral(" font-weight: bold;");
+    }
+
+    log->append(
+        QStringLiteral("<span style=\"%1\">%2</span>")
+            .arg(style, text.toHtmlEscaped())
+    );
+}
+
+static void appendStyledBlock(
+    QTextEdit *log,
+    const QString &text,
+    const QString &color,
+    bool bold = false
+)
+{
+    const QStringList lines = text.split('\n');
+
+    for (const QString &line : lines) {
+        appendStyledLine(log, line, color, bold);
+    }
+}
+
+static QString resultColorForSummary(const QString &summary, int exitCode)
+{
+    if (summary.contains(QStringLiteral("failed"), Qt::CaseInsensitive) ||
+        summary.contains(QStringLiteral("differ"), Qt::CaseInsensitive) ||
+        summary.contains(QStringLiteral("does not match"), Qt::CaseInsensitive)) {
+        return QStringLiteral("#b00020");
+    }
+
+    if (exitCode != 0) {
+        return QStringLiteral("#b26a00");
+    }
+
+    return QStringLiteral("#0b7a0b");
+}
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -685,10 +733,9 @@ connect(
                 const QString summary = hashFriendlySummary(*combinedOutput);
 
                 if (!summary.isEmpty()) {
-                    hashOutputLog->append("Summary");
-                    hashOutputLog->append("-------");
-                    hashOutputLog->append(summary);
-                    hashOutputLog->append("");
+                    appendStyledLine(hashOutputLog, "Summary", "#0057b8", true);
+			appendStyledLine(hashOutputLog, "-------", "#0057b8", true);
+			appendStyledBlock(hashOutputLog, summary, resultColorForSummary(summary, exitCode),true); hashOutputLog->append("");
                 }
 
                 hashOutputLog->append(
@@ -879,10 +926,10 @@ void MainWindow::runCopyCommand()
                 );
 
                 if (!summary.isEmpty()) {
-                    outputLog->append("Summary");
-                    outputLog->append("-------");
-                    outputLog->append(summary);
-                    outputLog->append("");
+                    appendStyledLine(outputLog, "Summary", "#0057b8", true); 
+                    appendStyledLine(outputLog, "-------", "#0057b8", true);
+		    appendStyledBlock(outputLog, summary, resultColorForSummary(summary, exitCode), true); 
+		    outputLog->append("");
                 }
 
                 outputLog->append(
