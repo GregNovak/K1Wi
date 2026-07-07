@@ -96,6 +96,46 @@ static QString hashFriendlySummary(const QString &output)
     return QString();
 }
 
+static QString copyFriendlySummary(
+    const QString &output,
+    int exitCode,
+    const QString &destination,
+    bool recursiveMode
+)
+{
+    if (exitCode == 0) {
+        QString summary;
+
+        summary += QStringLiteral("[RESULT] COPY completed successfully.\n");
+
+        if (recursiveMode) {
+            summary += QStringLiteral(
+                "[RESULT] Recursive directory copy finished and K1Wi verification completed.\n"
+            );
+        } else {
+            summary += QStringLiteral(
+                "[RESULT] File copy finished and K1Wi verification completed.\n"
+            );
+        }
+
+        summary += QStringLiteral("[RESULT] Destination: ") + destination;
+
+        return summary;
+    }
+
+    if (output.contains(QStringLiteral("failed"), Qt::CaseInsensitive) ||
+        output.contains(QStringLiteral("error"), Qt::CaseInsensitive)) {
+        return QStringLiteral(
+            "[RESULT] COPY did not complete successfully.\n"
+            "[RESULT] K1Wi reported an error. Check the detailed output above."
+        );
+    }
+
+    return QStringLiteral(
+        "[RESULT] COPY finished with a non-zero exit code.\n"
+        "[RESULT] Check the detailed K1Wi output above before trusting the destination."
+    );
+}
 
 void MainWindow::buildCopyTab()
 {
@@ -681,11 +721,15 @@ void MainWindow::runCopyCommand()
 
     if (source.isEmpty()) {
         QMessageBox::warning(this, "K1Wi COPY", "Please select a source path.");
+
+        outputLog->append("[GUI] COPY cancelled: no source path selected.");
         return;
     }
 
     if (destination.isEmpty()) {
         QMessageBox::warning(this, "K1Wi COPY", "Please select a destination path.");
+
+        outputLog->append("[GUI] COPY cancelled: no destination path selected.");
         return;
     }
 
@@ -696,36 +740,38 @@ void MainWindow::runCopyCommand()
             "Source path does not exist.\n\nPlease select a valid source file or directory."
         );
 
-        outputLog->append("[GUI] Source path does not exist.");
-        outputLog->append("[GUI] Please select a valid source file or directory.");
+        outputLog->append("[GUI] COPY cancelled: source path does not exist.");
+        outputLog->append("[GUI] Source: " + source);
         return;
     }
-    
+
     const QFileInfo sourceInfo(source);
-const bool recursiveMode =
-    copyModeCombo->currentData().toString() == QStringLiteral("recursive");
+    const bool recursiveMode =
+        copyModeCombo->currentData().toString() == QStringLiteral("recursive");
 
-if (recursiveMode && !sourceInfo.isDir()) {
-    QMessageBox::warning(
-        this,
-        "K1Wi COPY",
-        "Recursive directory copy requires a source directory."
-    );
+    if (recursiveMode && !sourceInfo.isDir()) {
+        QMessageBox::warning(
+            this,
+            "K1Wi COPY",
+            "Recursive directory copy requires a source directory."
+        );
 
-    outputLog->append("[GUI] Recursive directory copy requires a source directory.");
-    return;
+        outputLog->append("[GUI] COPY cancelled: recursive mode requires a source directory.");
+        outputLog->append("[GUI] Source: " + source);
+        return;
     }
 
     if (!recursiveMode && !sourceInfo.isFile()) {
         QMessageBox::warning(
-        this,
-        "K1Wi COPY",
-        "File copy requires a regular source file."
+            this,
+            "K1Wi COPY",
+            "File copy requires a regular source file."
         );
 
-        outputLog->append("[GUI] File copy requires a regular source file.");
+        outputLog->append("[GUI] COPY cancelled: file mode requires a regular source file.");
+        outputLog->append("[GUI] Source: " + source);
         return;
-    } 
+    }
 
     if (QFileInfo::exists(destination) && !forceCheck->isChecked()) {
         QMessageBox::warning(
@@ -734,12 +780,15 @@ if (recursiveMode && !sourceInfo.isDir()) {
             "Destination already exists.\n\nCheck \"Force overwrite\" to intentionally merge into the existing destination."
         );
 
-        outputLog->append("[GUI] Destination already exists.");
+        outputLog->append("[GUI] COPY cancelled: destination already exists.");
+        outputLog->append("[GUI] Destination: " + destination);
         outputLog->append("[GUI] Check \"Force overwrite\" to intentionally merge into the existing destination.");
         return;
     }
 
-    if (!QFileInfo::exists(k1wiBinary) || !QFileInfo(k1wiBinary).isExecutable()) {
+    const QFileInfo cliInfo(k1wiBinary);
+
+    if (!cliInfo.exists() || !cliInfo.isFile() || !cliInfo.isExecutable()) {
         QMessageBox::critical(
             this,
             "K1Wi COPY",
@@ -748,8 +797,8 @@ if (recursiveMode && !sourceInfo.isDir()) {
             "Build the CLI first from the project root."
         );
 
-        outputLog->append("[GUI] K1Wi CLI binary was not found or is not executable.");
-        outputLog->append("[GUI] Expected: ../bin/k1wi");
+        outputLog->append("[GUI] COPY cancelled: K1Wi CLI binary was not found or is not executable.");
+        outputLog->append("[GUI] Expected: " + cliInfo.absoluteFilePath());
         outputLog->append("[GUI] Build the CLI first from the project root.");
         return;
     }
@@ -764,35 +813,97 @@ if (recursiveMode && !sourceInfo.isDir()) {
     }
 
     if (recursiveMode) {
-    args << "--recursive";
-    } 
-    
+        args << "--recursive";
+    }
+
     outputLog->append("[GUI] COPY run summary");
     outputLog->append("[GUI] Source: " + source);
     outputLog->append("[GUI] Destination: " + destination);
     outputLog->append("[GUI] Mode: " + copyModeCombo->currentText());
-    outputLog->append("[GUI] Force overwrite / merge: " + QString(forceCheck->isChecked() ? "enabled" : "disabled"));
-    
+    outputLog->append(
+        "[GUI] Force overwrite / merge: " +
+        QString(forceCheck->isChecked() ? "enabled" : "disabled")
+    );
+
     outputLog->append("");
-    outputLog->append("Running: " + k1wiBinary + " " + args.join(" "));
+    outputLog->append("Running: " + cliInfo.absoluteFilePath() + " " + args.join(" "));
+    outputLog->append("");
 
     QProcess *process = new QProcess(this);
+    QString *combinedOutput = new QString();
 
-    connect(process, &QProcess::readyReadStandardOutput, this, [this, process]() {
-        outputLog->append(stripAnsiCodes(QString::fromLocal8Bit(process->readAllStandardOutput())));
-    });
+    connect(
+        process,
+        &QProcess::readyReadStandardOutput,
+        this,
+        [this, process, combinedOutput]() {
+            const QString output = stripAnsiCodes(
+                QString::fromLocal8Bit(process->readAllStandardOutput())
+            );
 
-    connect(process, &QProcess::readyReadStandardError, this, [this, process]() {
-        outputLog->append(stripAnsiCodes(QString::fromLocal8Bit(process->readAllStandardError())));
-    });
+            combinedOutput->append(output);
+            outputLog->append(output);
+        }
+    );
 
-    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-            this, [this, process](int exitCode, QProcess::ExitStatus) {
-        outputLog->append(QString("\nProcess finished with exit code %1").arg(exitCode));
+    connect(
+        process,
+        &QProcess::readyReadStandardError,
+        this,
+        [this, process, combinedOutput]() {
+            const QString output = stripAnsiCodes(
+                QString::fromLocal8Bit(process->readAllStandardError())
+            );
+
+            combinedOutput->append(output);
+            outputLog->append(output);
+        }
+    );
+
+    connect(
+        process,
+        QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+        this,
+        [this, process, combinedOutput, destination, recursiveMode](
+            int exitCode,
+            QProcess::ExitStatus exitStatus
+        ) {
+            outputLog->append("");
+
+            if (exitStatus == QProcess::NormalExit) {
+                const QString summary = copyFriendlySummary(
+                    *combinedOutput,
+                    exitCode,
+                    destination,
+                    recursiveMode
+                );
+
+                if (!summary.isEmpty()) {
+                    outputLog->append("Summary");
+                    outputLog->append("-------");
+                    outputLog->append(summary);
+                    outputLog->append("");
+                }
+
+                outputLog->append(
+                    QString("Process finished with exit code %1").arg(exitCode)
+                );
+            } else {
+                outputLog->append("[GUI] COPY process crashed or was terminated.");
+            }
+
+            delete combinedOutput;
+            process->deleteLater();
+        }
+    );
+
+    process->start(cliInfo.absoluteFilePath(), args);
+
+    if (!process->waitForStarted()) {
+        outputLog->append("[GUI] Failed to start COPY process.");
+        delete combinedOutput;
         process->deleteLater();
-    });
-
-    process->start(k1wiBinary, args);
+    }
 }
 
 void MainWindow::runLyzerCommand()
