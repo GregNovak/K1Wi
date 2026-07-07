@@ -398,15 +398,203 @@ void MainWindow::buildHashTab()
         }
     });
 
-    connect(runButton, &QPushButton::clicked, this, [this]() {
-        hashOutputLog->append("[GUI] Run HASH wiring will be added next.");
-    });
+    connect(runButton, &QPushButton::clicked, this, &MainWindow::runHashCommand);
 
     connect(clearButton, &QPushButton::clicked, hashOutputLog, &QTextEdit::clear);
 
     updateHashModeFields();
 }
 
+void MainWindow::runHashCommand()
+{
+    hashOutputLog->clear();
+
+    const QString algorithm = hashAlgorithmCombo->currentData().toString();
+    const QString algorithmLabel = hashAlgorithmCombo->currentText();
+    const QString mode = hashModeCombo->currentData().toString();
+    const QString modeLabel = hashModeCombo->currentText();
+
+    const QString filePath = hashFilePath->text().trimmed();
+    const QString expectedHash = hashExpectedValue->text().trimmed();
+    const QString compareFilePath = hashCompareFilePath->text().trimmed();
+
+    if (filePath.isEmpty()) {
+        QMessageBox::warning(
+            this,
+            "K1Wi HASH",
+            "Select a file before running HASH."
+        );
+
+        hashOutputLog->append("[GUI] HASH cancelled: no file selected.");
+        return;
+    }
+
+    QFileInfo fileInfo(filePath);
+
+    if (!fileInfo.exists()) {
+        QMessageBox::warning(
+            this,
+            "K1Wi HASH",
+            "The selected file does not exist."
+        );
+
+        hashOutputLog->append("[GUI] HASH cancelled: selected file does not exist.");
+        hashOutputLog->append("[GUI] File: " + filePath);
+        return;
+    }
+
+    if (!fileInfo.isFile()) {
+        QMessageBox::warning(
+            this,
+            "K1Wi HASH",
+            "The selected path is not a regular file."
+        );
+
+        hashOutputLog->append("[GUI] HASH cancelled: selected path is not a regular file.");
+        hashOutputLog->append("[GUI] File: " + filePath);
+        return;
+    }
+
+    if (mode == QStringLiteral("verify") && expectedHash.isEmpty()) {
+        QMessageBox::warning(
+            this,
+            "K1Wi HASH",
+            "Enter the expected hash before running verify mode."
+        );
+
+        hashOutputLog->append("[GUI] HASH cancelled: expected hash is empty.");
+        return;
+    }
+
+    QFileInfo compareFileInfo(compareFilePath);
+
+    if (mode == QStringLiteral("compare")) {
+        if (compareFilePath.isEmpty()) {
+            QMessageBox::warning(
+                this,
+                "K1Wi HASH",
+                "Select a compare file before running compare mode."
+            );
+
+            hashOutputLog->append("[GUI] HASH cancelled: no compare file selected.");
+            return;
+        }
+
+        if (!compareFileInfo.exists()) {
+            QMessageBox::warning(
+                this,
+                "K1Wi HASH",
+                "The selected compare file does not exist."
+            );
+
+            hashOutputLog->append("[GUI] HASH cancelled: compare file does not exist.");
+            hashOutputLog->append("[GUI] Compare file: " + compareFilePath);
+            return;
+        }
+
+        if (!compareFileInfo.isFile()) {
+            QMessageBox::warning(
+                this,
+                "K1Wi HASH",
+                "The selected compare path is not a regular file."
+            );
+
+            hashOutputLog->append("[GUI] HASH cancelled: compare path is not a regular file.");
+            hashOutputLog->append("[GUI] Compare file: " + compareFilePath);
+            return;
+        }
+    }
+
+    QFileInfo cliInfo(k1wiBinary);
+
+    if (!cliInfo.exists() || !cliInfo.isFile() || !cliInfo.isExecutable()) {
+        QMessageBox::critical(
+            this,
+            "K1Wi HASH",
+            "The K1Wi CLI binary was not found or is not executable.\n\n"
+            "Expected path:\n" + cliInfo.absoluteFilePath()
+        );
+
+        hashOutputLog->append("[GUI] HASH cancelled: K1Wi CLI binary is missing or not executable.");
+        hashOutputLog->append("[GUI] Expected CLI path: " + cliInfo.absoluteFilePath());
+        return;
+    }
+
+    QStringList arguments;
+    arguments << algorithm;
+
+    if (mode == QStringLiteral("compute")) {
+        arguments << filePath;
+    } else if (mode == QStringLiteral("verify")) {
+        arguments << "-verify" << filePath << expectedHash;
+    } else if (mode == QStringLiteral("compare")) {
+        arguments << "-compare" << filePath << compareFilePath;
+    } else {
+        QMessageBox::critical(
+            this,
+            "K1Wi HASH",
+            "Unknown HASH mode selected."
+        );
+
+        hashOutputLog->append("[GUI] HASH cancelled: unknown mode selected.");
+        return;
+    }
+
+    hashOutputLog->append("[GUI] HASH run summary");
+    hashOutputLog->append("[GUI] Algorithm: " + algorithmLabel);
+    hashOutputLog->append("[GUI] Mode: " + modeLabel);
+    hashOutputLog->append("[GUI] File: " + filePath);
+
+    if (mode == QStringLiteral("verify")) {
+        hashOutputLog->append("[GUI] Expected hash: " + expectedHash);
+    }
+
+    if (mode == QStringLiteral("compare")) {
+        hashOutputLog->append("[GUI] Compare file: " + compareFilePath);
+    }
+
+    hashOutputLog->append("");
+    hashOutputLog->append("Running: " + cliInfo.absoluteFilePath() + " " + arguments.join(" "));
+    hashOutputLog->append("");
+
+    QProcess *process = new QProcess(this);
+
+    connect(process, &QProcess::readyReadStandardOutput, this, [this, process]() {
+        const QString output = QString::fromLocal8Bit(process->readAllStandardOutput());
+        hashOutputLog->append(stripAnsiCodes(output));
+    });
+
+    connect(process, &QProcess::readyReadStandardError, this, [this, process]() {
+        const QString output = QString::fromLocal8Bit(process->readAllStandardError());
+        hashOutputLog->append(stripAnsiCodes(output));
+    });
+
+    connect(
+        process,
+        QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+        this,
+        [this, process](int exitCode, QProcess::ExitStatus exitStatus) {
+            if (exitStatus == QProcess::NormalExit) {
+                hashOutputLog->append("");
+                hashOutputLog->append(
+                    QString("Process finished with exit code %1").arg(exitCode)
+                );
+            } else {
+                hashOutputLog->append("");
+                hashOutputLog->append("[GUI] HASH process crashed or was terminated.");
+            }
+
+            process->deleteLater();
+        }
+    );
+
+    process->start(cliInfo.absoluteFilePath(), arguments);
+
+    if (!process->waitForStarted()) {
+        hashOutputLog->append("[GUI] Failed to start HASH process.");
+        process->deleteLater();
+    }
+}
 
 void MainWindow::runCopyCommand()
 {
