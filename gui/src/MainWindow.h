@@ -44,16 +44,25 @@ private:
     QLineEdit *delCustomPassCount;
     QTextEdit *delOutputLog;
     
-    
+    QWidget *hashTab;
+    QComboBox *hashAlgorithmCombo;
+    QComboBox *hashModeCombo;
+    QLineEdit *hashFilePath;
+    QLineEdit *hashExpectedValue;
+    QLineEdit *hashCompareFilePath;
+    QTextEdit *hashOutputLog;
 
     void buildCopyTab();
     void buildLyzerTab();
     void buildExtractTab();
     void buildDelTab();
+    void buildHashTab();
+    
     void runCopyCommand();
     void runLyzerCommand();
     void runExtractCommand();
     void runDelCommand();
+    void runHashCommand();
 };
 
 #endif

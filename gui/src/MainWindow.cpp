@@ -40,11 +40,13 @@ MainWindow::MainWindow(QWidget *parent)
     buildLyzerTab();
     buildExtractTab();
     buildDelTab();
+    buildHashTab();
 
     tabs->addTab(copyTab, "COPY");
     tabs->addTab(lyzerTab, "LYZER");
     tabs->addTab(extractTab, "EXTRACT");
     tabs->addTab(delTab, "DEL");
+    tabs->addTab(hashTab, "HASH");
 
     setCentralWidget(tabs);
 }
@@ -295,6 +297,116 @@ void MainWindow::buildDelTab()
 
     connect(clearButton, &QPushButton::clicked, delOutputLog, &QTextEdit::clear);
 }
+
+void MainWindow::buildHashTab()
+{
+    hashTab = new QWidget(this);
+    QVBoxLayout *mainLayout = new QVBoxLayout(hashTab);
+
+    QLabel *title = new QLabel("K1Wi Framework - HASH Prototype", hashTab);
+    mainLayout->addWidget(title);
+
+    QLabel *description = new QLabel(
+        "HASH combines the K1Wi MD5 and SHA256 modules in one GUI panel.",
+        hashTab
+    );
+    description->setWordWrap(true);
+    mainLayout->addWidget(description);
+
+    QHBoxLayout *algorithmLayout = new QHBoxLayout();
+    hashAlgorithmCombo = new QComboBox(hashTab);
+    hashAlgorithmCombo->addItem("MD5", "MD5");
+    hashAlgorithmCombo->addItem("SHA-256", "SHA256");
+    algorithmLayout->addWidget(new QLabel("Algorithm:", hashTab));
+    algorithmLayout->addWidget(hashAlgorithmCombo);
+    mainLayout->addLayout(algorithmLayout);
+
+    QHBoxLayout *modeLayout = new QHBoxLayout();
+    hashModeCombo = new QComboBox(hashTab);
+    hashModeCombo->addItem("Compute hash", "compute");
+    hashModeCombo->addItem("Verify hash", "verify");
+    hashModeCombo->addItem("Compare files", "compare");
+    modeLayout->addWidget(new QLabel("Mode:", hashTab));
+    modeLayout->addWidget(hashModeCombo);
+    mainLayout->addLayout(modeLayout);
+
+    QHBoxLayout *fileLayout = new QHBoxLayout();
+    hashFilePath = new QLineEdit(hashTab);
+    QPushButton *fileBrowse = new QPushButton("Browse File", hashTab);
+    fileLayout->addWidget(new QLabel("File:", hashTab));
+    fileLayout->addWidget(hashFilePath);
+    fileLayout->addWidget(fileBrowse);
+    mainLayout->addLayout(fileLayout);
+
+    QHBoxLayout *expectedLayout = new QHBoxLayout();
+    hashExpectedValue = new QLineEdit(hashTab);
+    hashExpectedValue->setPlaceholderText("Expected hash for verify mode");
+    expectedLayout->addWidget(new QLabel("Expected hash:", hashTab));
+    expectedLayout->addWidget(hashExpectedValue);
+    mainLayout->addLayout(expectedLayout);
+
+    QHBoxLayout *compareLayout = new QHBoxLayout();
+    hashCompareFilePath = new QLineEdit(hashTab);
+    QPushButton *compareBrowse = new QPushButton("Browse Compare File", hashTab);
+    compareLayout->addWidget(new QLabel("Compare file:", hashTab));
+    compareLayout->addWidget(hashCompareFilePath);
+    compareLayout->addWidget(compareBrowse);
+    mainLayout->addLayout(compareLayout);
+
+    QPushButton *runButton = new QPushButton("Run HASH", hashTab);
+    QPushButton *clearButton = new QPushButton("Clear Output", hashTab);
+
+    QHBoxLayout *buttonLayout = new QHBoxLayout();
+    buttonLayout->addWidget(runButton);
+    buttonLayout->addWidget(clearButton);
+    mainLayout->addLayout(buttonLayout);
+
+    hashOutputLog = new QTextEdit(hashTab);
+    hashOutputLog->setReadOnly(true);
+    hashOutputLog->append("[GUI] HASH panel ready.");
+    hashOutputLog->append("[GUI] Select MD5 or SHA-256, then choose Compute, Verify, or Compare.");
+    mainLayout->addWidget(hashOutputLog);
+
+    auto updateHashModeFields = [this]() {
+        const QString mode = hashModeCombo->currentData().toString();
+
+        hashExpectedValue->setEnabled(mode == QStringLiteral("verify"));
+        hashCompareFilePath->setEnabled(mode == QStringLiteral("compare"));
+
+        if (mode != QStringLiteral("verify")) {
+            hashExpectedValue->clear();
+        }
+
+        if (mode != QStringLiteral("compare")) {
+            hashCompareFilePath->clear();
+        }
+    };
+
+    connect(hashModeCombo, &QComboBox::currentIndexChanged, this, updateHashModeFields);
+
+    connect(fileBrowse, &QPushButton::clicked, this, [this]() {
+        QString path = QFileDialog::getOpenFileName(this, "Select HASH File");
+        if (!path.isEmpty()) {
+            hashFilePath->setText(path);
+        }
+    });
+
+    connect(compareBrowse, &QPushButton::clicked, this, [this]() {
+        QString path = QFileDialog::getOpenFileName(this, "Select Compare File");
+        if (!path.isEmpty()) {
+            hashCompareFilePath->setText(path);
+        }
+    });
+
+    connect(runButton, &QPushButton::clicked, this, [this]() {
+        hashOutputLog->append("[GUI] Run HASH wiring will be added next.");
+    });
+
+    connect(clearButton, &QPushButton::clicked, hashOutputLog, &QTextEdit::clear);
+
+    updateHashModeFields();
+}
+
 
 void MainWindow::runCopyCommand()
 {
