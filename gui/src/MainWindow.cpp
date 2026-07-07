@@ -51,6 +51,52 @@ MainWindow::MainWindow(QWidget *parent)
     setCentralWidget(tabs);
 }
 
+static QString hashFriendlySummary(const QString &output)
+{
+    if (output.contains(QStringLiteral("MD5 OK")) ||
+        output.contains(QStringLiteral("SHA256 OK"))) {
+        return QStringLiteral(
+            "[RESULT] Verification passed.\n"
+            "[RESULT] The selected file matches the expected hash."
+        );
+    }
+
+    if (output.contains(QStringLiteral("MD5 FAIL")) ||
+        output.contains(QStringLiteral("SHA256 FAIL"))) {
+        return QStringLiteral(
+            "[RESULT] Verification failed.\n"
+            "[RESULT] The selected file does not match the expected hash."
+        );
+    }
+
+    if (output.contains(QStringLiteral("MD5 MATCH")) ||
+        output.contains(QStringLiteral("SHA256 MATCH"))) {
+        return QStringLiteral(
+            "[RESULT] Files match.\n"
+            "[RESULT] The two selected files have the same hash."
+        );
+    }
+
+    if (output.contains(QStringLiteral("MD5 DIFFER")) ||
+        output.contains(QStringLiteral("SHA256 DIFFER"))) {
+        return QStringLiteral(
+            "[RESULT] Files differ.\n"
+            "[RESULT] The two selected files do not have the same hash."
+        );
+    }
+
+    if (output.contains(QStringLiteral("MD5(")) ||
+        output.contains(QStringLiteral("SHA256("))) {
+        return QStringLiteral(
+            "[RESULT] Hash computed successfully.\n"
+            "[RESULT] The computed hash is shown in the detailed output below."
+        );
+    }
+
+    return QString();
+}
+
+
 void MainWindow::buildCopyTab()
 {
     copyTab = new QWidget(this);
@@ -558,41 +604,61 @@ void MainWindow::runHashCommand()
     hashOutputLog->append("");
 
     QProcess *process = new QProcess(this);
+    QString *combinedOutput = new QString();
 
-    connect(process, &QProcess::readyReadStandardOutput, this, [this, process]() {
-        const QString output = QString::fromLocal8Bit(process->readAllStandardOutput());
-        hashOutputLog->append(stripAnsiCodes(output));
-    });
+    connect(process, &QProcess::readyReadStandardOutput, this, [this, process, combinedOutput]() {
+    const QString output = stripAnsiCodes(
+        QString::fromLocal8Bit(process->readAllStandardOutput())
+    );
 
-    connect(process, &QProcess::readyReadStandardError, this, [this, process]() {
-        const QString output = QString::fromLocal8Bit(process->readAllStandardError());
-        hashOutputLog->append(stripAnsiCodes(output));
-    });
+    combinedOutput->append(output);
+    hashOutputLog->append(output);
+});
+
+    connect(process, &QProcess::readyReadStandardError, this, [this, process, combinedOutput]() {
+    const QString output = stripAnsiCodes(
+        QString::fromLocal8Bit(process->readAllStandardError())
+    );
+
+    combinedOutput->append(output);
+    hashOutputLog->append(output);
+});
 
     connect(
-        process,
-        QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-        this,
-        [this, process](int exitCode, QProcess::ExitStatus exitStatus) {
-            if (exitStatus == QProcess::NormalExit) {
+    process,
+    QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+    this,
+    [this, process, combinedOutput](int exitCode, QProcess::ExitStatus exitStatus) {
+        hashOutputLog->append("");
+
+        if (exitStatus == QProcess::NormalExit) {
+            const QString summary = hashFriendlySummary(*combinedOutput);
+
+            if (!summary.isEmpty()) {
+                hashOutputLog->append("Summary");
+                hashOutputLog->append("-------");
+                hashOutputLog->append(summary);
                 hashOutputLog->append("");
-                hashOutputLog->append(
-                    QString("Process finished with exit code %1").arg(exitCode)
-                );
-            } else {
-                hashOutputLog->append("");
-                hashOutputLog->append("[GUI] HASH process crashed or was terminated.");
             }
 
-            process->deleteLater();
+            hashOutputLog->append(
+                QString("Process finished with exit code %1").arg(exitCode)
+            );
+        } else {
+            hashOutputLog->append("[GUI] HASH process crashed or was terminated.");
         }
-    );
+
+        delete combinedOutput;
+        process->deleteLater();
+    }
+);
 
     process->start(cliInfo.absoluteFilePath(), arguments);
 
     if (!process->waitForStarted()) {
-        hashOutputLog->append("[GUI] Failed to start HASH process.");
-        process->deleteLater();
+    hashOutputLog->append("[GUI] Failed to start HASH process.");
+    delete combinedOutput;
+    process->deleteLater();
     }
 }
 
