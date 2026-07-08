@@ -171,13 +171,16 @@ static QString copyFriendlySummary(
         return summary;
     }
 
-    if (output.contains(QStringLiteral("failed"), Qt::CaseInsensitive) ||
-        output.contains(QStringLiteral("error"), Qt::CaseInsensitive)) {
-        return QStringLiteral(
-            "[RESULT] COPY did not complete successfully.\n"
-            "[RESULT] K1Wi reported an error. Check the detailed output above."
-        );
-    }
+    if (exitCode != 0 ||
+    output.contains(QStringLiteral("failed"), Qt::CaseInsensitive) ||
+    output.contains(QStringLiteral("fatal"), Qt::CaseInsensitive) ||
+    output.contains(QStringLiteral("error:"), Qt::CaseInsensitive) ||
+    output.contains(QStringLiteral("[ERROR]"), Qt::CaseInsensitive)) {
+    return QStringLiteral(
+        "[RESULT] LYZER did not complete successfully.\n"
+        "[RESULT] K1Wi reported an error or failure. Check the detailed output above."
+    );
+}
 
     return QStringLiteral(
         "[RESULT] COPY finished with a non-zero exit code.\n"
@@ -280,6 +283,85 @@ static QString extractFriendlySummary(
     );
 }
 
+static QString lyzerFriendlySummary(
+    const QString &output,
+    int exitCode,
+    const QString &target,
+    const QString &modeLabel
+)
+{
+    if (output.contains(QStringLiteral("Assessment: LOW"), Qt::CaseInsensitive) ||
+        output.contains(QStringLiteral("LOW entropy"), Qt::CaseInsensitive)) {
+        return QStringLiteral(
+            "[RESULT] LYZER completed successfully.\n"
+            "[RESULT] Assessment: LOW.\n"
+            "[RESULT] No major risk indicators were reported in the summary output.\n"
+            "[RESULT] Target analyzed: "
+        ) + target + QStringLiteral("\n") +
+        QStringLiteral("[RESULT] Mode: ") + modeLabel;
+    }
+
+    if (output.contains(QStringLiteral("Assessment: MEDIUM"), Qt::CaseInsensitive) ||
+        output.contains(QStringLiteral("MEDIUM"), Qt::CaseInsensitive)) {
+        return QStringLiteral(
+            "[RESULT] LYZER completed with a medium-risk assessment.\n"
+            "[RESULT] Review the detailed output above and consider running Full or Verbose analysis.\n"
+            "[RESULT] Target analyzed: "
+        ) + target + QStringLiteral("\n") +
+        QStringLiteral("[RESULT] Mode: ") + modeLabel;
+    }
+
+    if (output.contains(QStringLiteral("Assessment: HIGH"), Qt::CaseInsensitive) ||
+        output.contains(QStringLiteral("HIGH"), Qt::CaseInsensitive)) {
+        return QStringLiteral(
+            "[RESULT] LYZER reported a high-risk assessment.\n"
+            "[RESULT] Review the detailed findings above before trusting the file.\n"
+            "[RESULT] Target analyzed: "
+        ) + target + QStringLiteral("\n") +
+        QStringLiteral("[RESULT] Mode: ") + modeLabel;
+    }
+
+    if (output.contains(QStringLiteral("failed"), Qt::CaseInsensitive) ||
+        output.contains(QStringLiteral("error"), Qt::CaseInsensitive)) {
+        return QStringLiteral(
+            "[RESULT] LYZER did not complete successfully.\n"
+            "[RESULT] K1Wi reported an error or failure. Check the detailed output above."
+        );
+    }
+
+    if (exitCode == 0) {
+        return QStringLiteral(
+            "[RESULT] LYZER completed successfully.\n"
+            "[RESULT] Review the detailed output above for findings and recommended next steps.\n"
+            "[RESULT] Target analyzed: "
+        ) + target + QStringLiteral("\n") +
+        QStringLiteral("[RESULT] Mode: ") + modeLabel;
+    }
+
+    return QStringLiteral(
+        "[RESULT] LYZER finished with a non-zero exit code.\n"
+        "[RESULT] Check the detailed K1Wi output above before trusting the analysis result."
+    );
+}
+
+static QString lyzerColorForSummary(const QString &summary, int exitCode)
+{
+    if (summary.contains(QStringLiteral("reported a high-risk assessment"), Qt::CaseInsensitive) ||
+    summary.contains(QStringLiteral("did not complete"), Qt::CaseInsensitive) ||
+    summary.contains(QStringLiteral("non-zero"), Qt::CaseInsensitive)) {
+    return QStringLiteral("#b00020");
+    }
+
+    if (summary.contains(QStringLiteral("medium-risk"), Qt::CaseInsensitive)) {
+        return QStringLiteral("#b26a00");
+    }
+
+    if (exitCode != 0) {
+        return QStringLiteral("#b26a00");
+    }
+
+    return QStringLiteral("#0b7a0b");
+}
 void MainWindow::buildCopyTab()
 {
     copyTab = new QWidget(this);
@@ -1056,34 +1138,40 @@ void MainWindow::runLyzerCommand()
 
     if (target.isEmpty()) {
         QMessageBox::warning(this, "K1Wi LYZER", "Please select a target file.");
+
+        lyzerOutputLog->append("[GUI] LYZER cancelled: no target file selected.");
         return;
     }
 
-    if (!QFileInfo::exists(target)) {
+    const QFileInfo targetInfo(target);
+
+    if (!targetInfo.exists()) {
         QMessageBox::warning(
             this,
             "K1Wi LYZER",
             "Target file does not exist.\n\nPlease select a valid file."
         );
 
-        lyzerOutputLog->append("[GUI] LYZER target file does not exist.");
-        lyzerOutputLog->append("[GUI] Please select a valid file.");
+        lyzerOutputLog->append("[GUI] LYZER cancelled: target file does not exist.");
+        lyzerOutputLog->append("[GUI] Target: " + target);
         return;
     }
 
-    if (!QFileInfo(target).isFile()) {
+    if (!targetInfo.isFile()) {
         QMessageBox::warning(
             this,
             "K1Wi LYZER",
             "Target path is not a regular file.\n\nPlease select a valid file."
         );
 
-        lyzerOutputLog->append("[GUI] LYZER target path is not a regular file.");
-        lyzerOutputLog->append("[GUI] Please select a valid file.");
+        lyzerOutputLog->append("[GUI] LYZER cancelled: target path is not a regular file.");
+        lyzerOutputLog->append("[GUI] Target: " + target);
         return;
     }
 
-    if (!QFileInfo::exists(k1wiBinary) || !QFileInfo(k1wiBinary).isExecutable()) {
+    const QFileInfo cliInfo(k1wiBinary);
+
+    if (!cliInfo.exists() || !cliInfo.isFile() || !cliInfo.isExecutable()) {
         QMessageBox::critical(
             this,
             "K1Wi LYZER",
@@ -1092,8 +1180,8 @@ void MainWindow::runLyzerCommand()
             "Build the CLI first from the project root."
         );
 
-        lyzerOutputLog->append("[GUI] K1Wi CLI binary was not found or is not executable.");
-        lyzerOutputLog->append("[GUI] Expected: ../bin/k1wi");
+        lyzerOutputLog->append("[GUI] LYZER cancelled: K1Wi CLI binary was not found or is not executable.");
+        lyzerOutputLog->append("[GUI] Expected: " + cliInfo.absoluteFilePath());
         lyzerOutputLog->append("[GUI] Build the CLI first from the project root.");
         return;
     }
@@ -1103,35 +1191,111 @@ void MainWindow::runLyzerCommand()
     args << target;
 
     const QString lyzerMode = lyzerModeCombo->currentData().toString();
+    const QString modeLabel = lyzerModeCombo->currentText();
+
     if (!lyzerMode.isEmpty()) {
-       args << lyzerMode;
+        args << lyzerMode;
     }
 
     lyzerOutputLog->append("[GUI] LYZER run summary");
     lyzerOutputLog->append("[GUI] Target: " + target);
-    lyzerOutputLog->append("[GUI] Mode: " + lyzerModeCombo->currentText());
+    lyzerOutputLog->append("[GUI] Mode: " + modeLabel);
     lyzerOutputLog->append("");
-    lyzerOutputLog->append("Running: " + k1wiBinary + " " + args.join(" "));
+    lyzerOutputLog->append("Running: " + cliInfo.absoluteFilePath() + " " + args.join(" "));
+    lyzerOutputLog->append("");
 
     QProcess *process = new QProcess(this);
+    QString *combinedOutput = new QString();
 
-    connect(process, &QProcess::readyReadStandardOutput, this, [this, process]() {
-        lyzerOutputLog->append(stripAnsiCodes(QString::fromLocal8Bit(process->readAllStandardOutput())));
-    });
+    connect(
+        process,
+        &QProcess::readyReadStandardOutput,
+        this,
+        [this, process, combinedOutput]() {
+            const QString output = stripAnsiCodes(
+                QString::fromLocal8Bit(process->readAllStandardOutput())
+            );
 
-    connect(process, &QProcess::readyReadStandardError, this, [this, process]() {
-        lyzerOutputLog->append(stripAnsiCodes(QString::fromLocal8Bit(process->readAllStandardError())));
-    });
+            combinedOutput->append(output);
+            lyzerOutputLog->append(output);
+        }
+    );
 
-    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-            this, [this, process](int exitCode, QProcess::ExitStatus) {
-        lyzerOutputLog->append(QString("\nProcess finished with exit code %1").arg(exitCode));
+    connect(
+        process,
+        &QProcess::readyReadStandardError,
+        this,
+        [this, process, combinedOutput]() {
+            const QString output = stripAnsiCodes(
+                QString::fromLocal8Bit(process->readAllStandardError())
+            );
+
+            combinedOutput->append(output);
+            lyzerOutputLog->append(output);
+        }
+    );
+
+    connect(
+        process,
+        QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+        this,
+        [this, process, combinedOutput, target, modeLabel](
+            int exitCode,
+            QProcess::ExitStatus exitStatus
+        ) {
+            lyzerOutputLog->append("");
+
+            if (exitStatus == QProcess::NormalExit) {
+                const QString summary = lyzerFriendlySummary(
+                    *combinedOutput,
+                    exitCode,
+                    target,
+                    modeLabel
+                );
+
+                if (!summary.isEmpty()) {
+                    appendStyledLine(lyzerOutputLog, "Summary", "#0057b8", true);
+                    appendStyledLine(lyzerOutputLog, "-------", "#0057b8", true);
+                    appendStyledBlock(
+                        lyzerOutputLog,
+                        summary,
+                        lyzerColorForSummary(summary, exitCode),
+                        true
+                    );
+                    lyzerOutputLog->append("");
+                }
+
+                lyzerOutputLog->append(
+                    QString("Process finished with exit code %1").arg(exitCode)
+                );
+            } else {
+                appendStyledLine(
+                    lyzerOutputLog,
+                    "[RESULT] LYZER process crashed or was terminated.",
+                    "#b00020",
+                    true
+                );
+            }
+
+            delete combinedOutput;
+            process->deleteLater();
+        }
+    );
+
+    process->start(cliInfo.absoluteFilePath(), args);
+
+    if (!process->waitForStarted()) {
+        appendStyledLine(
+            lyzerOutputLog,
+            "[RESULT] Failed to start LYZER process.",
+            "#b00020",
+            true
+        );
+
+        delete combinedOutput;
         process->deleteLater();
-    });
-
-    process->start(k1wiBinary, args);
+    }
 }
-
 void MainWindow::runExtractCommand()
 {
     extractOutputLog->clear();
