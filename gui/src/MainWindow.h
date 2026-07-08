@@ -51,18 +51,29 @@ private:
     QLineEdit *hashExpectedValue;
     QLineEdit *hashCompareFilePath;
     QTextEdit *hashOutputLog;
+    
+    QWidget *stringTab;
+    QComboBox *stringInputModeCombo;
+    QLineEdit *stringTextInput;
+    QLineEdit *stringFilePath;
+    QCheckBox *stringDecodeCheck;
+    QLineEdit *stringMinLength;
+    QTextEdit *stringOutputLog;
 
     void buildCopyTab();
     void buildLyzerTab();
     void buildExtractTab();
     void buildDelTab();
     void buildHashTab();
+    void buildStringTab();
+    
     
     void runCopyCommand();
     void runLyzerCommand();
     void runExtractCommand();
     void runDelCommand();
     void runHashCommand();
+    void runStringCommand();
 };
 
 #endif

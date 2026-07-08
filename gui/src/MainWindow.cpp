@@ -47,12 +47,7 @@ static void appendStyledLine(
     );
 }
 
-static void appendStyledBlock(
-    QTextEdit *log,
-    const QString &text,
-    const QString &color,
-    bool bold = false
-)
+static void appendStyledBlock(QTextEdit *log, const QString &text, const QString &color, bool bold = false)
 {
     const QStringList lines = text.split('\n');
 
@@ -89,12 +84,14 @@ MainWindow::MainWindow(QWidget *parent)
     buildExtractTab();
     buildDelTab();
     buildHashTab();
+    buildStringTab();
 
     tabs->addTab(copyTab, "COPY");
     tabs->addTab(lyzerTab, "LYZER");
     tabs->addTab(extractTab, "EXTRACT");
     tabs->addTab(delTab, "DEL");
     tabs->addTab(hashTab, "HASH");
+    tabs->addTab(stringTab, "STRING");
 
     setCentralWidget(tabs);
 }
@@ -426,6 +423,104 @@ void MainWindow::buildCopyTab()
     connect(runButton, &QPushButton::clicked, this, &MainWindow::runCopyCommand);
     connect(clearButton, &QPushButton::clicked, outputLog, &QTextEdit::clear);
 }
+
+void MainWindow::buildStringTab()
+{
+    stringTab = new QWidget(this);
+    QVBoxLayout *mainLayout = new QVBoxLayout(stringTab);
+
+    QLabel *title = new QLabel("K1Wi Framework - STRING Analyzer", stringTab);
+    mainLayout->addWidget(title);
+
+    QLabel *description = new QLabel(
+        "STRING analyzes direct text or printable strings inside a file. "
+        "It can detect Base64, hex, URLs, hashes, credentials, JWTs, emails, UTF-8, ROT13, and more.",
+        stringTab
+    );
+    description->setWordWrap(true);
+    mainLayout->addWidget(description);
+
+    QHBoxLayout *modeLayout = new QHBoxLayout();
+    stringInputModeCombo = new QComboBox(stringTab);
+    stringInputModeCombo->addItem("Direct text", "text");
+    stringInputModeCombo->addItem("File mode", "file");
+    modeLayout->addWidget(new QLabel("Input mode:", stringTab));
+    modeLayout->addWidget(stringInputModeCombo);
+    mainLayout->addLayout(modeLayout);
+
+    QHBoxLayout *textLayout = new QHBoxLayout();
+    stringTextInput = new QLineEdit(stringTab);
+    stringTextInput->setPlaceholderText("Example: SGVsbG8= or 48656c6c6f");
+    textLayout->addWidget(new QLabel("Text:", stringTab));
+    textLayout->addWidget(stringTextInput);
+    mainLayout->addLayout(textLayout);
+
+    QHBoxLayout *fileLayout = new QHBoxLayout();
+    stringFilePath = new QLineEdit(stringTab);
+    QPushButton *fileBrowse = new QPushButton("Browse File", stringTab);
+    fileLayout->addWidget(new QLabel("File:", stringTab));
+    fileLayout->addWidget(stringFilePath);
+    fileLayout->addWidget(fileBrowse);
+    mainLayout->addLayout(fileLayout);
+
+    stringDecodeCheck = new QCheckBox("Force decoded output", stringTab);
+    mainLayout->addWidget(stringDecodeCheck);
+
+    QHBoxLayout *minLayout = new QHBoxLayout();
+    stringMinLength = new QLineEdit(stringTab);
+    stringMinLength->setPlaceholderText("Optional, file mode only");
+    minLayout->addWidget(new QLabel("Minimum string length:", stringTab));
+    minLayout->addWidget(stringMinLength);
+    mainLayout->addLayout(minLayout);
+
+    QPushButton *runButton = new QPushButton("Run STRING", stringTab);
+    QPushButton *clearButton = new QPushButton("Clear Output", stringTab);
+
+    QHBoxLayout *buttonLayout = new QHBoxLayout();
+    buttonLayout->addWidget(runButton);
+    buttonLayout->addWidget(clearButton);
+    mainLayout->addLayout(buttonLayout);
+
+    stringOutputLog = new QTextEdit(stringTab);
+    stringOutputLog->setReadOnly(true);
+    stringOutputLog->append("[GUI] STRING panel ready.");
+    stringOutputLog->append("[GUI] Analyze direct text or printable strings inside a file.");
+    mainLayout->addWidget(stringOutputLog);
+
+    auto updateStringModeFields = [this]() {
+        const QString mode = stringInputModeCombo->currentData().toString();
+        const bool fileMode = mode == QStringLiteral("file");
+
+        stringTextInput->setEnabled(!fileMode);
+        stringFilePath->setEnabled(fileMode);
+        stringMinLength->setEnabled(fileMode);
+
+        if (fileMode) {
+            stringTextInput->clear();
+        } else {
+            stringFilePath->clear();
+            stringMinLength->clear();
+        }
+    };
+
+    connect(stringInputModeCombo, &QComboBox::currentIndexChanged, this, updateStringModeFields);
+
+    connect(fileBrowse, &QPushButton::clicked, this, [this]() {
+        QString path = QFileDialog::getOpenFileName(this, "Select STRING File");
+        if (!path.isEmpty()) {
+            stringFilePath->setText(path);
+        }
+    });
+
+    connect(runButton, &QPushButton::clicked, this, [this]() {
+        stringOutputLog->append("[GUI] Run STRING wiring will be added next.");
+    });
+
+    connect(clearButton, &QPushButton::clicked, stringOutputLog, &QTextEdit::clear);
+
+    updateStringModeFields();
+}
+
 
 void MainWindow::buildLyzerTab()
 {
