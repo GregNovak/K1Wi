@@ -86,6 +86,8 @@ MainWindow::MainWindow(QWidget *parent)
     buildHashTab();
     buildStringTab();
     buildMagicTab();
+    buildEntropyTab();
+    
 
     tabs->addTab(copyTab, "COPY");
     tabs->addTab(lyzerTab, "LYZER");
@@ -94,6 +96,7 @@ MainWindow::MainWindow(QWidget *parent)
     tabs->addTab(hashTab, "HASH");
     tabs->addTab(stringTab, "STRING");
     tabs->addTab(magicTab, "MAGIC");
+    tabs->addTab(entropyTab, "ENTROPY");
 
     setCentralWidget(tabs);
 }
@@ -438,6 +441,49 @@ static QString magicFriendlySummary(
         "[RESULT] Target analyzed: "
     ) + target;
 }
+
+static QString entropyFriendlySummary(
+    const QString &output,
+    int exitCode,
+    const QString &target,
+    const QString &modeLabel
+)
+{
+    if (output.contains(QStringLiteral("failed"), Qt::CaseInsensitive) ||
+        output.contains(QStringLiteral("fatal"), Qt::CaseInsensitive) ||
+        output.contains(QStringLiteral("error:"), Qt::CaseInsensitive) ||
+        output.contains(QStringLiteral("[ERROR]"), Qt::CaseInsensitive)) {
+        return QStringLiteral(
+            "[RESULT] ENTROPY analysis did not complete successfully.\n"
+            "[RESULT] K1Wi reported an error or failure. Check the detailed output above."
+        );
+    }
+
+    if (exitCode != 0) {
+        return QStringLiteral(
+            "[RESULT] ENTROPY finished with a non-zero exit code.\n"
+            "[RESULT] Check the detailed K1Wi output above before trusting the entropy result."
+        );
+    }
+
+    QString summary;
+
+    summary += QStringLiteral("[RESULT] ENTROPY analysis completed successfully.\n");
+    summary += QStringLiteral("[RESULT] Mode: ") + modeLabel + QStringLiteral("\n");
+    summary += QStringLiteral("[RESULT] Target analyzed: ") + target;
+
+    if (output.contains(QStringLiteral("high"), Qt::CaseInsensitive) ||
+        output.contains(QStringLiteral("encrypted"), Qt::CaseInsensitive) ||
+        output.contains(QStringLiteral("compressed"), Qt::CaseInsensitive)) {
+        summary += QStringLiteral(
+            "\n[RESULT] Review high-entropy regions carefully; they may indicate compressed, encrypted, or packed content."
+        );
+    }
+
+    return summary;
+}
+
+
 void MainWindow::buildCopyTab()
 {
     copyTab = new QWidget(this);
@@ -645,6 +691,67 @@ void MainWindow::buildMagicTab()
 
     connect(runButton, &QPushButton::clicked, this, &MainWindow::runMagicCommand);
     connect(clearButton, &QPushButton::clicked, magicOutputLog, &QTextEdit::clear);
+}
+
+void MainWindow::buildEntropyTab()
+{
+    entropyTab = new QWidget(this);
+    QVBoxLayout *mainLayout = new QVBoxLayout(entropyTab);
+
+    QLabel *title = new QLabel("K1Wi Framework - ENTROPY Analyzer", entropyTab);
+    mainLayout->addWidget(title);
+
+    QLabel *description = new QLabel(
+        "ENTROPY computes Shannon entropy for files and binary regions. "
+        "It supports default file entropy, global entropy, sliding-window analysis, and heatmap output.",
+        entropyTab
+    );
+    description->setWordWrap(true);
+    mainLayout->addWidget(description);
+
+    QHBoxLayout *modeLayout = new QHBoxLayout();
+    entropyModeCombo = new QComboBox(entropyTab);
+    entropyModeCombo->addItem("Default file entropy", "default");
+    entropyModeCombo->addItem("Global entropy", "--global");
+    entropyModeCombo->addItem("Sliding-window entropy", "--window");
+    entropyModeCombo->addItem("Heatmap entropy", "--heatmap");
+
+    modeLayout->addWidget(new QLabel("ENTROPY mode:", entropyTab));
+    modeLayout->addWidget(entropyModeCombo);
+    mainLayout->addLayout(modeLayout);
+
+    QHBoxLayout *targetLayout = new QHBoxLayout();
+    entropyTargetPath = new QLineEdit(entropyTab);
+    QPushButton *browseButton = new QPushButton("Browse Target", entropyTab);
+
+    targetLayout->addWidget(new QLabel("Target file:", entropyTab));
+    targetLayout->addWidget(entropyTargetPath);
+    targetLayout->addWidget(browseButton);
+    mainLayout->addLayout(targetLayout);
+
+    QPushButton *runButton = new QPushButton("Run ENTROPY", entropyTab);
+    QPushButton *clearButton = new QPushButton("Clear Output", entropyTab);
+
+    QHBoxLayout *buttonLayout = new QHBoxLayout();
+    buttonLayout->addWidget(runButton);
+    buttonLayout->addWidget(clearButton);
+    mainLayout->addLayout(buttonLayout);
+
+    entropyOutputLog = new QTextEdit(entropyTab);
+    entropyOutputLog->setReadOnly(true);
+    entropyOutputLog->append("[GUI] ENTROPY panel ready.");
+    entropyOutputLog->append("[GUI] Select a file and entropy mode to analyze.");
+    mainLayout->addWidget(entropyOutputLog);
+
+    connect(browseButton, &QPushButton::clicked, this, [this]() {
+        QString path = QFileDialog::getOpenFileName(this, "Select ENTROPY Target");
+        if (!path.isEmpty()) {
+            entropyTargetPath->setText(path);
+        }
+    });
+
+    connect(runButton, &QPushButton::clicked, this, &MainWindow::runEntropyCommand);
+    connect(clearButton, &QPushButton::clicked, entropyOutputLog, &QTextEdit::clear);
 }
 
 void MainWindow::buildLyzerTab()
@@ -1541,6 +1648,172 @@ void MainWindow::runMagicCommand()
         appendStyledLine(
             magicOutputLog,
             "[RESULT] Failed to start MAGIC process.",
+            "#b00020",
+            true
+        );
+
+        delete combinedOutput;
+        process->deleteLater();
+    }
+}
+
+void MainWindow::runEntropyCommand()
+{
+    entropyOutputLog->clear();
+
+    const QString target = entropyTargetPath->text().trimmed();
+    const QString entropyMode = entropyModeCombo->currentData().toString();
+    const QString modeLabel = entropyModeCombo->currentText();
+
+    if (target.isEmpty()) {
+        QMessageBox::warning(this, "K1Wi ENTROPY", "Please select a target file.");
+
+        entropyOutputLog->append("[GUI] ENTROPY cancelled: no target file selected.");
+        return;
+    }
+
+    const QFileInfo targetInfo(target);
+
+    if (!targetInfo.exists()) {
+        QMessageBox::warning(
+            this,
+            "K1Wi ENTROPY",
+            "Target file does not exist.\n\nPlease select a valid file."
+        );
+
+        entropyOutputLog->append("[GUI] ENTROPY cancelled: target file does not exist.");
+        entropyOutputLog->append("[GUI] Target: " + target);
+        return;
+    }
+
+    if (!targetInfo.isFile()) {
+        QMessageBox::warning(
+            this,
+            "K1Wi ENTROPY",
+            "Target path is not a regular file.\n\nPlease select a valid file."
+        );
+
+        entropyOutputLog->append("[GUI] ENTROPY cancelled: target path is not a regular file.");
+        entropyOutputLog->append("[GUI] Target: " + target);
+        return;
+    }
+
+    const QFileInfo cliInfo(k1wiBinary);
+
+    if (!cliInfo.exists() || !cliInfo.isFile() || !cliInfo.isExecutable()) {
+        QMessageBox::critical(
+            this,
+            "K1Wi ENTROPY",
+            "K1Wi CLI binary was not found or is not executable.\n\n"
+            "Expected: ../bin/k1wi\n\n"
+            "Build the CLI first from the project root."
+        );
+
+        entropyOutputLog->append("[GUI] ENTROPY cancelled: K1Wi CLI binary was not found or is not executable.");
+        entropyOutputLog->append("[GUI] Expected: " + cliInfo.absoluteFilePath());
+        entropyOutputLog->append("[GUI] Build the CLI first from the project root.");
+        return;
+    }
+
+    QStringList args;
+    args << "ENTROPY";
+    args << target;
+
+    if (entropyMode != QStringLiteral("default")) {
+        args << entropyMode;
+    }
+
+    entropyOutputLog->append("[GUI] ENTROPY run summary");
+    entropyOutputLog->append("[GUI] Target: " + target);
+    entropyOutputLog->append("[GUI] Mode: " + modeLabel);
+    entropyOutputLog->append("");
+    entropyOutputLog->append("Running: " + cliInfo.absoluteFilePath() + " " + args.join(" "));
+    entropyOutputLog->append("");
+
+    QProcess *process = new QProcess(this);
+    QString *combinedOutput = new QString();
+
+    connect(
+        process,
+        &QProcess::readyReadStandardOutput,
+        this,
+        [this, process, combinedOutput]() {
+            const QString output = stripAnsiCodes(
+                QString::fromLocal8Bit(process->readAllStandardOutput())
+            );
+
+            combinedOutput->append(output);
+            entropyOutputLog->append(output);
+        }
+    );
+
+    connect(
+        process,
+        &QProcess::readyReadStandardError,
+        this,
+        [this, process, combinedOutput]() {
+            const QString output = stripAnsiCodes(
+                QString::fromLocal8Bit(process->readAllStandardError())
+            );
+
+            combinedOutput->append(output);
+            entropyOutputLog->append(output);
+        }
+    );
+
+    connect(
+        process,
+        QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+        this,
+        [this, process, combinedOutput, target, modeLabel](
+            int exitCode,
+            QProcess::ExitStatus exitStatus
+        ) {
+            entropyOutputLog->append("");
+
+            if (exitStatus == QProcess::NormalExit) {
+                const QString summary = entropyFriendlySummary(
+                    *combinedOutput,
+                    exitCode,
+                    target,
+                    modeLabel
+                );
+
+                if (!summary.isEmpty()) {
+                    appendStyledLine(entropyOutputLog, "Summary", "#0057b8", true);
+                    appendStyledLine(entropyOutputLog, "-------", "#0057b8", true);
+                    appendStyledBlock(
+                        entropyOutputLog,
+                        summary,
+                        resultColorForSummary(summary, exitCode),
+                        true
+                    );
+                    entropyOutputLog->append("");
+                }
+
+                entropyOutputLog->append(
+                    QString("Process finished with exit code %1").arg(exitCode)
+                );
+            } else {
+                appendStyledLine(
+                    entropyOutputLog,
+                    "[RESULT] ENTROPY process crashed or was terminated.",
+                    "#b00020",
+                    true
+                );
+            }
+
+            delete combinedOutput;
+            process->deleteLater();
+        }
+    );
+
+    process->start(cliInfo.absoluteFilePath(), args);
+
+    if (!process->waitForStarted()) {
+        appendStyledLine(
+            entropyOutputLog,
+            "[RESULT] Failed to start ENTROPY process.",
             "#b00020",
             true
         );

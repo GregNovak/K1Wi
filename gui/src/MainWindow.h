@@ -63,6 +63,11 @@ private:
     QWidget *magicTab;
     QLineEdit *magicTargetPath;
     QTextEdit *magicOutputLog;
+    
+    QWidget *entropyTab;
+    QComboBox *entropyModeCombo;
+    QLineEdit *entropyTargetPath;
+    QTextEdit *entropyOutputLog;
 
     void buildCopyTab();
     void buildLyzerTab();
@@ -71,7 +76,7 @@ private:
     void buildHashTab();
     void buildStringTab();
     void buildMagicTab();
-    
+    void buildEntropyTab();
     
     void runCopyCommand();
     void runLyzerCommand();
@@ -80,6 +85,7 @@ private:
     void runHashCommand();
     void runStringCommand();
     void runMagicCommand();
+    void runEntropyCommand();
 };
 
 #endif
