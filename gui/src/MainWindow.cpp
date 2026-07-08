@@ -359,6 +359,55 @@ static QString lyzerColorForSummary(const QString &summary, int exitCode)
 
     return QStringLiteral("#0b7a0b");
 }
+
+static QString stringFriendlySummary(
+    const QString &output,
+    int exitCode,
+    bool fileMode,
+    bool decodeEnabled,
+    const QString &targetLabel
+)
+{
+    if (output.contains(QStringLiteral("failed"), Qt::CaseInsensitive) ||
+        output.contains(QStringLiteral("fatal"), Qt::CaseInsensitive) ||
+        output.contains(QStringLiteral("error:"), Qt::CaseInsensitive) ||
+        output.contains(QStringLiteral("[ERROR]"), Qt::CaseInsensitive)) {
+        return QStringLiteral(
+            "[RESULT] STRING analysis did not complete successfully.\n"
+            "[RESULT] K1Wi reported an error or failure. Check the detailed output above."
+        );
+    }
+
+    if (exitCode != 0) {
+        return QStringLiteral(
+            "[RESULT] STRING finished with a non-zero exit code.\n"
+            "[RESULT] Check the detailed K1Wi output above before trusting the analysis result."
+        );
+    }
+
+    QString summary;
+
+    summary += QStringLiteral("[RESULT] STRING analysis completed successfully.\n");
+
+    if (fileMode) {
+        summary += QStringLiteral(
+            "[RESULT] File mode analyzed printable strings inside the selected file.\n"
+        );
+    } else {
+        summary += QStringLiteral(
+            "[RESULT] Direct text mode analyzed the provided input string.\n"
+        );
+    }
+
+    if (decodeEnabled) {
+        summary += QStringLiteral("[RESULT] Decode output was requested.\n");
+    }
+
+    summary += QStringLiteral("[RESULT] Target: ") + targetLabel;
+
+    return summary;
+}
+
 void MainWindow::buildCopyTab()
 {
     copyTab = new QWidget(this);
@@ -512,9 +561,7 @@ void MainWindow::buildStringTab()
         }
     });
 
-    connect(runButton, &QPushButton::clicked, this, [this]() {
-        stringOutputLog->append("[GUI] Run STRING wiring will be added next.");
-    });
+    connect(runButton, &QPushButton::clicked, this, &MainWindow::runStringCommand);
 
     connect(clearButton, &QPushButton::clicked, stringOutputLog, &QTextEdit::clear);
 
@@ -1026,6 +1073,245 @@ connect(
 
     if (!process->waitForStarted()) {
         hashOutputLog->append("[GUI] Failed to start HASH process.");
+        delete combinedOutput;
+        process->deleteLater();
+    }
+}
+
+void MainWindow::runStringCommand()
+{
+    stringOutputLog->clear();
+
+    const QString inputMode = stringInputModeCombo->currentData().toString();
+    const bool fileMode = inputMode == QStringLiteral("file");
+    const bool decodeEnabled = stringDecodeCheck->isChecked();
+
+    const QString textInput = stringTextInput->text().trimmed();
+    const QString filePath = stringFilePath->text().trimmed();
+    const QString minLengthText = stringMinLength->text().trimmed();
+
+    if (!fileMode && textInput.isEmpty()) {
+        QMessageBox::warning(
+            this,
+            "K1Wi STRING",
+            "Enter text before running STRING in direct text mode."
+        );
+
+        stringOutputLog->append("[GUI] STRING cancelled: no direct text input provided.");
+        return;
+    }
+
+    if (fileMode && filePath.isEmpty()) {
+        QMessageBox::warning(
+            this,
+            "K1Wi STRING",
+            "Select a file before running STRING in file mode."
+        );
+
+        stringOutputLog->append("[GUI] STRING cancelled: no file selected.");
+        return;
+    }
+
+    QFileInfo fileInfo(filePath);
+
+    if (fileMode) {
+        if (!fileInfo.exists()) {
+            QMessageBox::warning(
+                this,
+                "K1Wi STRING",
+                "The selected file does not exist."
+            );
+
+            stringOutputLog->append("[GUI] STRING cancelled: selected file does not exist.");
+            stringOutputLog->append("[GUI] File: " + filePath);
+            return;
+        }
+
+        if (!fileInfo.isFile()) {
+            QMessageBox::warning(
+                this,
+                "K1Wi STRING",
+                "The selected path is not a regular file."
+            );
+
+            stringOutputLog->append("[GUI] STRING cancelled: selected path is not a regular file.");
+            stringOutputLog->append("[GUI] File: " + filePath);
+            return;
+        }
+    }
+
+    int minLength = 0;
+
+    if (fileMode && !minLengthText.isEmpty()) {
+        bool ok = false;
+        minLength = minLengthText.toInt(&ok);
+
+        if (!ok || minLength < 1) {
+            QMessageBox::warning(
+                this,
+                "K1Wi STRING",
+                "Minimum string length must be a positive number."
+            );
+
+            stringOutputLog->append("[GUI] STRING cancelled: invalid minimum string length.");
+            stringOutputLog->append("[GUI] Minimum string length must be 1 or greater.");
+            return;
+        }
+    }
+
+    const QFileInfo cliInfo(k1wiBinary);
+
+    if (!cliInfo.exists() || !cliInfo.isFile() || !cliInfo.isExecutable()) {
+        QMessageBox::critical(
+            this,
+            "K1Wi STRING",
+            "K1Wi CLI binary was not found or is not executable.\n\n"
+            "Expected: ../bin/k1wi\n\n"
+            "Build the CLI first from the project root."
+        );
+
+        stringOutputLog->append("[GUI] STRING cancelled: K1Wi CLI binary was not found or is not executable.");
+        stringOutputLog->append("[GUI] Expected: " + cliInfo.absoluteFilePath());
+        stringOutputLog->append("[GUI] Build the CLI first from the project root.");
+        return;
+    }
+
+    QStringList args;
+    args << "STRING";
+
+    if (fileMode) {
+        args << "--file" << filePath;
+
+        if (decodeEnabled) {
+            args << "--decode";
+        }
+
+        if (minLength > 0) {
+            args << "--min" << QString::number(minLength);
+        }
+    } else {
+        if (decodeEnabled) {
+            args << "--decode";
+        }
+
+        args << textInput;
+    }
+
+    const QString targetLabel = fileMode ? filePath : textInput;
+
+    stringOutputLog->append("[GUI] STRING run summary");
+    stringOutputLog->append("[GUI] Input mode: " + stringInputModeCombo->currentText());
+
+    if (fileMode) {
+        stringOutputLog->append("[GUI] File: " + filePath);
+
+        if (minLength > 0) {
+            stringOutputLog->append("[GUI] Minimum string length: " + QString::number(minLength));
+        } else {
+            stringOutputLog->append("[GUI] Minimum string length: default");
+        }
+    } else {
+        stringOutputLog->append("[GUI] Text: " + textInput);
+    }
+
+    stringOutputLog->append(
+        "[GUI] Force decoded output: " +
+        QString(decodeEnabled ? "enabled" : "disabled")
+    );
+
+    stringOutputLog->append("");
+    stringOutputLog->append("Running: " + cliInfo.absoluteFilePath() + " " + args.join(" "));
+    stringOutputLog->append("");
+
+    QProcess *process = new QProcess(this);
+    QString *combinedOutput = new QString();
+
+    connect(
+        process,
+        &QProcess::readyReadStandardOutput,
+        this,
+        [this, process, combinedOutput]() {
+            const QString output = stripAnsiCodes(
+                QString::fromLocal8Bit(process->readAllStandardOutput())
+            );
+
+            combinedOutput->append(output);
+            stringOutputLog->append(output);
+        }
+    );
+
+    connect(
+        process,
+        &QProcess::readyReadStandardError,
+        this,
+        [this, process, combinedOutput]() {
+            const QString output = stripAnsiCodes(
+                QString::fromLocal8Bit(process->readAllStandardError())
+            );
+
+            combinedOutput->append(output);
+            stringOutputLog->append(output);
+        }
+    );
+
+    connect(
+        process,
+        QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+        this,
+        [this, process, combinedOutput, fileMode, decodeEnabled, targetLabel](
+            int exitCode,
+            QProcess::ExitStatus exitStatus
+        ) {
+            stringOutputLog->append("");
+
+            if (exitStatus == QProcess::NormalExit) {
+                const QString summary = stringFriendlySummary(
+                    *combinedOutput,
+                    exitCode,
+                    fileMode,
+                    decodeEnabled,
+                    targetLabel
+                );
+
+                if (!summary.isEmpty()) {
+                    appendStyledLine(stringOutputLog, "Summary", "#0057b8", true);
+                    appendStyledLine(stringOutputLog, "-------", "#0057b8", true);
+                    appendStyledBlock(
+                        stringOutputLog,
+                        summary,
+                        resultColorForSummary(summary, exitCode),
+                        true
+                    );
+                    stringOutputLog->append("");
+                }
+
+                stringOutputLog->append(
+                    QString("Process finished with exit code %1").arg(exitCode)
+                );
+            } else {
+                appendStyledLine(
+                    stringOutputLog,
+                    "[RESULT] STRING process crashed or was terminated.",
+                    "#b00020",
+                    true
+                );
+            }
+
+            delete combinedOutput;
+            process->deleteLater();
+        }
+    );
+
+    process->start(cliInfo.absoluteFilePath(), args);
+
+    if (!process->waitForStarted()) {
+        appendStyledLine(
+            stringOutputLog,
+            "[RESULT] Failed to start STRING process.",
+            "#b00020",
+            true
+        );
+
         delete combinedOutput;
         process->deleteLater();
     }
