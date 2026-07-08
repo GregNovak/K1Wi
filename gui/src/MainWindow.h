@@ -59,6 +59,10 @@ private:
     QCheckBox *stringDecodeCheck;
     QLineEdit *stringMinLength;
     QTextEdit *stringOutputLog;
+    
+    QWidget *magicTab;
+    QLineEdit *magicTargetPath;
+    QTextEdit *magicOutputLog;
 
     void buildCopyTab();
     void buildLyzerTab();
@@ -66,6 +70,7 @@ private:
     void buildDelTab();
     void buildHashTab();
     void buildStringTab();
+    void buildMagicTab();
     
     
     void runCopyCommand();
@@ -74,6 +79,7 @@ private:
     void runDelCommand();
     void runHashCommand();
     void runStringCommand();
+    void runMagicCommand();
 };
 
 #endif

@@ -85,6 +85,7 @@ MainWindow::MainWindow(QWidget *parent)
     buildDelTab();
     buildHashTab();
     buildStringTab();
+    buildMagicTab();
 
     tabs->addTab(copyTab, "COPY");
     tabs->addTab(lyzerTab, "LYZER");
@@ -92,6 +93,7 @@ MainWindow::MainWindow(QWidget *parent)
     tabs->addTab(delTab, "DEL");
     tabs->addTab(hashTab, "HASH");
     tabs->addTab(stringTab, "STRING");
+    tabs->addTab(magicTab, "MAGIC");
 
     setCentralWidget(tabs);
 }
@@ -407,7 +409,35 @@ static QString stringFriendlySummary(
 
     return summary;
 }
+static QString magicFriendlySummary(
+    const QString &output,
+    int exitCode,
+    const QString &target
+)
+{
+    if (output.contains(QStringLiteral("failed"), Qt::CaseInsensitive) ||
+        output.contains(QStringLiteral("fatal"), Qt::CaseInsensitive) ||
+        output.contains(QStringLiteral("error:"), Qt::CaseInsensitive) ||
+        output.contains(QStringLiteral("[ERROR]"), Qt::CaseInsensitive)) {
+        return QStringLiteral(
+            "[RESULT] MAGIC analysis did not complete successfully.\n"
+            "[RESULT] K1Wi reported an error or failure. Check the detailed output above."
+        );
+    }
 
+    if (exitCode != 0) {
+        return QStringLiteral(
+            "[RESULT] MAGIC finished with a non-zero exit code.\n"
+            "[RESULT] Check the detailed K1Wi output above before trusting the file identification."
+        );
+    }
+
+    return QStringLiteral(
+        "[RESULT] MAGIC analysis completed successfully.\n"
+        "[RESULT] K1Wi inspected the file signature / magic bytes.\n"
+        "[RESULT] Target analyzed: "
+    ) + target;
+}
 void MainWindow::buildCopyTab()
 {
     copyTab = new QWidget(this);
@@ -568,6 +598,54 @@ void MainWindow::buildStringTab()
     updateStringModeFields();
 }
 
+void MainWindow::buildMagicTab()
+{
+    magicTab = new QWidget(this);
+    QVBoxLayout *mainLayout = new QVBoxLayout(magicTab);
+
+    QLabel *title = new QLabel("K1Wi Framework - MAGIC Detector", magicTab);
+    mainLayout->addWidget(title);
+
+    QLabel *description = new QLabel(
+        "MAGIC identifies file types by checking file signatures and magic bytes.",
+        magicTab
+    );
+    description->setWordWrap(true);
+    mainLayout->addWidget(description);
+
+    QHBoxLayout *targetLayout = new QHBoxLayout();
+    magicTargetPath = new QLineEdit(magicTab);
+    QPushButton *browseButton = new QPushButton("Browse Target", magicTab);
+
+    targetLayout->addWidget(new QLabel("Target file:", magicTab));
+    targetLayout->addWidget(magicTargetPath);
+    targetLayout->addWidget(browseButton);
+    mainLayout->addLayout(targetLayout);
+
+    QPushButton *runButton = new QPushButton("Run MAGIC", magicTab);
+    QPushButton *clearButton = new QPushButton("Clear Output", magicTab);
+
+    QHBoxLayout *buttonLayout = new QHBoxLayout();
+    buttonLayout->addWidget(runButton);
+    buttonLayout->addWidget(clearButton);
+    mainLayout->addLayout(buttonLayout);
+
+    magicOutputLog = new QTextEdit(magicTab);
+    magicOutputLog->setReadOnly(true);
+    magicOutputLog->append("[GUI] MAGIC panel ready.");
+    magicOutputLog->append("[GUI] Select a file to inspect its signature / magic bytes.");
+    mainLayout->addWidget(magicOutputLog);
+
+    connect(browseButton, &QPushButton::clicked, this, [this]() {
+        QString path = QFileDialog::getOpenFileName(this, "Select MAGIC Target");
+        if (!path.isEmpty()) {
+            magicTargetPath->setText(path);
+        }
+    });
+
+    connect(runButton, &QPushButton::clicked, this, &MainWindow::runMagicCommand);
+    connect(clearButton, &QPushButton::clicked, magicOutputLog, &QTextEdit::clear);
+}
 
 void MainWindow::buildLyzerTab()
 {
@@ -1308,6 +1386,161 @@ void MainWindow::runStringCommand()
         appendStyledLine(
             stringOutputLog,
             "[RESULT] Failed to start STRING process.",
+            "#b00020",
+            true
+        );
+
+        delete combinedOutput;
+        process->deleteLater();
+    }
+}
+
+void MainWindow::runMagicCommand()
+{
+    magicOutputLog->clear();
+
+    const QString target = magicTargetPath->text().trimmed();
+
+    if (target.isEmpty()) {
+        QMessageBox::warning(this, "K1Wi MAGIC", "Please select a target file.");
+
+        magicOutputLog->append("[GUI] MAGIC cancelled: no target file selected.");
+        return;
+    }
+
+    const QFileInfo targetInfo(target);
+
+    if (!targetInfo.exists()) {
+        QMessageBox::warning(
+            this,
+            "K1Wi MAGIC",
+            "Target file does not exist.\n\nPlease select a valid file."
+        );
+
+        magicOutputLog->append("[GUI] MAGIC cancelled: target file does not exist.");
+        magicOutputLog->append("[GUI] Target: " + target);
+        return;
+    }
+
+    if (!targetInfo.isFile()) {
+        QMessageBox::warning(
+            this,
+            "K1Wi MAGIC",
+            "Target path is not a regular file.\n\nPlease select a valid file."
+        );
+
+        magicOutputLog->append("[GUI] MAGIC cancelled: target path is not a regular file.");
+        magicOutputLog->append("[GUI] Target: " + target);
+        return;
+    }
+
+    const QFileInfo cliInfo(k1wiBinary);
+
+    if (!cliInfo.exists() || !cliInfo.isFile() || !cliInfo.isExecutable()) {
+        QMessageBox::critical(
+            this,
+            "K1Wi MAGIC",
+            "K1Wi CLI binary was not found or is not executable.\n\n"
+            "Expected: ../bin/k1wi\n\n"
+            "Build the CLI first from the project root."
+        );
+
+        magicOutputLog->append("[GUI] MAGIC cancelled: K1Wi CLI binary was not found or is not executable.");
+        magicOutputLog->append("[GUI] Expected: " + cliInfo.absoluteFilePath());
+        magicOutputLog->append("[GUI] Build the CLI first from the project root.");
+        return;
+    }
+
+    QStringList args;
+    args << "MAGIC";
+    args << target;
+
+    magicOutputLog->append("[GUI] MAGIC run summary");
+    magicOutputLog->append("[GUI] Target: " + target);
+    magicOutputLog->append("");
+    magicOutputLog->append("Running: " + cliInfo.absoluteFilePath() + " " + args.join(" "));
+    magicOutputLog->append("");
+
+    QProcess *process = new QProcess(this);
+    QString *combinedOutput = new QString();
+
+    connect(
+        process,
+        &QProcess::readyReadStandardOutput,
+        this,
+        [this, process, combinedOutput]() {
+            const QString output = stripAnsiCodes(
+                QString::fromLocal8Bit(process->readAllStandardOutput())
+            );
+
+            combinedOutput->append(output);
+            magicOutputLog->append(output);
+        }
+    );
+
+    connect(
+        process,
+        &QProcess::readyReadStandardError,
+        this,
+        [this, process, combinedOutput]() {
+            const QString output = stripAnsiCodes(
+                QString::fromLocal8Bit(process->readAllStandardError())
+            );
+
+            combinedOutput->append(output);
+            magicOutputLog->append(output);
+        }
+    );
+
+    connect(
+        process,
+        QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+        this,
+        [this, process, combinedOutput, target](int exitCode, QProcess::ExitStatus exitStatus) {
+            magicOutputLog->append("");
+
+            if (exitStatus == QProcess::NormalExit) {
+                const QString summary = magicFriendlySummary(
+                    *combinedOutput,
+                    exitCode,
+                    target
+                );
+
+                if (!summary.isEmpty()) {
+                    appendStyledLine(magicOutputLog, "Summary", "#0057b8", true);
+                    appendStyledLine(magicOutputLog, "-------", "#0057b8", true);
+                    appendStyledBlock(
+                        magicOutputLog,
+                        summary,
+                        resultColorForSummary(summary, exitCode),
+                        true
+                    );
+                    magicOutputLog->append("");
+                }
+
+                magicOutputLog->append(
+                    QString("Process finished with exit code %1").arg(exitCode)
+                );
+            } else {
+                appendStyledLine(
+                    magicOutputLog,
+                    "[RESULT] MAGIC process crashed or was terminated.",
+                    "#b00020",
+                    true
+                );
+            }
+
+            delete combinedOutput;
+            process->deleteLater();
+        }
+    );
+
+    process->start(cliInfo.absoluteFilePath(), args);
+
+    if (!process->waitForStarted()) {
+        appendStyledLine(
+            magicOutputLog,
+            "[RESULT] Failed to start MAGIC process.",
             "#b00020",
             true
         );
