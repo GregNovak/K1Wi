@@ -218,6 +218,67 @@ static QString delFriendlySummary(const QString &output, int exitCode, const QSt
     );
 }
 
+static QString extractFriendlySummary(
+    const QString &output,
+    int exitCode,
+    const QString &target,
+    bool recursiveMode
+)
+{
+    if (exitCode == 0 &&
+        output.contains(QStringLiteral("EXTRACT COMPLETE"), Qt::CaseInsensitive)) {
+        QString summary;
+
+        summary += QStringLiteral("[RESULT] EXTRACT completed successfully.\n");
+
+        if (recursiveMode) {
+            summary += QStringLiteral(
+                "[RESULT] Recursive extraction finished without reported errors.\n"
+            );
+        } else {
+            summary += QStringLiteral(
+                "[RESULT] Extraction finished without reported errors.\n"
+            );
+        }
+
+        summary += QStringLiteral("[RESULT] Target analyzed: ") + target;
+
+        return summary;
+    }
+
+    if (exitCode == 0) {
+        QString summary;
+
+        summary += QStringLiteral("[RESULT] EXTRACT finished.\n");
+
+        if (recursiveMode) {
+            summary += QStringLiteral(
+                "[RESULT] Recursive mode completed. Review the detailed output above for recovered content.\n"
+            );
+        } else {
+            summary += QStringLiteral(
+                "[RESULT] Review the detailed output above for recovered content.\n"
+            );
+        }
+
+        summary += QStringLiteral("[RESULT] Target analyzed: ") + target;
+
+        return summary;
+    }
+
+    if (output.contains(QStringLiteral("failed"), Qt::CaseInsensitive) ||
+        output.contains(QStringLiteral("error"), Qt::CaseInsensitive)) {
+        return QStringLiteral(
+            "[RESULT] EXTRACT did not complete successfully.\n"
+            "[RESULT] K1Wi reported an error or failure. Check the detailed output above."
+        );
+    }
+
+    return QStringLiteral(
+        "[RESULT] EXTRACT finished with a non-zero exit code.\n"
+        "[RESULT] Check the detailed K1Wi output above before trusting the extraction result."
+    );
+}
 
 void MainWindow::buildCopyTab()
 {
@@ -1079,34 +1140,40 @@ void MainWindow::runExtractCommand()
 
     if (target.isEmpty()) {
         QMessageBox::warning(this, "K1Wi EXTRACT", "Please select a target file.");
+
+        extractOutputLog->append("[GUI] EXTRACT cancelled: no target file selected.");
         return;
     }
 
-    if (!QFileInfo::exists(target)) {
+    const QFileInfo targetInfo(target);
+
+    if (!targetInfo.exists()) {
         QMessageBox::warning(
             this,
             "K1Wi EXTRACT",
             "Target file does not exist.\n\nPlease select a valid file."
         );
 
-        extractOutputLog->append("[GUI] EXTRACT target file does not exist.");
-        extractOutputLog->append("[GUI] Please select a valid file.");
+        extractOutputLog->append("[GUI] EXTRACT cancelled: target file does not exist.");
+        extractOutputLog->append("[GUI] Target: " + target);
         return;
     }
 
-    if (!QFileInfo(target).isFile()) {
+    if (!targetInfo.isFile()) {
         QMessageBox::warning(
             this,
             "K1Wi EXTRACT",
             "Target path is not a regular file.\n\nPlease select a valid file."
         );
 
-        extractOutputLog->append("[GUI] EXTRACT target path is not a regular file.");
-        extractOutputLog->append("[GUI] Please select a valid file.");
+        extractOutputLog->append("[GUI] EXTRACT cancelled: target path is not a regular file.");
+        extractOutputLog->append("[GUI] Target: " + target);
         return;
     }
 
-    if (!QFileInfo::exists(k1wiBinary) || !QFileInfo(k1wiBinary).isExecutable()) {
+    const QFileInfo cliInfo(k1wiBinary);
+
+    if (!cliInfo.exists() || !cliInfo.isFile() || !cliInfo.isExecutable()) {
         QMessageBox::critical(
             this,
             "K1Wi EXTRACT",
@@ -1115,16 +1182,18 @@ void MainWindow::runExtractCommand()
             "Build the CLI first from the project root."
         );
 
-        extractOutputLog->append("[GUI] K1Wi CLI binary was not found or is not executable.");
-        extractOutputLog->append("[GUI] Expected: ../bin/k1wi");
+        extractOutputLog->append("[GUI] EXTRACT cancelled: K1Wi CLI binary was not found or is not executable.");
+        extractOutputLog->append("[GUI] Expected: " + cliInfo.absoluteFilePath());
         extractOutputLog->append("[GUI] Build the CLI first from the project root.");
         return;
     }
 
+    const bool recursiveMode = extractRecursiveCheck->isChecked();
+
     QStringList args;
     args << "EXTRACT";
 
-    if (extractRecursiveCheck->isChecked()) {
+    if (recursiveMode) {
         args << "--recursive";
     }
 
@@ -1132,27 +1201,106 @@ void MainWindow::runExtractCommand()
 
     extractOutputLog->append("[GUI] EXTRACT run summary");
     extractOutputLog->append("[GUI] Target: " + target);
-    extractOutputLog->append("[GUI] Recursive: " + QString(extractRecursiveCheck->isChecked() ? "enabled" : "disabled"));
+    extractOutputLog->append(
+        "[GUI] Recursive: " +
+        QString(recursiveMode ? "enabled" : "disabled")
+    );
+
     extractOutputLog->append("");
-    extractOutputLog->append("Running: " + k1wiBinary + " " + args.join(" "));
+    extractOutputLog->append("Running: " + cliInfo.absoluteFilePath() + " " + args.join(" "));
+    extractOutputLog->append("");
 
-    QProcess *process = new QProcess(this);  
+    QProcess *process = new QProcess(this);
+    QString *combinedOutput = new QString();
 
-    connect(process, &QProcess::readyReadStandardOutput, this, [this, process]() {
-        extractOutputLog->append(stripAnsiCodes(QString::fromLocal8Bit(process->readAllStandardOutput())));
-    });
+    connect(
+        process,
+        &QProcess::readyReadStandardOutput,
+        this,
+        [this, process, combinedOutput]() {
+            const QString output = stripAnsiCodes(
+                QString::fromLocal8Bit(process->readAllStandardOutput())
+            );
 
-    connect(process, &QProcess::readyReadStandardError, this, [this, process]() {
-        extractOutputLog->append(stripAnsiCodes(QString::fromLocal8Bit(process->readAllStandardError())));
-    });
+            combinedOutput->append(output);
+            extractOutputLog->append(output);
+        }
+    );
 
-    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-            this, [this, process](int exitCode, QProcess::ExitStatus) {
-        extractOutputLog->append(QString("\nProcess finished with exit code %1").arg(exitCode));
+    connect(
+        process,
+        &QProcess::readyReadStandardError,
+        this,
+        [this, process, combinedOutput]() {
+            const QString output = stripAnsiCodes(
+                QString::fromLocal8Bit(process->readAllStandardError())
+            );
+
+            combinedOutput->append(output);
+            extractOutputLog->append(output);
+        }
+    );
+
+    connect(
+        process,
+        QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+        this,
+        [this, process, combinedOutput, target, recursiveMode](
+            int exitCode,
+            QProcess::ExitStatus exitStatus
+        ) {
+            extractOutputLog->append("");
+
+            if (exitStatus == QProcess::NormalExit) {
+                const QString summary = extractFriendlySummary(
+                    *combinedOutput,
+                    exitCode,
+                    target,
+                    recursiveMode
+                );
+
+                if (!summary.isEmpty()) {
+                    appendStyledLine(extractOutputLog, "Summary", "#0057b8", true);
+                    appendStyledLine(extractOutputLog, "-------", "#0057b8", true);
+                    appendStyledBlock(
+                        extractOutputLog,
+                        summary,
+                        resultColorForSummary(summary, exitCode),
+                        true
+                    );
+                    extractOutputLog->append("");
+                }
+
+                extractOutputLog->append(
+                    QString("Process finished with exit code %1").arg(exitCode)
+                );
+            } else {
+                appendStyledLine(
+                    extractOutputLog,
+                    "[RESULT] EXTRACT process crashed or was terminated.",
+                    "#b00020",
+                    true
+                );
+            }
+
+            delete combinedOutput;
+            process->deleteLater();
+        }
+    );
+
+    process->start(cliInfo.absoluteFilePath(), args);
+
+    if (!process->waitForStarted()) {
+        appendStyledLine(
+            extractOutputLog,
+            "[RESULT] Failed to start EXTRACT process.",
+            "#b00020",
+            true
+        );
+
+        delete combinedOutput;
         process->deleteLater();
-    });
-
-    process->start(k1wiBinary, args);
+    }
 }
 
 void MainWindow::runDelCommand()
