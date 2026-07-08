@@ -185,6 +185,40 @@ static QString copyFriendlySummary(
     );
 }
 
+static QString delFriendlySummary(const QString &output, int exitCode, const QString &target, const QString &standardLabel)
+{
+    if (exitCode == 0 &&
+        output.contains(QStringLiteral("Secure deletion complete"), Qt::CaseInsensitive)) {
+        return QStringLiteral(
+            "[RESULT] Secure deletion completed successfully.\n"
+            "[RESULT] Target deleted: "
+        ) + target + QStringLiteral("\n") +
+        QStringLiteral("[RESULT] Deletion method: ") + standardLabel;
+    }
+
+    if (output.contains(QStringLiteral("aborted"), Qt::CaseInsensitive) ||
+        output.contains(QStringLiteral("failed"), Qt::CaseInsensitive) ||
+        output.contains(QStringLiteral("error"), Qt::CaseInsensitive)) {
+        return QStringLiteral(
+            "[RESULT] Secure deletion did not complete successfully.\n"
+            "[RESULT] K1Wi reported an error, failure, or abort. Check the detailed output above."
+        );
+    }
+
+    if (exitCode != 0) {
+        return QStringLiteral(
+            "[RESULT] DEL finished with a non-zero exit code.\n"
+            "[RESULT] Check the detailed K1Wi output above before assuming the file was deleted."
+        );
+    }
+
+    return QStringLiteral(
+        "[RESULT] DEL finished.\n"
+        "[RESULT] Review the detailed K1Wi output above to confirm the deletion result."
+    );
+}
+
+
 void MainWindow::buildCopyTab()
 {
     copyTab = new QWidget(this);
@@ -1214,9 +1248,17 @@ void MainWindow::runDelCommand()
     );
 
     if (confirm != QMessageBox::Yes) {
-        delOutputLog->append("[GUI] DEL cancelled by user.");
-        return;
-    }
+    appendStyledLine(delOutputLog, "Summary", "#0057b8", true);
+    appendStyledLine(delOutputLog, "-------", "#0057b8", true);
+    appendStyledLine(delOutputLog, "[RESULT] DEL cancelled by user.", "#b26a00", true);
+    appendStyledLine(
+        delOutputLog,
+        "[RESULT] No file was deleted because the final confirmation was declined.",
+        "#b26a00",
+        true
+    );
+    return;
+}
 
     QStringList inputLines;
     inputLines << "DEL";
@@ -1240,22 +1282,85 @@ void MainWindow::runDelCommand()
     delOutputLog->append("");
     delOutputLog->append("Running interactive: " + binaryPath);
 
-    QProcess *process = new QProcess(this);
+        QProcess *process = new QProcess(this);
+    QString *combinedOutput = new QString();
+
     process->setWorkingDirectory(targetInfo.absolutePath());
 
-    connect(process, &QProcess::readyReadStandardOutput, this, [this, process]() {
-        delOutputLog->append(stripAnsiCodes(QString::fromLocal8Bit(process->readAllStandardOutput())));
-    });
+    connect(
+        process,
+        &QProcess::readyReadStandardOutput,
+        this,
+        [this, process, combinedOutput]() {
+            const QString output = stripAnsiCodes(
+                QString::fromLocal8Bit(process->readAllStandardOutput())
+            );
 
-    connect(process, &QProcess::readyReadStandardError, this, [this, process]() {
-        delOutputLog->append(stripAnsiCodes(QString::fromLocal8Bit(process->readAllStandardError())));
-    });
+            combinedOutput->append(output);
+            delOutputLog->append(output);
+        }
+    );
 
-    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-            this, [this, process](int exitCode, QProcess::ExitStatus) {
-        delOutputLog->append(QString("\nProcess finished with exit code %1").arg(exitCode));
-        process->deleteLater();
-    });
+    connect(
+        process,
+        &QProcess::readyReadStandardError,
+        this,
+        [this, process, combinedOutput]() {
+            const QString output = stripAnsiCodes(
+                QString::fromLocal8Bit(process->readAllStandardError())
+            );
+
+            combinedOutput->append(output);
+            delOutputLog->append(output);
+        }
+    );
+
+    connect(
+        process,
+        QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+        this,
+        [this, process, combinedOutput, targetInfo, standardLabel](
+            int exitCode,
+            QProcess::ExitStatus exitStatus
+        ) {
+            delOutputLog->append("");
+
+            if (exitStatus == QProcess::NormalExit) {
+                const QString summary = delFriendlySummary(
+                    *combinedOutput,
+                    exitCode,
+                    targetInfo.absoluteFilePath(),
+                    standardLabel
+                );
+
+                if (!summary.isEmpty()) {
+                    appendStyledLine(delOutputLog, "Summary", "#0057b8", true);
+                    appendStyledLine(delOutputLog, "-------", "#0057b8", true);
+                    appendStyledBlock(
+                        delOutputLog,
+                        summary,
+                        resultColorForSummary(summary, exitCode),
+                        true
+                    );
+                    delOutputLog->append("");
+                }
+
+                delOutputLog->append(
+                    QString("Process finished with exit code %1").arg(exitCode)
+                );
+            } else {
+                appendStyledLine(
+                    delOutputLog,
+                    "[RESULT] DEL process crashed or was terminated.",
+                    "#b00020",
+                    true
+                );
+            }
+
+            delete combinedOutput;
+            process->deleteLater();
+        }
+    );
 
     connect(process, &QProcess::started, this, [process, inputScript]() {
         process->write(inputScript.toLocal8Bit());
@@ -1263,4 +1368,10 @@ void MainWindow::runDelCommand()
     });
 
     process->start(binaryPath);
+
+    if (!process->waitForStarted()) {
+        appendStyledLine(delOutputLog, "[RESULT] Failed to start DEL process.", "#b00020", true);
+        delete combinedOutput;
+        process->deleteLater();
+    }
 }
