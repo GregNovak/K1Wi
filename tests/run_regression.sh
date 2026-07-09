@@ -213,6 +213,24 @@ if [ -f "$LYZER_IMG" ]; then
     echo "$OUT"
     require_output "ENTROPY reports global entropy" "$OUT" "Global entropy"
     require_output "ENTROPY reports bits per byte" "$OUT" "bits/byte"
+    
+        OUT=$($BIN ENTROPY "$LYZER_IMG" --window 2>&1)
+    echo "$OUT"
+    require_output "ENTROPY file-first --window reports sliding-window output" "$OUT" "Sliding-window entropy"
+
+    OUT=$($BIN ENTROPY "$LYZER_IMG" --heatmap 2>&1)
+    echo "$OUT"
+    require_output "ENTROPY file-first --heatmap reports heatmap output" "$OUT" "Entropy heatmap"
+    require_output "ENTROPY file-first --heatmap reports anomaly detection" "$OUT" "Entropy Anomaly Detection"
+
+    OUT=$($BIN ENTROPY --window "$LYZER_IMG" 2>&1)
+    echo "$OUT"
+    require_output "ENTROPY flag-first --window reports sliding-window output" "$OUT" "Sliding-window entropy"
+
+    OUT=$($BIN ENTROPY --heatmap "$LYZER_IMG" 2>&1)
+    echo "$OUT"
+    require_output "ENTROPY flag-first --heatmap reports heatmap output" "$OUT" "Entropy heatmap"
+    require_output "ENTROPY flag-first --heatmap reports anomaly detection" "$OUT" "Entropy Anomaly Detection"
 else
     skip "$LYZER_IMG not found"
 fi
