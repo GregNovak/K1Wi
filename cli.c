@@ -277,7 +277,10 @@ static int opus_cli_dispatch(const OpusCLI *cli, int argc, char **argv) {
     else if (strcasecmp(cmd, "ENTROPY") == 0) {
         return cmd_entropy(cli, argc, argv);
 
-    } else if (strcasecmp(cmd, "ELFINFO") == 0) {
+    }else if (strcasecmp(cmd, "PCAP") == 0) {
+        return cmd_pcap(cli, argc, argv);
+    
+    }else if (strcasecmp(cmd, "ELFINFO") == 0) {
         return cmd_binary(cli, argc, argv);
 
     } else if (strcasecmp(cmd, "DESIG") == 0) {

@@ -7,7 +7,7 @@
 #include "rsa_factor.h"
 #include "entropy.h"
 #include "entropy_heatmap.h"
-
+#include "pcap_analyze.h"
 
 int opus_lyzer_file(const char *path, const char *mode);
 
@@ -136,6 +136,62 @@ int cmd_entropy(const OpusCLI *cli, int argc, char **argv)
 
     fprintf(stderr, "Unknown ENTROPY mode: %s\n", mode);
     return 1;
+}
+
+int cmd_pcap(const OpusCLI *cli, int argc, char **argv)
+{
+    int argi = cli->arg_start;
+    int full_mode = 0;
+    const char *path = NULL;
+
+    if (argi >= argc) {
+        fprintf(stderr, "Usage: k1wi PCAP <file>\n");
+        fprintf(stderr, "       k1wi PCAP --summary <file>\n");
+        fprintf(stderr, "       k1wi PCAP --full <file>\n");
+        return 1;
+    }
+
+    /*
+     * Support both flag-first and file-first forms:
+     *   PCAP --summary capture.pcap
+     *   PCAP --full capture.pcap
+     *   PCAP capture.pcap --summary
+     *   PCAP capture.pcap --full
+     */
+    if (strcmp(argv[argi], "--summary") == 0) {
+        full_mode = 0;
+
+        if (argi + 1 >= argc) {
+            fprintf(stderr, "Usage: k1wi PCAP --summary <file>\n");
+            return 1;
+        }
+
+        path = argv[argi + 1];
+    } else if (strcmp(argv[argi], "--full") == 0) {
+        full_mode = 1;
+
+        if (argi + 1 >= argc) {
+            fprintf(stderr, "Usage: k1wi PCAP --full <file>\n");
+            return 1;
+        }
+
+        path = argv[argi + 1];
+    } else {
+        path = argv[argi];
+
+        if (argi + 1 < argc) {
+            if (strcmp(argv[argi + 1], "--summary") == 0) {
+                full_mode = 0;
+            } else if (strcmp(argv[argi + 1], "--full") == 0) {
+                full_mode = 1;
+            } else {
+                fprintf(stderr, "Unknown PCAP option: %s\n", argv[argi + 1]);
+                return 1;
+            }
+        }
+    }
+
+    return k1wi_pcap_analyze_file(path, full_mode);
 }
 
 int cmd_magic(int argc, char **argv) {

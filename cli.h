@@ -29,6 +29,7 @@ int cmd_extract(const OpusCLI *cli, int argc, char **argv);
 int cmd_string(int argc, char **argv);
 
 int cmd_entropy(const OpusCLI *cli, int argc, char **argv);
+int cmd_pcap(const OpusCLI *cli, int argc, char **argv);
 int cmd_crypto(const OpusCLI *cli, int argc, char **argv);
 int cmd_binary(const OpusCLI *cli, int argc, char **argv);
 int cmd_desig(const OpusCLI *cli, int argc, char **argv);
