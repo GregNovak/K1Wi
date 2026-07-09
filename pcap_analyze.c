@@ -62,6 +62,85 @@ static const char *link_type_name(uint32_t link_type)
     }
 }
 
+#define K1WI_PCAP_MAX_IPS 64
+
+struct ip_counter {
+    uint32_t ip;
+    uint64_t count;
+};
+
+static void format_ipv4(uint32_t ip, char *out, size_t out_size)
+{
+    snprintf(out,
+             out_size,
+             "%u.%u.%u.%u",
+             (unsigned int)((ip >> 24) & 0xffu),
+             (unsigned int)((ip >> 16) & 0xffu),
+             (unsigned int)((ip >> 8) & 0xffu),
+             (unsigned int)(ip & 0xffu));
+}
+
+static void add_ip_count(struct ip_counter *table, size_t table_size, uint32_t ip)
+{
+    for (size_t i = 0; i < table_size; i++) {
+        if (table[i].count > 0 && table[i].ip == ip) {
+            table[i].count++;
+            return;
+        }
+    }
+
+    for (size_t i = 0; i < table_size; i++) {
+        if (table[i].count == 0) {
+            table[i].ip = ip;
+            table[i].count = 1;
+            return;
+        }
+    }
+}
+
+static void print_ip_table(const char *title, const struct ip_counter *table, size_t table_size)
+{
+    int printed_indices[5] = {-1, -1, -1, -1, -1};
+
+    printf("\n%s\n", title);
+    printf("-------------------\n");
+
+    for (size_t rank = 0; rank < 5; rank++) {
+        size_t best = table_size;
+        uint64_t best_count = 0;
+
+        for (size_t i = 0; i < table_size; i++) {
+            int already_printed = 0;
+
+            for (size_t j = 0; j < rank; j++) {
+                if (printed_indices[j] == (int)i) {
+                    already_printed = 1;
+                    break;
+                }
+            }
+
+            if (!already_printed && table[i].count > best_count) {
+                best = i;
+                best_count = table[i].count;
+            }
+        }
+
+        if (best == table_size || best_count == 0) {
+            break;
+        }
+
+        printed_indices[rank] = (int)best;
+
+        char ip_buf[32];
+        format_ipv4(table[best].ip, ip_buf, sizeof(ip_buf));
+        printf("%-15s  %llu\n", ip_buf, (unsigned long long)table[best].count);
+    }
+
+    if (printed_indices[0] == -1) {
+        printf("n/a\n");
+    }
+}
+
 int k1wi_pcap_analyze_file(const char *path, int full_mode)
 {
     FILE *fp = fopen(path, "rb");
@@ -123,7 +202,16 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
     uint32_t last_ts_sec = 0;
     uint32_t last_ts_frac = 0;
 
-int have_timestamp = 0;
+    int have_timestamp = 0;
+
+    uint64_t ipv4_packets = 0;
+    uint64_t tcp_packets = 0;
+    uint64_t udp_packets = 0;
+    uint64_t icmp_packets = 0;
+    uint64_t other_ipv4_packets = 0;
+
+struct ip_counter source_ips[K1WI_PCAP_MAX_IPS] = {0};
+struct ip_counter destination_ips[K1WI_PCAP_MAX_IPS] = {0};
 
     while (1) {
         unsigned char ph[16];
@@ -155,12 +243,31 @@ int have_timestamp = 0;
             return 1;
         }
 
-        if (fseek(fp, (long)incl_len, SEEK_CUR) != 0) {
-            fprintf(stderr, "Truncated PCAP packet data near packet %llu\n",
-                    (unsigned long long)(packet_count + 1));
-            fclose(fp);
-            return 1;
-        }
+        unsigned char *packet_data = NULL;
+
+    if (incl_len > 0) {
+       packet_data = malloc(incl_len);
+
+       if (!packet_data) {
+           fprintf(stderr, "Out of memory reading PCAP packet %llu\n",
+                (unsigned long long)(packet_count + 1));
+           fclose(fp);
+           return 1;
+       }
+
+       if (fread(packet_data, 1, incl_len, fp) != incl_len) {
+           fprintf(stderr, "Truncated PCAP packet data near packet %llu\n",
+                   (unsigned long long)(packet_count + 1));
+           if (full_mode) {
+               printf("Packet %llu: ts=%u.%06u captured=%u original=%u\n",
+                       (unsigned long long)packet_count, ts_sec, ts_frac, incl_len, orig_len);
+           }
+                    
+           free(packet_data);
+           fclose(fp);
+           return 1;
+       }
+    }
 
         if (!have_timestamp) {
     first_ts_sec = ts_sec;
@@ -181,6 +288,32 @@ int have_timestamp = 0;
         last_ts_frac = ts_frac;
     }
 }
+
+	if (packet_data && incl_len >= 20 && (network == 228 || network == 101)) {
+            unsigned char version_ihl = packet_data[0];
+    	    unsigned int version = (unsigned int)(version_ihl >> 4);
+            unsigned int ihl = (unsigned int)(version_ihl & 0x0fu) * 4u;
+
+            if (version == 4 && ihl >= 20u && ihl <= incl_len) {
+                uint8_t protocol = packet_data[9];
+                uint32_t src_ip = read_u32_be(packet_data + 12);
+                uint32_t dst_ip = read_u32_be(packet_data + 16);
+
+                ipv4_packets++;
+                add_ip_count(source_ips, K1WI_PCAP_MAX_IPS, src_ip);
+                add_ip_count(destination_ips, K1WI_PCAP_MAX_IPS, dst_ip);
+
+                if (protocol == 1) {
+                    icmp_packets++;
+                } else if (protocol == 6) {
+                    tcp_packets++;
+                } else if (protocol == 17) {
+                    udp_packets++;
+                } else {
+                    other_ipv4_packets++;
+             }
+         }
+      }
 
         packet_count++;
         total_captured_bytes += incl_len;
@@ -239,6 +372,17 @@ int have_timestamp = 0;
     }
 
     printf("Average captured packet size: %.2f bytes\n", avg_packet_size);
+
+    printf("\nProtocol Summary\n");
+    printf("----------------\n");
+    printf("IPv4 packets: %llu\n", (unsigned long long)ipv4_packets);
+    printf("TCP packets: %llu\n", (unsigned long long)tcp_packets);
+    printf("UDP packets: %llu\n", (unsigned long long)udp_packets);
+    printf("ICMP packets: %llu\n", (unsigned long long)icmp_packets);
+    printf("Other IPv4 packets: %llu\n", (unsigned long long)other_ipv4_packets);
+
+    print_ip_table("Top Source IPs", source_ips, K1WI_PCAP_MAX_IPS);
+    print_ip_table("Top Destination IPs", destination_ips, K1WI_PCAP_MAX_IPS);
 
     return 0;
 }
