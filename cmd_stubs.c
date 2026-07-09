@@ -151,6 +151,27 @@ int cmd_pcap(const OpusCLI *cli, int argc, char **argv)
         return 1;
     }
 
+    if (strcmp(argv[argi], "--help") == 0 ||
+        strcmp(argv[argi], "-h") == 0 ||
+        strcmp(argv[argi], "help") == 0) {
+        printf("PCAP - Packet Capture Analyzer\n");
+        printf("\n");
+        printf("Usage:\n");
+        printf("  PCAP <file>\n");
+        printf("  PCAP --summary <file>\n");
+        printf("  PCAP --full <file>\n");
+        printf("\n");
+        printf("Description:\n");
+        printf("  Analyzes classic PCAP packet capture files.\n");
+        printf("  Reports capture metadata, packet counts, byte totals,\n");
+        printf("  timestamps, duration, snap length, and link type.\n");
+        printf("\n");
+        printf("Options:\n");
+        printf("  --summary  Print capture summary.\n");
+        printf("  --full     Print packet records plus capture summary.\n");
+        return 0;
+    }
+
     /*
      * Support both flag-first and file-first forms:
      *   PCAP --summary capture.pcap

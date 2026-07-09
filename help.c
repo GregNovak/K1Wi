@@ -268,6 +268,30 @@ static const char *help_entropy_lines[] = {
     NULL
 };
 
+static const char *help_pcap_lines[] = {
+    "PCAP - Packet Capture Analyzer",
+    "",
+    "Usage:",
+    "  PCAP <file>",
+    "  PCAP --summary <file>",
+    "  PCAP --full <file>",
+    "",
+    "Description:",
+    "  Analyzes classic PCAP packet capture files.",
+    "  Reports capture metadata, packet counts, byte totals,",
+    "  timestamps, duration, snap length, and link type.",
+    "",
+    "Options:",
+    "  --summary  Print capture summary.",
+    "  --full     Print packet records plus capture summary.",
+    "",
+    "Examples:",
+    "  PCAP capture.pcap",
+    "  PCAP --summary capture.pcap",
+    "  PCAP --full capture.pcap",
+    NULL
+};
+
 static const char *help_convert_lines[] = {
     "CONVERT - Numeric / Encoding Conversion Helper",
     "",
@@ -671,7 +695,7 @@ static const help_entry_t help_table[] = {
     
     { "STRING",      help_string_lines,      sizeof(help_string_lines)/sizeof(char*) },
     { "ENTROPY",     help_entropy_lines,     sizeof(help_entropy_lines)/sizeof(char*) },
-
+    { "PCAP",        help_pcap_lines,        sizeof(help_pcap_lines)/sizeof(char*) },
     { "RSA-KNOWNPQ", help_rsa_knownpq_lines, sizeof(help_rsa_knownpq_lines)/sizeof(char*) },
     { "RSA-SMALL-E", help_rsa_small_e_lines, sizeof(help_rsa_small_e_lines)/sizeof(char*) },
     { "RSA-ROOTS",  help_rsa_roots_lines,  sizeof(help_rsa_roots_lines)/sizeof(char*) },
