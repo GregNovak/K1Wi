@@ -860,19 +860,24 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
            return 1;
        }
 
-       if (fread(packet_data, 1, incl_len, fp) != incl_len) {
-           fprintf(stderr, "Truncated PCAP packet data near packet %llu\n",
-                   (unsigned long long)(packet_count + 1));
-           if (full_mode) {
-               printf("Packet %llu: ts=%u.%06u captured=%u original=%u\n",
-                       (unsigned long long)packet_count, ts_sec, ts_frac, incl_len, orig_len);
-           }
-                    
-           free(packet_data);
-           fclose(fp);
-           return 1;
-       }
+              if (fread(packet_data, 1, incl_len, fp) != incl_len) {
+                  fprintf(stderr, "Truncated PCAP packet data near packet %llu\n",
+                          (unsigned long long)(packet_count + 1));
+
+                  free(packet_data);
+                  fclose(fp);
+                  return 1;
+              }
+           
     }
+    if (full_mode) {
+        printf("Packet %llu: ts=%u.%06u captured=%u original=%u\n",
+               (unsigned long long)(packet_count + 1),
+               ts_sec,
+               ts_frac,
+               incl_len,
+               orig_len);
+        }
 
         if (!have_timestamp) {
     first_ts_sec = ts_sec;
@@ -1033,13 +1038,8 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
 
         packet_count++;
         total_captured_bytes += incl_len;
-        total_original_bytes += orig_len;
+        total_original_bytes += orig_len;     
 
-        if (full_mode) {
-            printf("Packet %llu: ts=%u.%06u captured=%u original=%u\n",
-                   (unsigned long long)packet_count, ts_sec, ts_frac, incl_len, orig_len);
-        }
-	
 	free(packet_data);
     }
 
