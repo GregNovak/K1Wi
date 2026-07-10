@@ -68,6 +68,11 @@ private:
     QComboBox *entropyModeCombo;
     QLineEdit *entropyTargetPath;
     QTextEdit *entropyOutputLog;
+    
+    QWidget *pcapTab;
+    QComboBox *pcapModeCombo;
+    QLineEdit *pcapTargetPath;
+    QTextEdit *pcapOutputLog;
 
     void buildCopyTab();
     void buildLyzerTab();
@@ -77,6 +82,7 @@ private:
     void buildStringTab();
     void buildMagicTab();
     void buildEntropyTab();
+    void buildPcapTab();
     
     void runCopyCommand();
     void runLyzerCommand();
@@ -86,6 +92,7 @@ private:
     void runStringCommand();
     void runMagicCommand();
     void runEntropyCommand();
+    void runPcapCommand();
 };
 
 #endif

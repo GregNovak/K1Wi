@@ -87,6 +87,7 @@ MainWindow::MainWindow(QWidget *parent)
     buildStringTab();
     buildMagicTab();
     buildEntropyTab();
+    buildPcapTab();
     
 
     tabs->addTab(copyTab, "COPY");
@@ -97,7 +98,8 @@ MainWindow::MainWindow(QWidget *parent)
     tabs->addTab(stringTab, "STRING");
     tabs->addTab(magicTab, "MAGIC");
     tabs->addTab(entropyTab, "ENTROPY");
-
+    tabs->addTab(pcapTab, "PCAP");
+    
     setCentralWidget(tabs);
 }
 
@@ -752,6 +754,65 @@ void MainWindow::buildEntropyTab()
 
     connect(runButton, &QPushButton::clicked, this, &MainWindow::runEntropyCommand);
     connect(clearButton, &QPushButton::clicked, entropyOutputLog, &QTextEdit::clear);
+}
+
+void MainWindow::buildPcapTab()
+{
+    pcapTab = new QWidget(this);
+    QVBoxLayout *mainLayout = new QVBoxLayout(pcapTab);
+
+    QLabel *title = new QLabel("K1Wi Framework - PCAP Analyzer", pcapTab);
+    mainLayout->addWidget(title);
+
+    QLabel *description = new QLabel(
+        "PCAP analyzes packet captures, summarizes IPv4/TCP/UDP traffic, "
+        "and reconstructs Base64-like TCP payloads by sequence and timestamp.",
+        pcapTab
+    );
+    description->setWordWrap(true);
+    mainLayout->addWidget(description);
+
+    QHBoxLayout *modeLayout = new QHBoxLayout();
+    pcapModeCombo = new QComboBox(pcapTab);
+    pcapModeCombo->addItem("Summary", "--summary");
+    pcapModeCombo->addItem("Full packet view", "--full");
+
+    modeLayout->addWidget(new QLabel("PCAP mode:", pcapTab));
+    modeLayout->addWidget(pcapModeCombo);
+    mainLayout->addLayout(modeLayout);
+
+    QHBoxLayout *targetLayout = new QHBoxLayout();
+    pcapTargetPath = new QLineEdit(pcapTab);
+    QPushButton *browseButton = new QPushButton("Browse PCAP", pcapTab);
+
+    targetLayout->addWidget(new QLabel("PCAP file:", pcapTab));
+    targetLayout->addWidget(pcapTargetPath);
+    targetLayout->addWidget(browseButton);
+    mainLayout->addLayout(targetLayout);
+
+    QPushButton *runButton = new QPushButton("Run PCAP", pcapTab);
+    QPushButton *clearButton = new QPushButton("Clear Output", pcapTab);
+
+    QHBoxLayout *buttonLayout = new QHBoxLayout();
+    buttonLayout->addWidget(runButton);
+    buttonLayout->addWidget(clearButton);
+    mainLayout->addLayout(buttonLayout);
+
+    pcapOutputLog = new QTextEdit(pcapTab);
+    pcapOutputLog->setReadOnly(true);
+    pcapOutputLog->append("[GUI] PCAP panel ready.");
+    pcapOutputLog->append("[GUI] Select a PCAP file and choose Summary or Full packet view.");
+    mainLayout->addWidget(pcapOutputLog);
+
+    connect(browseButton, &QPushButton::clicked, this, [this]() {
+        QString path = QFileDialog::getOpenFileName(this, "Select PCAP Target");
+        if (!path.isEmpty()) {
+            pcapTargetPath->setText(path);
+        }
+    });
+
+    connect(runButton, &QPushButton::clicked, this, &MainWindow::runPcapCommand);
+    connect(clearButton, &QPushButton::clicked, pcapOutputLog, &QTextEdit::clear);
 }
 
 void MainWindow::buildLyzerTab()
@@ -1822,6 +1883,188 @@ void MainWindow::runEntropyCommand()
         process->deleteLater();
     }
 }
+
+void MainWindow::runPcapCommand()
+{
+    pcapOutputLog->clear();
+
+    const QString target = pcapTargetPath->text().trimmed();
+    const QString pcapMode = pcapModeCombo->currentData().toString();
+    const QString modeLabel = pcapModeCombo->currentText();
+
+    if (target.isEmpty()) {
+        QMessageBox::warning(this, "K1Wi PCAP", "Please select a PCAP file.");
+
+        pcapOutputLog->append("[GUI] PCAP cancelled: no target file selected.");
+        return;
+    }
+
+    const QFileInfo targetInfo(target);
+
+    if (!targetInfo.exists()) {
+        QMessageBox::warning(
+            this,
+            "K1Wi PCAP",
+            "PCAP file does not exist.\n\nPlease select a valid file."
+        );
+
+        pcapOutputLog->append("[GUI] PCAP cancelled: target file does not exist.");
+        pcapOutputLog->append("[GUI] Target: " + target);
+        return;
+    }
+
+    if (!targetInfo.isFile()) {
+        QMessageBox::warning(
+            this,
+            "K1Wi PCAP",
+            "Target path is not a regular file.\n\nPlease select a valid PCAP file."
+        );
+
+        pcapOutputLog->append("[GUI] PCAP cancelled: target path is not a regular file.");
+        pcapOutputLog->append("[GUI] Target: " + target);
+        return;
+    }
+
+    const QFileInfo cliInfo(k1wiBinary);
+
+    if (!cliInfo.exists() || !cliInfo.isFile() || !cliInfo.isExecutable()) {
+        QMessageBox::critical(
+            this,
+            "K1Wi PCAP",
+            "K1Wi CLI binary was not found or is not executable.\n\n"
+            "Expected: ../bin/k1wi\n\n"
+            "Build the CLI first from the project root."
+        );
+
+        pcapOutputLog->append("[GUI] PCAP cancelled: K1Wi CLI binary was not found or is not executable.");
+        pcapOutputLog->append("[GUI] Expected: " + cliInfo.absoluteFilePath());
+        pcapOutputLog->append("[GUI] Build the CLI first from the project root.");
+        return;
+    }
+
+    QStringList args;
+    args << "PCAP";
+
+    if (pcapMode == QStringLiteral("--full")) {
+        args << "--full";
+    } else {
+        args << "--summary";
+    }
+
+    args << target;
+
+    pcapOutputLog->append("[GUI] PCAP run summary");
+    pcapOutputLog->append("[GUI] Target: " + target);
+    pcapOutputLog->append("[GUI] Mode: " + modeLabel);
+    pcapOutputLog->append("");
+    pcapOutputLog->append("Running: " + cliInfo.absoluteFilePath() + " " + args.join(" "));
+    pcapOutputLog->append("");
+
+    QProcess *process = new QProcess(this);
+    QString *combinedOutput = new QString();
+
+    connect(
+        process,
+        &QProcess::readyReadStandardOutput,
+        this,
+        [this, process, combinedOutput]() {
+            const QString output = stripAnsiCodes(
+                QString::fromLocal8Bit(process->readAllStandardOutput())
+            );
+
+            combinedOutput->append(output);
+            pcapOutputLog->append(output);
+        }
+    );
+
+    connect(
+        process,
+        &QProcess::readyReadStandardError,
+        this,
+        [this, process, combinedOutput]() {
+            const QString output = stripAnsiCodes(
+                QString::fromLocal8Bit(process->readAllStandardError())
+            );
+
+            combinedOutput->append(output);
+            pcapOutputLog->append(output);
+        }
+    );
+
+    connect(
+        process,
+        QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+        this,
+        [this, process, combinedOutput](int exitCode, QProcess::ExitStatus exitStatus) {
+            pcapOutputLog->append("");
+
+            if (exitStatus == QProcess::NormalExit) {
+                if (exitCode == 0) {
+                    appendStyledLine(
+                        pcapOutputLog,
+                        "[RESULT] PCAP analysis completed successfully.",
+                        "#0b7a0b",
+                        true
+                    );
+
+                    if (combinedOutput->contains("Decoded TCP Payload Reconstruction by Time")) {
+                        appendStyledLine(
+                            pcapOutputLog,
+                            "[RESULT] Time-order TCP payload reconstruction was found.",
+                            "#0057b8",
+                            true
+                        );
+                    }
+
+                    if (combinedOutput->contains("Base64-like TCP payload packets:")) {
+                        appendStyledLine(
+                            pcapOutputLog,
+                            "[RESULT] Base64-like TCP payload analysis was included.",
+                            "#0057b8",
+                            true
+                        );
+                    }
+                } else {
+                    appendStyledLine(
+                        pcapOutputLog,
+                        "[RESULT] PCAP analysis finished with a non-zero exit code.",
+                        "#b00020",
+                        true
+                    );
+                }
+
+                pcapOutputLog->append(
+                    QString("Process finished with exit code %1").arg(exitCode)
+                );
+            } else {
+                appendStyledLine(
+                    pcapOutputLog,
+                    "[RESULT] PCAP process crashed or was terminated.",
+                    "#b00020",
+                    true
+                );
+            }
+
+            delete combinedOutput;
+            process->deleteLater();
+        }
+    );
+
+    process->start(cliInfo.absoluteFilePath(), args);
+
+    if (!process->waitForStarted()) {
+        appendStyledLine(
+            pcapOutputLog,
+            "[RESULT] Failed to start PCAP process.",
+            "#b00020",
+            true
+        );
+
+        delete combinedOutput;
+        process->deleteLater();
+    }
+}
+
 
 void MainWindow::runCopyCommand()
 {
