@@ -234,6 +234,32 @@ if [ -f "$LYZER_IMG" ]; then
 else
     skip "$LYZER_IMG not found"
 fi
+  
+  
+  echo "[TEST] PCAP synthetic time-order TCP Base64 reconstruction"
+
+PCAP_FIXTURE="testdata/pcap/k1wi_time_order_tcp_base64.pcap"
+
+if [ -f "$PCAP_FIXTURE" ]; then
+    OUT=$($BIN PCAP "$PCAP_FIXTURE" 2>&1)
+    require_output "PCAP synthetic reports packet count" "$OUT" "Packets: 3"
+    require_output "PCAP synthetic reports TCP packet count" "$OUT" "TCP packets: 3"
+    require_output "PCAP synthetic reports Base64 payload count" "$OUT" "Base64-like TCP payload packets: 3"
+    require_output "PCAP synthetic reports sequence reconstruction" "$OUT" "Decoded TCP Payload Reconstruction by Sequence"
+    require_output "PCAP synthetic sequence order differs from time order" "$OUT" "{time_order}K1Wi"
+    require_output "PCAP synthetic reports time reconstruction" "$OUT" "Decoded TCP Payload Reconstruction by Time"
+    require_output "PCAP synthetic reconstructs time-order payload" "$OUT" "K1Wi{time_order}"
+
+    OUT=$($BIN PCAP --full "$PCAP_FIXTURE" 2>&1)
+    require_output "PCAP synthetic full mode reports payload preview" "$OUT" "Payload ASCII preview"
+    require_output "PCAP synthetic full mode reports decoded preview" "$OUT" "Base64 decoded preview"
+    require_output "PCAP synthetic full mode reconstructs time-order payload" "$OUT" "K1Wi{time_order}"
+else
+    fail "PCAP synthetic fixture missing"
+fi
+  
+  
+  
     
 echo
 echo "[TEST] ELFINFO tiny ELF sample"
@@ -702,9 +728,14 @@ fi
 pass "COPY recursive manifest created"
 
 PASS_RECORDS=$(grep -c '^PASS |' /tmp/k1wi_copy_tree_test/K1Wi_COPY_MANIFEST.txt)
-if [ "$PASS_RECORDS" != "44" ]; then
-    fail "COPY recursive manifest expected 44 PASS records, got $PASS_RECORDS"
+EXPECTED_PASS_RECORDS=$(find testdata -type f | wc -l)
+
+if [ "$PASS_RECORDS" != "$EXPECTED_PASS_RECORDS" ]; then
+    fail "COPY recursive manifest expected $EXPECTED_PASS_RECORDS PASS records, got $PASS_RECORDS"
 fi
+
+pass "COPY recursive manifest contains expected PASS records"
+
 
 pass "COPY recursive manifest contains expected PASS records"
 
