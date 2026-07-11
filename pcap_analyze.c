@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+
+
+
+
 static uint16_t read_u16_le(const unsigned char *p)
 {
     return (uint16_t)((uint16_t)p[0] | ((uint16_t)p[1] << 8));
@@ -363,6 +367,59 @@ static void format_ipv4(uint32_t ip, char *out, size_t out_size)
              (unsigned int)((ip >> 16) & 0xffu),
              (unsigned int)((ip >> 8) & 0xffu),
              (unsigned int)(ip & 0xffu));
+}
+
+static void format_tcp_flags(uint8_t flags, char *out, size_t out_size)
+{
+    struct tcp_flag_name {
+        uint8_t mask;
+        const char *name;
+    };
+
+    static const struct tcp_flag_name flag_names[] = {
+        {0x01u, "FIN"},
+        {0x02u, "SYN"},
+        {0x04u, "RST"},
+        {0x08u, "PSH"},
+        {0x10u, "ACK"},
+        {0x20u, "URG"}
+    };
+
+    size_t used = 0;
+    size_t i;
+    int first = 1;
+
+    if (!out || out_size == 0u) {
+        return;
+    }
+
+    out[0] = '\0';
+
+    for (i = 0; i < sizeof(flag_names) / sizeof(flag_names[0]); i++) {
+        int written;
+
+        if ((flags & flag_names[i].mask) == 0u) {
+            continue;
+        }
+
+        written = snprintf(out + used,
+                           out_size - used,
+                           "%s%s",
+                           first ? "" : ",",
+                           flag_names[i].name);
+
+        if (written < 0 || (size_t)written >= out_size - used) {
+            out[out_size - 1u] = '\0';
+            return;
+        }
+
+        used += (size_t)written;
+        first = 0;
+    }
+
+    if (first) {
+        snprintf(out, out_size, "NONE");
+    }
 }
 
 static void add_ip_count(struct ip_counter *table, size_t table_size, uint32_t ip)
@@ -973,9 +1030,36 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
                                     tcp_payload_bytes += payload_len;
 
                                     
-    				    uint32_t tcp_seq = read_u32_be(packet_data + ihl + 4u);
+    				                                       uint32_t tcp_seq =
+                                        read_u32_be(packet_data + ihl + 4u);
 
-    				                                        add_tcp_fragment(tcp_fragments,
+                                    if (full_mode) {
+                                        char src_ip_text[16];
+                                        char dst_ip_text[16];
+                                        char flags_text[32];
+
+                                        format_ipv4(src_ip,
+                                                    src_ip_text,
+                                                    sizeof(src_ip_text));
+                                        format_ipv4(dst_ip,
+                                                    dst_ip_text,
+                                                    sizeof(dst_ip_text));
+                                        format_tcp_flags(tcp_flags,
+                                                         flags_text,
+                                                         sizeof(flags_text));
+
+                                        printf("  TCP %s:%u -> %s:%u "
+                                               "seq=%u flags=%s payload=%zu\n",
+                                               src_ip_text,
+                                               (unsigned int)src_port,
+                                               dst_ip_text,
+                                               (unsigned int)dst_port,
+                                               tcp_seq,
+                                               flags_text,
+                                               payload_len);
+                                    }
+
+                                    add_tcp_fragment(tcp_fragments,
                                                      &tcp_fragment_count,
                                                      K1WI_PCAP_MAX_TCP_FRAGMENTS,
                                                      src_ip,

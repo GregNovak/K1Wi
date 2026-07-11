@@ -258,6 +258,10 @@ if [ -f "$PCAP_FIXTURE" ]; then
     require_output "PCAP synthetic reconstructs time-order payload" "$OUT" "K1Wi{time_order}"
 
     OUT=$($BIN PCAP --full "$PCAP_FIXTURE" 2>&1)
+    require_output "PCAP synthetic full mode reports TCP detail line" "$OUT" "TCP 10.1.1.10:4444 -> 10.1.1.20:80"
+    require_output "PCAP synthetic full mode reports TCP sequence" "$OUT" "seq=3000"
+    require_output "PCAP synthetic full mode reports TCP flags" "$OUT" "flags=PSH,ACK"
+    require_output "PCAP synthetic full mode reports payload size" "$OUT" "payload=8"
     require_output "PCAP synthetic full mode reports payload preview" "$OUT" "Payload ASCII preview"
     require_output "PCAP synthetic full mode reports decoded preview" "$OUT" "Base64 decoded preview"
     require_output "PCAP synthetic full mode reconstructs time-order payload" "$OUT" "K1Wi{time_order}"
