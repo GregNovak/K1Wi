@@ -963,15 +963,41 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
     }
 }
 
-	if (packet_data && incl_len >= 20 && (network == 228 || network == 101)) {
-            unsigned char version_ihl = packet_data[0];
-    	    unsigned int version = (unsigned int)(version_ihl >> 4);
-            unsigned int ihl = (unsigned int)(version_ihl & 0x0fu) * 4u;
+	        if (packet_data) {
+            size_t ip_offset = 0;
+            size_t ip_available = 0;
+            int contains_ipv4 = 0;
 
-            if (version == 4 && ihl >= 20u && ihl <= incl_len) {
-                uint8_t protocol = packet_data[9];
-                uint32_t src_ip = read_u32_be(packet_data + 12);
-                uint32_t dst_ip = read_u32_be(packet_data + 16);
+            if ((network == 101u || network == 228u) && incl_len >= 20u) {
+                /* Raw IPv4 packet. */
+                ip_offset = 0;
+                contains_ipv4 = 1;
+            } else if (network == 1u && incl_len >= 14u) {
+                /* Ethernet II frame. */
+                uint16_t ether_type = read_u16_be(packet_data + 12u);
+
+                if (ether_type == 0x0800u && incl_len >= 14u + 20u) {
+                    ip_offset = 14u;
+                    contains_ipv4 = 1;
+                }
+            }
+
+            if (contains_ipv4) {
+                const unsigned char *ip_data = packet_data + ip_offset;
+
+                ip_available = (size_t)incl_len - ip_offset;
+
+                unsigned char version_ihl = ip_data[0];
+                unsigned int version = (unsigned int)(version_ihl >> 4);
+                unsigned int ihl =
+                    (unsigned int)(version_ihl & 0x0fu) * 4u;
+
+                if (version == 4u &&
+                    ihl >= 20u &&
+                    (size_t)ihl <= ip_available) {
+                    uint8_t protocol = ip_data[9];
+                    uint32_t src_ip = read_u32_be(ip_data + 12u);
+                    uint32_t dst_ip = read_u32_be(ip_data + 16u);
 
                 ipv4_packets++;
                 add_ip_count(source_ips, K1WI_PCAP_MAX_IPS, src_ip);
@@ -983,9 +1009,9 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
                                 } else if (protocol == 6) {
                     tcp_packets++;
 
-                    if (incl_len >= ihl + 4u) {
-                        uint16_t src_port = read_u16_be(packet_data + ihl);
-                        uint16_t dst_port = read_u16_be(packet_data + ihl + 2u);
+                    if (ip_available >= (size_t)ihl + 4u) {
+                        uint16_t src_port = read_u16_be(ip_data + ihl);
+                        uint16_t dst_port = read_u16_be(ip_data + ihl + 2u);
 
                         add_port_count(tcp_source_ports, K1WI_PCAP_MAX_PORTS, src_port);
                         add_port_count(tcp_destination_ports, K1WI_PCAP_MAX_PORTS, dst_port);
@@ -996,10 +1022,10 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
                          * TCP header starts at packet_data[ihl].
                          * TCP data offset is the high nibble of byte 12 in the TCP header.
                          */
-                        if (incl_len >= ihl + 20u) {
+                        if (ip_available >= (size_t)ihl + 20u) {
                             unsigned int tcp_header_len =
-                                (unsigned int)(packet_data[ihl + 12u] >> 4) * 4u;
-                            uint8_t tcp_flags = packet_data[ihl + 13u];
+                                (unsigned int)(ip_data[ihl + 12u] >> 4) * 4u;
+                            uint8_t tcp_flags = ip_data[ihl + 13u];
 
                             if ((tcp_flags & 0x02u) != 0u) {
                                 tcp_syn_packets++;
@@ -1020,10 +1046,10 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
                                 tcp_urg_packets++;
                             }
 
-                            if (tcp_header_len >= 20u && incl_len >= ihl + tcp_header_len) {
+                            if (tcp_header_len >= 20u && ip_available >= (size_t)ihl + (size_t)tcp_header_len) {
                                 size_t payload_offset = (size_t)ihl + (size_t)tcp_header_len;
-                                size_t payload_len = (size_t)incl_len - payload_offset;
-                                const unsigned char *payload = packet_data + payload_offset;
+                                size_t payload_len = ip_available - payload_offset;
+                                const unsigned char *payload = ip_data + payload_offset;
 
                                 if (payload_len > 0) {
                                     tcp_payload_packets++;
@@ -1031,7 +1057,7 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
 
                                     
     				                                       uint32_t tcp_seq =
-                                        read_u32_be(packet_data + ihl + 4u);
+                                        read_u32_be(ip_data + ihl + 4u);
 
                                     if (full_mode) {
                                         char src_ip_text[16];
@@ -1134,9 +1160,9 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
                 
                     udp_packets++;
 
-                    if (incl_len >= ihl + 4u) {
-                        uint16_t src_port = read_u16_be(packet_data + ihl);
-                        uint16_t dst_port = read_u16_be(packet_data + ihl + 2u);
+                    if (ip_available >= (size_t)ihl + 4u) {
+                        uint16_t src_port = read_u16_be(ip_data + ihl);
+                        uint16_t dst_port = read_u16_be(ip_data + ihl + 2u);
 
                         add_port_count(udp_source_ports, K1WI_PCAP_MAX_PORTS, src_port);
                         add_port_count(udp_destination_ports, K1WI_PCAP_MAX_PORTS, dst_port);
@@ -1144,6 +1170,7 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
                 } else {
                     other_ipv4_packets++;
                 }
+             }
          }
       }
 

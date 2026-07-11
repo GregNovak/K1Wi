@@ -269,7 +269,48 @@ else
     fail "PCAP synthetic fixture missing"
 fi
   
-  
+echo
+echo "[TEST] PCAP synthetic Ethernet IPv4 parsing"
+
+PCAP_ETH_FIXTURE="testdata/pcap/k1wi_ethernet_time_order_tcp_base64.pcap"
+
+if [ -f "$PCAP_ETH_FIXTURE" ]; then
+    OUT=$($BIN PCAP "$PCAP_ETH_FIXTURE" 2>&1)
+
+    require_output "PCAP Ethernet reports Ethernet link type" \
+        "$OUT" "Link type: 1 (Ethernet)"
+
+    require_output "PCAP Ethernet reports packet count" \
+        "$OUT" "Packets: 3"
+
+    require_output "PCAP Ethernet reports IPv4 packet count" \
+        "$OUT" "IPv4 packets: 3"
+
+    require_output "PCAP Ethernet reports TCP packet count" \
+        "$OUT" "TCP packets: 3"
+
+    require_output "PCAP Ethernet reports ACK flag count" \
+        "$OUT" "ACK packets: 3"
+
+    require_output "PCAP Ethernet reports PSH flag count" \
+        "$OUT" "PSH packets: 3"
+
+    require_output "PCAP Ethernet reconstructs time-order payload" \
+        "$OUT" "K1Wi{time_order}"
+
+    OUT=$($BIN PCAP --full "$PCAP_ETH_FIXTURE" 2>&1)
+
+    require_output "PCAP Ethernet full mode reports TCP endpoints" \
+        "$OUT" "TCP 10.1.1.10:4444 -> 10.1.1.20:80"
+
+    require_output "PCAP Ethernet full mode reports TCP flags" \
+        "$OUT" "flags=PSH,ACK"
+
+    require_output "PCAP Ethernet full mode reports payload size" \
+        "$OUT" "payload=12"
+else
+    fail "PCAP Ethernet synthetic fixture missing"
+fi
   
     
 echo
