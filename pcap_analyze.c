@@ -197,20 +197,39 @@ static void add_vlan_count(struct vlan_counter *table,
 static void print_vlan_table(const struct vlan_counter *table,
                              size_t table_size)
 {
-    size_t i;
+    int printed[K1WI_PCAP_MAX_VLANS] = {0};
+    size_t rank;
     int found = 0;
 
     printf("\nTop VLAN IDs\n");
     printf("------------\n");
 
-    for (i = 0; i < table_size; i++) {
-        if (!table[i].used) {
-            continue;
+    for (rank = 0; rank < table_size; rank++) {
+        size_t best = table_size;
+        size_t i;
+
+        for (i = 0; i < table_size; i++) {
+            if (!table[i].used || printed[i]) {
+                continue;
+            }
+
+            if (best == table_size ||
+                table[i].count > table[best].count ||
+                (table[i].count == table[best].count &&
+                 table[i].vlan_id < table[best].vlan_id)) {
+                best = i;
+            }
         }
 
+        if (best == table_size) {
+            break;
+        }
+
+        printed[best] = 1;
+
         printf("VLAN %u: %llu tag(s)\n",
-               (unsigned int)table[i].vlan_id,
-               (unsigned long long)table[i].count);
+               (unsigned int)table[best].vlan_id,
+               (unsigned long long)table[best].count);
         found = 1;
     }
 
