@@ -69,6 +69,7 @@ static const char *link_type_name(uint32_t link_type)
 
 #define K1WI_PCAP_MAX_IPS 64
 #define K1WI_PCAP_MAX_PORTS 64
+#define K1WI_PCAP_MAX_VLANS 64
 #define K1WI_PCAP_PREVIEW_SIZE 128
 #define K1WI_PCAP_MAX_TCP_FRAGMENTS 512
 #define K1WI_PCAP_MAX_RECON_BYTES 8192
@@ -78,11 +79,16 @@ struct ip_counter {
     uint64_t count;
 };
 
-#define K1WI_PCAP_MAX_PORTS 64
 
 struct port_counter {
     uint16_t port;
     uint64_t count;
+};
+
+struct vlan_counter {
+    uint16_t vlan_id;
+    uint64_t count;
+    int used;
 };
 
 struct tcp_fragment {
@@ -163,6 +169,55 @@ static void print_port_table(const char *title, const struct port_counter *table
     }
 }
 
+static void add_vlan_count(struct vlan_counter *table,
+                           size_t table_size,
+                           uint16_t vlan_id)
+{
+    size_t i;
+    size_t free_slot = table_size;
+
+    for (i = 0; i < table_size; i++) {
+        if (table[i].used && table[i].vlan_id == vlan_id) {
+            table[i].count++;
+            return;
+        }
+
+        if (!table[i].used && free_slot == table_size) {
+            free_slot = i;
+        }
+    }
+
+    if (free_slot < table_size) {
+        table[free_slot].used = 1;
+        table[free_slot].vlan_id = vlan_id;
+        table[free_slot].count = 1;
+    }
+}
+
+static void print_vlan_table(const struct vlan_counter *table,
+                             size_t table_size)
+{
+    size_t i;
+    int found = 0;
+
+    printf("\nTop VLAN IDs\n");
+    printf("------------\n");
+
+    for (i = 0; i < table_size; i++) {
+        if (!table[i].used) {
+            continue;
+        }
+
+        printf("VLAN %u: %llu tag(s)\n",
+               (unsigned int)table[i].vlan_id,
+               (unsigned long long)table[i].count);
+        found = 1;
+    }
+
+    if (!found) {
+        printf("None\n");
+    }
+}
 
 static int is_ascii_whitespace(unsigned char c)
 {
@@ -863,6 +918,12 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
     uint64_t ethernet_ipv6_frames = 0;
     uint64_t ethernet_other_frames = 0;
 
+    uint64_t vlan_tagged_frames = 0;
+    uint64_t vlan_single_tagged_frames = 0;
+    uint64_t vlan_stacked_tagged_frames = 0;
+    uint64_t vlan_8021q_tags = 0;
+    uint64_t vlan_8021ad_tags = 0;
+
     uint64_t tcp_syn_packets = 0;
     uint64_t tcp_ack_packets = 0;
     uint64_t tcp_fin_packets = 0;
@@ -878,6 +939,8 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
 
     struct ip_counter source_ips[K1WI_PCAP_MAX_IPS] = {0};
     struct ip_counter destination_ips[K1WI_PCAP_MAX_IPS] = {0};
+
+    struct vlan_counter vlan_ids[K1WI_PCAP_MAX_VLANS] = {0};
 
     struct port_counter tcp_source_ports[K1WI_PCAP_MAX_PORTS] = {0};
     struct port_counter tcp_destination_ports[K1WI_PCAP_MAX_PORTS] = {0};
@@ -979,16 +1042,43 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
                 contains_ipv4 = 1;
                         } else if (network == 1u && incl_len >= 14u) {
                 /* Ethernet II frame, optionally with VLAN tags. */
-                size_t ethernet_payload_offset = 14u;
+                                size_t ethernet_payload_offset = 14u;
                 uint16_t ether_type = read_u16_be(packet_data + 12u);
+                unsigned int vlan_tag_count = 0;
 
                 while ((ether_type == 0x8100u ||
                         ether_type == 0x88a8u) &&
                        (size_t)incl_len >= ethernet_payload_offset + 4u) {
+                    uint16_t vlan_tci =
+                        read_u16_be(packet_data + ethernet_payload_offset);
+                    uint16_t vlan_id =
+                        (uint16_t)(vlan_tci & 0x0fffu);
+
+                    if (ether_type == 0x8100u) {
+                        vlan_8021q_tags++;
+                    } else {
+                        vlan_8021ad_tags++;
+                    }
+
+                    add_vlan_count(vlan_ids,
+                                   K1WI_PCAP_MAX_VLANS,
+                                   vlan_id);
+                    vlan_tag_count++;
+
                     ether_type =
                         read_u16_be(packet_data +
                                     ethernet_payload_offset + 2u);
                     ethernet_payload_offset += 4u;
+                }
+
+                if (vlan_tag_count > 0u) {
+                    vlan_tagged_frames++;
+
+                    if (vlan_tag_count == 1u) {
+                        vlan_single_tagged_frames++;
+                    } else {
+                        vlan_stacked_tagged_frames++;
+                    }
                 }
 
                 if (ether_type == 0x0800u) {
@@ -1278,6 +1368,20 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
                (unsigned long long)ethernet_ipv6_frames);
         printf("Other EtherTypes: %llu\n",
                (unsigned long long)ethernet_other_frames);
+                printf("\nVLAN Summary\n");
+        printf("------------\n");
+        printf("Tagged frames: %llu\n",
+               (unsigned long long)vlan_tagged_frames);
+        printf("Single-tagged frames: %llu\n",
+               (unsigned long long)vlan_single_tagged_frames);
+        printf("Stacked-tagged frames: %llu\n",
+               (unsigned long long)vlan_stacked_tagged_frames);
+        printf("802.1Q tags: %llu\n",
+               (unsigned long long)vlan_8021q_tags);
+        printf("802.1ad tags: %llu\n",
+               (unsigned long long)vlan_8021ad_tags);
+
+        print_vlan_table(vlan_ids, K1WI_PCAP_MAX_VLANS);
         }
     
     

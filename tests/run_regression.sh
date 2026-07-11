@@ -370,6 +370,27 @@ if [ -f "$PCAP_VLAN_FIXTURE" ]; then
     require_output "PCAP VLAN reconstructs time-order payload" \
         "$OUT" "K1Wi{time_order}"
 
+        require_output "PCAP VLAN reports VLAN summary heading" \
+        "$OUT" "VLAN Summary"
+
+    require_output "PCAP VLAN reports tagged frame count" \
+        "$OUT" "Tagged frames: 3"
+
+    require_output "PCAP VLAN reports single-tagged frame count" \
+        "$OUT" "Single-tagged frames: 3"
+
+    require_output "PCAP VLAN reports stacked-tagged frame count" \
+        "$OUT" "Stacked-tagged frames: 0"
+
+    require_output "PCAP VLAN reports 802.1Q tag count" \
+        "$OUT" "802.1Q tags: 3"
+
+    require_output "PCAP VLAN reports 802.1ad tag count" \
+        "$OUT" "802.1ad tags: 0"
+
+    require_output "PCAP VLAN reports VLAN ID 100" \
+        "$OUT" "VLAN 100: 3 tag(s)"
+
     OUT=$($BIN PCAP --full "$PCAP_VLAN_FIXTURE" 2>&1)
 
     require_output "PCAP VLAN full mode reports TCP endpoints" \
@@ -412,6 +433,30 @@ if [ -f "$PCAP_QINQ_FIXTURE" ]; then
 
     require_output "PCAP QinQ reconstructs time-order payload" \
         "$OUT" "K1Wi{time_order}"
+        
+        require_output "PCAP QinQ reports VLAN summary heading" \
+        "$OUT" "VLAN Summary"
+
+    require_output "PCAP QinQ reports tagged frame count" \
+        "$OUT" "Tagged frames: 3"
+
+    require_output "PCAP QinQ reports single-tagged frame count" \
+        "$OUT" "Single-tagged frames: 0"
+
+    require_output "PCAP QinQ reports stacked-tagged frame count" \
+        "$OUT" "Stacked-tagged frames: 3"
+
+    require_output "PCAP QinQ reports 802.1Q tag count" \
+        "$OUT" "802.1Q tags: 3"
+
+    require_output "PCAP QinQ reports 802.1ad tag count" \
+        "$OUT" "802.1ad tags: 3"
+
+    require_output "PCAP QinQ reports outer VLAN ID 10" \
+        "$OUT" "VLAN 10: 3 tag(s)"
+
+    require_output "PCAP QinQ reports inner VLAN ID 100" \
+        "$OUT" "VLAN 100: 3 tag(s)"    
 
     OUT=$($BIN PCAP --full "$PCAP_QINQ_FIXTURE" 2>&1)
 
