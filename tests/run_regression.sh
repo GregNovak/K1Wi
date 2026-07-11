@@ -341,6 +341,50 @@ else
     fail "PCAP mixed Ethernet fixture missing"
 fi
   
+echo
+echo "[TEST] PCAP VLAN-tagged Ethernet IPv4 parsing"
+
+PCAP_VLAN_FIXTURE="testdata/pcap/k1wi_vlan_time_order_tcp_base64.pcap"
+
+if [ -f "$PCAP_VLAN_FIXTURE" ]; then
+    OUT=$($BIN PCAP "$PCAP_VLAN_FIXTURE" 2>&1)
+
+    require_output "PCAP VLAN reports Ethernet link type" \
+        "$OUT" "Link type: 1 (Ethernet)"
+
+    require_output "PCAP VLAN reports packet count" \
+        "$OUT" "Packets: 3"
+
+    require_output "PCAP VLAN reports IPv4 frame count" \
+        "$OUT" "IPv4 frames: 3"
+
+    require_output "PCAP VLAN reports IPv4 packet count" \
+        "$OUT" "IPv4 packets: 3"
+
+    require_output "PCAP VLAN reports TCP packet count" \
+        "$OUT" "TCP packets: 3"
+
+    require_output "PCAP VLAN reports TCP flags" \
+        "$OUT" "PSH packets: 3"
+
+    require_output "PCAP VLAN reconstructs time-order payload" \
+        "$OUT" "K1Wi{time_order}"
+
+    OUT=$($BIN PCAP --full "$PCAP_VLAN_FIXTURE" 2>&1)
+
+    require_output "PCAP VLAN full mode reports TCP endpoints" \
+        "$OUT" "TCP 10.1.1.10:4444 -> 10.1.1.20:80"
+
+    require_output "PCAP VLAN full mode reports TCP flags" \
+        "$OUT" "flags=PSH,ACK"
+
+    require_output "PCAP VLAN full mode reports payload size" \
+        "$OUT" "payload=12"
+else
+    fail "PCAP VLAN fixture missing"
+fi
+
+
     
 echo
 echo "[TEST] ELFINFO tiny ELF sample"

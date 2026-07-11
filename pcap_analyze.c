@@ -977,15 +977,26 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
                 /* Raw IPv4 packet. */
                 ip_offset = 0;
                 contains_ipv4 = 1;
-            } else if (network == 1u && incl_len >= 14u) {
-                /* Ethernet II frame. */
+                        } else if (network == 1u && incl_len >= 14u) {
+                /* Ethernet II frame, optionally with VLAN tags. */
+                size_t ethernet_payload_offset = 14u;
                 uint16_t ether_type = read_u16_be(packet_data + 12u);
+
+                while ((ether_type == 0x8100u ||
+                        ether_type == 0x88a8u) &&
+                       (size_t)incl_len >= ethernet_payload_offset + 4u) {
+                    ether_type =
+                        read_u16_be(packet_data +
+                                    ethernet_payload_offset + 2u);
+                    ethernet_payload_offset += 4u;
+                }
 
                 if (ether_type == 0x0800u) {
                     ethernet_ipv4_frames++;
 
-                    if (incl_len >= 14u + 20u) {
-                        ip_offset = 14u;
+                    if ((size_t)incl_len >=
+                        ethernet_payload_offset + 20u) {
+                        ip_offset = ethernet_payload_offset;
                         contains_ipv4 = 1;
                     }
                 } else if (ether_type == 0x0806u) {
