@@ -384,7 +384,48 @@ else
     fail "PCAP VLAN fixture missing"
 fi
 
+echo
+echo "[TEST] PCAP QinQ stacked-VLAN IPv4 parsing"
 
+PCAP_QINQ_FIXTURE="testdata/pcap/k1wi_qinq_time_order_tcp_base64.pcap"
+
+if [ -f "$PCAP_QINQ_FIXTURE" ]; then
+    OUT=$($BIN PCAP "$PCAP_QINQ_FIXTURE" 2>&1)
+
+    require_output "PCAP QinQ reports Ethernet link type" \
+        "$OUT" "Link type: 1 (Ethernet)"
+
+    require_output "PCAP QinQ reports packet count" \
+        "$OUT" "Packets: 3"
+
+    require_output "PCAP QinQ reports IPv4 frame count" \
+        "$OUT" "IPv4 frames: 3"
+
+    require_output "PCAP QinQ reports IPv4 packet count" \
+        "$OUT" "IPv4 packets: 3"
+
+    require_output "PCAP QinQ reports TCP packet count" \
+        "$OUT" "TCP packets: 3"
+
+    require_output "PCAP QinQ reports PSH count" \
+        "$OUT" "PSH packets: 3"
+
+    require_output "PCAP QinQ reconstructs time-order payload" \
+        "$OUT" "K1Wi{time_order}"
+
+    OUT=$($BIN PCAP --full "$PCAP_QINQ_FIXTURE" 2>&1)
+
+    require_output "PCAP QinQ full mode reports TCP endpoints" \
+        "$OUT" "TCP 10.1.1.10:4444 -> 10.1.1.20:80"
+
+    require_output "PCAP QinQ full mode reports TCP flags" \
+        "$OUT" "flags=PSH,ACK"
+
+    require_output "PCAP QinQ full mode reports payload size" \
+        "$OUT" "payload=12"
+else
+    fail "PCAP QinQ fixture missing"
+fi
     
 echo
 echo "[TEST] ELFINFO tiny ELF sample"
