@@ -857,6 +857,11 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
     uint64_t udp_packets = 0;
     uint64_t icmp_packets = 0;
     uint64_t other_ipv4_packets = 0;
+    
+    uint64_t ethernet_ipv4_frames = 0;
+    uint64_t ethernet_arp_frames = 0;
+    uint64_t ethernet_ipv6_frames = 0;
+    uint64_t ethernet_other_frames = 0;
 
     uint64_t tcp_syn_packets = 0;
     uint64_t tcp_ack_packets = 0;
@@ -976,9 +981,19 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
                 /* Ethernet II frame. */
                 uint16_t ether_type = read_u16_be(packet_data + 12u);
 
-                if (ether_type == 0x0800u && incl_len >= 14u + 20u) {
-                    ip_offset = 14u;
-                    contains_ipv4 = 1;
+                if (ether_type == 0x0800u) {
+                    ethernet_ipv4_frames++;
+
+                    if (incl_len >= 14u + 20u) {
+                        ip_offset = 14u;
+                        contains_ipv4 = 1;
+                    }
+                } else if (ether_type == 0x0806u) {
+                    ethernet_arp_frames++;
+                } else if (ether_type == 0x86ddu) {
+                    ethernet_ipv6_frames++;
+                } else {
+                    ethernet_other_frames++;
                 }
             }
 
@@ -1241,6 +1256,22 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
     print_port_table("Top UDP Source Ports", udp_source_ports, K1WI_PCAP_MAX_PORTS);
     print_port_table("Top UDP Destination Ports", udp_destination_ports, K1WI_PCAP_MAX_PORTS);
 
+        if (network == 1u) {
+        printf("\nEthernet Protocol Summary\n");
+        printf("-------------------------\n");
+        printf("IPv4 frames: %llu\n",
+               (unsigned long long)ethernet_ipv4_frames);
+        printf("ARP frames: %llu\n",
+               (unsigned long long)ethernet_arp_frames);
+        printf("IPv6 frames: %llu\n",
+               (unsigned long long)ethernet_ipv6_frames);
+        printf("Other EtherTypes: %llu\n",
+               (unsigned long long)ethernet_other_frames);
+        }
+    
+    
+    
+    
     printf("\nTCP Flags Summary\n");
     printf("-----------------\n");
     printf("SYN packets: %llu\n", (unsigned long long)tcp_syn_packets);

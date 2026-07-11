@@ -312,6 +312,35 @@ else
     fail "PCAP Ethernet synthetic fixture missing"
 fi
   
+echo
+echo "[TEST] PCAP mixed Ethernet EtherType summary"
+
+PCAP_MIXED_ETH_FIXTURE="testdata/pcap/k1wi_ethernet_mixed_ethertypes.pcap"
+
+if [ -f "$PCAP_MIXED_ETH_FIXTURE" ]; then
+    OUT=$($BIN PCAP "$PCAP_MIXED_ETH_FIXTURE" 2>&1)
+
+    require_output "PCAP mixed Ethernet reports packet count" \
+        "$OUT" "Packets: 6"
+
+    require_output "PCAP mixed Ethernet reports summary heading" \
+        "$OUT" "Ethernet Protocol Summary"
+
+    require_output "PCAP mixed Ethernet reports IPv4 frame count" \
+        "$OUT" "IPv4 frames: 3"
+
+    require_output "PCAP mixed Ethernet reports ARP frame count" \
+        "$OUT" "ARP frames: 1"
+
+    require_output "PCAP mixed Ethernet reports IPv6 frame count" \
+        "$OUT" "IPv6 frames: 1"
+
+    require_output "PCAP mixed Ethernet reports other EtherType count" \
+        "$OUT" "Other EtherTypes: 1"
+else
+    fail "PCAP mixed Ethernet fixture missing"
+fi
+  
     
 echo
 echo "[TEST] ELFINFO tiny ELF sample"
