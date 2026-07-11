@@ -394,7 +394,7 @@ if [ -f "$PCAP_VLAN_FIXTURE" ]; then
     OUT=$($BIN PCAP --full "$PCAP_VLAN_FIXTURE" 2>&1)
 
     require_output "PCAP VLAN full mode reports VLAN details" \
-        "$OUT" "VLAN tags: 802.1Q VLAN 100"
+        "$OUT" "VLAN tags: 802.1Q VLAN 100 PCP 0 DEI 0"
 
     require_output "PCAP VLAN full mode reports TCP endpoints" \
         "$OUT" "TCP 10.1.1.10:4444 -> 10.1.1.20:80"
@@ -464,7 +464,7 @@ if [ -f "$PCAP_QINQ_FIXTURE" ]; then
     OUT=$($BIN PCAP --full "$PCAP_QINQ_FIXTURE" 2>&1)
 
     require_output "PCAP QinQ full mode reports stacked VLAN details" \
-        "$OUT" "VLAN tags: 802.1ad VLAN 10, 802.1Q VLAN 100"
+        "$OUT" "VLAN tags: 802.1ad VLAN 10 PCP 0 DEI 0, 802.1Q VLAN 100 PCP 0 DEI 0"
 
     require_output "PCAP QinQ full mode reports TCP endpoints" \
         "$OUT" "TCP 10.1.1.10:4444 -> 10.1.1.20:80"

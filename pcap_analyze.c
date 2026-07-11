@@ -1055,15 +1055,21 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
                         read_u16_be(packet_data + ethernet_payload_offset);
                     uint16_t vlan_id =
                         (uint16_t)(vlan_tci & 0x0fffu);
+                    unsigned int vlan_pcp =
+                        (unsigned int)((vlan_tci >> 13) & 0x07u);
+                    unsigned int vlan_dei =
+                        (unsigned int)((vlan_tci >> 12) & 0x01u);
                     const char *vlan_type =
                         ether_type == 0x8100u ? "802.1Q" : "802.1ad";
                     int written =
                         snprintf(vlan_details + vlan_details_used,
                                  sizeof(vlan_details) - vlan_details_used,
-                                 "%s%s VLAN %u",
+                                 "%s%s VLAN %u PCP %u DEI %u",
                                  vlan_tag_count == 0u ? "" : ", ",
                                  vlan_type,
-                                 (unsigned int)vlan_id);
+                                 (unsigned int)vlan_id,
+                                 vlan_pcp,
+                                 vlan_dei);
 
                     if (written > 0 &&
                         (size_t)written <
