@@ -1045,6 +1045,8 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
                                 size_t ethernet_payload_offset = 14u;
                 uint16_t ether_type = read_u16_be(packet_data + 12u);
                 unsigned int vlan_tag_count = 0;
+                char vlan_details[128] = "";
+                size_t vlan_details_used = 0;
 
                 while ((ether_type == 0x8100u ||
                         ether_type == 0x88a8u) &&
@@ -1053,6 +1055,21 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
                         read_u16_be(packet_data + ethernet_payload_offset);
                     uint16_t vlan_id =
                         (uint16_t)(vlan_tci & 0x0fffu);
+                    const char *vlan_type =
+                        ether_type == 0x8100u ? "802.1Q" : "802.1ad";
+                    int written =
+                        snprintf(vlan_details + vlan_details_used,
+                                 sizeof(vlan_details) - vlan_details_used,
+                                 "%s%s VLAN %u",
+                                 vlan_tag_count == 0u ? "" : ", ",
+                                 vlan_type,
+                                 (unsigned int)vlan_id);
+
+                    if (written > 0 &&
+                        (size_t)written <
+                            sizeof(vlan_details) - vlan_details_used) {
+                        vlan_details_used += (size_t)written;
+                    }
 
                     if (ether_type == 0x8100u) {
                         vlan_8021q_tags++;
@@ -1079,6 +1096,10 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
                     } else {
                         vlan_stacked_tagged_frames++;
                     }
+                }
+
+                if (full_mode && vlan_tag_count > 0u) {
+                    printf("  VLAN tags: %s\n", vlan_details);
                 }
 
                 if (ether_type == 0x0800u) {
