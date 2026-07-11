@@ -244,6 +244,13 @@ if [ -f "$PCAP_FIXTURE" ]; then
     OUT=$($BIN PCAP "$PCAP_FIXTURE" 2>&1)
     require_output "PCAP synthetic reports packet count" "$OUT" "Packets: 3"
     require_output "PCAP synthetic reports TCP packet count" "$OUT" "TCP packets: 3"
+    require_output "PCAP synthetic reports TCP flags summary" "$OUT" "TCP Flags Summary"
+    require_output "PCAP synthetic reports SYN flag count" "$OUT" "SYN packets: 0"
+    require_output "PCAP synthetic reports ACK flag count" "$OUT" "ACK packets: 3"
+    require_output "PCAP synthetic reports FIN flag count" "$OUT" "FIN packets: 0"
+    require_output "PCAP synthetic reports RST flag count" "$OUT" "RST packets: 0"
+    require_output "PCAP synthetic reports PSH flag count" "$OUT" "PSH packets: 3"
+    require_output "PCAP synthetic reports URG flag count" "$OUT" "URG packets: 0"
     require_output "PCAP synthetic reports Base64 payload count" "$OUT" "Base64-like TCP payload packets: 3"
     require_output "PCAP synthetic reports sequence reconstruction" "$OUT" "Decoded TCP Payload Reconstruction by Sequence"
     require_output "PCAP synthetic sequence order differs from time order" "$OUT" "{time_order}K1Wi"

@@ -801,6 +801,13 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
     uint64_t icmp_packets = 0;
     uint64_t other_ipv4_packets = 0;
 
+    uint64_t tcp_syn_packets = 0;
+    uint64_t tcp_ack_packets = 0;
+    uint64_t tcp_fin_packets = 0;
+    uint64_t tcp_rst_packets = 0;
+    uint64_t tcp_psh_packets = 0;
+    uint64_t tcp_urg_packets = 0;
+
     uint64_t tcp_payload_packets = 0;
     uint64_t tcp_payload_bytes = 0;
     uint64_t printable_payload_packets = 0;
@@ -935,6 +942,26 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
                         if (incl_len >= ihl + 20u) {
                             unsigned int tcp_header_len =
                                 (unsigned int)(packet_data[ihl + 12u] >> 4) * 4u;
+                            uint8_t tcp_flags = packet_data[ihl + 13u];
+
+                            if ((tcp_flags & 0x02u) != 0u) {
+                                tcp_syn_packets++;
+                            }
+                            if ((tcp_flags & 0x10u) != 0u) {
+                                tcp_ack_packets++;
+                            }
+                            if ((tcp_flags & 0x01u) != 0u) {
+                                tcp_fin_packets++;
+                            }
+                            if ((tcp_flags & 0x04u) != 0u) {
+                                tcp_rst_packets++;
+                            }
+                            if ((tcp_flags & 0x08u) != 0u) {
+                                tcp_psh_packets++;
+                            }
+                            if ((tcp_flags & 0x20u) != 0u) {
+                                tcp_urg_packets++;
+                            }
 
                             if (tcp_header_len >= 20u && incl_len >= ihl + tcp_header_len) {
                                 size_t payload_offset = (size_t)ihl + (size_t)tcp_header_len;
@@ -1102,6 +1129,15 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
     print_port_table("Top TCP Destination Ports", tcp_destination_ports, K1WI_PCAP_MAX_PORTS);
     print_port_table("Top UDP Source Ports", udp_source_ports, K1WI_PCAP_MAX_PORTS);
     print_port_table("Top UDP Destination Ports", udp_destination_ports, K1WI_PCAP_MAX_PORTS);
+
+    printf("\nTCP Flags Summary\n");
+    printf("-----------------\n");
+    printf("SYN packets: %llu\n", (unsigned long long)tcp_syn_packets);
+    printf("ACK packets: %llu\n", (unsigned long long)tcp_ack_packets);
+    printf("FIN packets: %llu\n", (unsigned long long)tcp_fin_packets);
+    printf("RST packets: %llu\n", (unsigned long long)tcp_rst_packets);
+    printf("PSH packets: %llu\n", (unsigned long long)tcp_psh_packets);
+    printf("URG packets: %llu\n", (unsigned long long)tcp_urg_packets);
 
     printf("\nPayload Summary\n");
     printf("---------------\n");
