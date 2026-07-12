@@ -67,6 +67,24 @@ static const char *link_type_name(uint32_t link_type)
     }
 }
 
+static const char *ether_type_name(uint16_t ether_type)
+{
+    switch (ether_type) {
+        case 0x0800u:
+            return "IPv4";
+        case 0x0806u:
+            return "ARP";
+        case 0x86ddu:
+            return "IPv6";
+        case 0x8100u:
+            return "802.1Q VLAN";
+        case 0x88a8u:
+            return "802.1ad QinQ";
+        default:
+            return "Unknown/other";
+    }
+}
+
 #define K1WI_PCAP_MAX_IPS 64
 #define K1WI_PCAP_MAX_PORTS 64
 #define K1WI_PCAP_MAX_VLANS 64
@@ -1177,7 +1195,9 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
                         } else if (network == 1u && incl_len >= 14u) {
                 /* Ethernet II frame, optionally with VLAN tags. */
                                 size_t ethernet_payload_offset = 14u;
-                uint16_t ether_type = read_u16_be(packet_data + 12u);
+                uint16_t outer_ether_type =
+                    read_u16_be(packet_data + 12u);
+                uint16_t ether_type = outer_ether_type;
                 unsigned int vlan_tag_count = 0;
                 char vlan_details[128] = "";
                 size_t vlan_details_used = 0;
@@ -1202,9 +1222,12 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
                                destination_mac_text,
                                sizeof(destination_mac_text));
 
-                    printf("  Ethernet %s -> %s\n",
+                    printf("  Ethernet %s -> %s "
+                           "EtherType=0x%04x (%s)\n",
                            source_mac_text,
-                           destination_mac_text);
+                           destination_mac_text,
+                           (unsigned int)outer_ether_type,
+                           ether_type_name(outer_ether_type));
                 }
 
                 while ((ether_type == 0x8100u ||
@@ -1278,6 +1301,14 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
 
                 if (full_mode && vlan_tag_count > 0u) {
                     printf("  VLAN tags: %s\n", vlan_details);
+
+                    if (ether_type != 0x8100u &&
+                        ether_type != 0x88a8u) {
+                        printf("  VLAN encapsulated EtherType: "
+                               "0x%04x (%s)\n",
+                               (unsigned int)ether_type,
+                               ether_type_name(ether_type));
+                    }
                 }
 
                 if (ether_type == 0x0800u) {
