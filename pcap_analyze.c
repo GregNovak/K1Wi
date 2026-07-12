@@ -1,3 +1,4 @@
+#include <arpa/inet.h>
 #include "pcap_analyze.h"
 
 #include <stdint.h>
@@ -600,6 +601,47 @@ static void format_ipv4(uint32_t ip, char *out, size_t out_size)
              (unsigned int)((ip >> 16) & 0xffu),
              (unsigned int)((ip >> 8) & 0xffu),
              (unsigned int)(ip & 0xffu));
+}
+
+static void format_ipv6(const unsigned char *ip,
+                        char *out,
+                        size_t out_size)
+{
+    if (!ip || !out || out_size == 0u) {
+        return;
+    }
+
+    if (!inet_ntop(AF_INET6, ip, out, out_size)) {
+        snprintf(out, out_size, "<invalid>");
+    }
+}
+
+static const char *ipv6_next_header_name(uint8_t next_header)
+{
+    switch (next_header) {
+        case 0u:
+            return "Hop-by-Hop Options";
+        case 6u:
+            return "TCP";
+        case 17u:
+            return "UDP";
+        case 43u:
+            return "Routing";
+        case 44u:
+            return "Fragment";
+        case 50u:
+            return "ESP";
+        case 51u:
+            return "AH";
+        case 58u:
+            return "ICMPv6";
+        case 59u:
+            return "No Next Header";
+        case 60u:
+            return "Destination Options";
+        default:
+            return "Unknown/other";
+    }
 }
 
 static void format_tcp_flags(uint8_t flags, char *out, size_t out_size)
@@ -1447,7 +1489,59 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
                         printf("  Warning: truncated ARP header\n");
                     }
                 } else if (ether_type == 0x86ddu) {
+                    size_t ipv6_available =
+                        (size_t)incl_len - ethernet_payload_offset;
+
                     ethernet_ipv6_frames++;
+
+                    if (ipv6_available >= 40u) {
+                        const unsigned char *ipv6_data =
+                            packet_data + ethernet_payload_offset;
+                        unsigned int version =
+                            (unsigned int)(ipv6_data[0] >> 4);
+                        uint16_t payload_length =
+                            read_u16_be(ipv6_data + 4u);
+                        uint8_t next_header = ipv6_data[6];
+                        size_t captured_payload_length =
+                            ipv6_available - 40u;
+
+                        if (version == 6u) {
+                            if (full_mode) {
+                                char source_ip_text[INET6_ADDRSTRLEN];
+                                char destination_ip_text[INET6_ADDRSTRLEN];
+
+                                format_ipv6(ipv6_data + 8u,
+                                            source_ip_text,
+                                            sizeof(source_ip_text));
+                                format_ipv6(ipv6_data + 24u,
+                                            destination_ip_text,
+                                            sizeof(destination_ip_text));
+
+                                printf("  IPv6 %s -> %s "
+                                       "next-header=%u (%s) "
+                                       "payload=%u\n",
+                                       source_ip_text,
+                                       destination_ip_text,
+                                       (unsigned int)next_header,
+                                       ipv6_next_header_name(next_header),
+                                       (unsigned int)payload_length);
+
+                                if ((size_t)payload_length >
+                                    captured_payload_length) {
+                                    printf("  Warning: truncated IPv6 "
+                                           "payload "
+                                           "(declared=%u captured=%zu)\n",
+                                           (unsigned int)payload_length,
+                                           captured_payload_length);
+                                }
+                            }
+                        } else if (full_mode) {
+                            printf("  Warning: invalid IPv6 version %u\n",
+                                   version);
+                        }
+                    } else if (full_mode) {
+                        printf("  Warning: truncated IPv6 header\n");
+                    }
                 } else {
                     ethernet_other_frames++;
                 }

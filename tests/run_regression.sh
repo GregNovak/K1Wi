@@ -427,6 +427,34 @@ else
     fail "PCAP ARP fixture missing"
 fi
 
+echo
+echo "[TEST] PCAP Ethernet IPv6 details"
+
+PCAP_IPV6_FIXTURE="testdata/pcap/k1wi_ethernet_ipv6_udp.pcap"
+
+if [ -f "$PCAP_IPV6_FIXTURE" ]; then
+    OUT=$($BIN PCAP "$PCAP_IPV6_FIXTURE" 2>&1)
+
+    require_output "PCAP IPv6 reports packet count" \
+        "$OUT" "Packets: 1"
+
+    require_output "PCAP IPv6 reports IPv6 frame count" \
+        "$OUT" "IPv6 frames: 1"
+
+    OUT=$($BIN PCAP --full "$PCAP_IPV6_FIXTURE" 2>&1)
+
+    require_output "PCAP IPv6 full mode reports endpoints" \
+        "$OUT" "IPv6 2001:db8::10 -> 2001:db8::20"
+
+    require_output "PCAP IPv6 full mode reports next header" \
+        "$OUT" "next-header=17 (UDP)"
+
+    require_output "PCAP IPv6 full mode reports payload length" \
+        "$OUT" "payload=18"
+else
+    fail "PCAP IPv6 fixture missing"
+fi
+
 echo "[TEST] PCAP mixed Ethernet EtherType summary"
 
 PCAP_MIXED_ETH_FIXTURE="testdata/pcap/k1wi_ethernet_mixed_ethertypes.pcap"
