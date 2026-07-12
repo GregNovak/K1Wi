@@ -1350,7 +1350,102 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
                         contains_ipv4 = 1;
                     }
                 } else if (ether_type == 0x0806u) {
+                    size_t arp_available =
+                        (size_t)incl_len - ethernet_payload_offset;
+
                     ethernet_arp_frames++;
+
+                    if (arp_available >= 8u) {
+                        const unsigned char *arp_data =
+                            packet_data + ethernet_payload_offset;
+                        uint16_t hardware_type =
+                            read_u16_be(arp_data);
+                        uint16_t protocol_type =
+                            read_u16_be(arp_data + 2u);
+                        uint8_t hardware_length = arp_data[4];
+                        uint8_t protocol_length = arp_data[5];
+                        uint16_t operation =
+                            read_u16_be(arp_data + 6u);
+                        size_t required_length =
+                            8u +
+                            ((size_t)hardware_length * 2u) +
+                            ((size_t)protocol_length * 2u);
+
+                        if (hardware_type == 1u &&
+                            protocol_type == 0x0800u &&
+                            hardware_length == 6u &&
+                            protocol_length == 4u &&
+                            arp_available >= required_length) {
+                            const unsigned char *sender_mac =
+                                arp_data + 8u;
+                            const unsigned char *sender_ip =
+                                sender_mac + hardware_length;
+                            const unsigned char *target_mac =
+                                sender_ip + protocol_length;
+                            const unsigned char *target_ip =
+                                target_mac + hardware_length;
+
+                            if (full_mode) {
+                                char sender_mac_text[18];
+                                char target_mac_text[18];
+                                char sender_ip_text[16];
+                                char target_ip_text[16];
+
+                                format_mac(sender_mac,
+                                           sender_mac_text,
+                                           sizeof(sender_mac_text));
+                                format_mac(target_mac,
+                                           target_mac_text,
+                                           sizeof(target_mac_text));
+                                format_ipv4(read_u32_be(sender_ip),
+                                            sender_ip_text,
+                                            sizeof(sender_ip_text));
+                                format_ipv4(read_u32_be(target_ip),
+                                            target_ip_text,
+                                            sizeof(target_ip_text));
+
+                                if (operation == 1u) {
+                                    printf("  ARP request: %s (%s) "
+                                           "asks for %s\n",
+                                           sender_ip_text,
+                                           sender_mac_text,
+                                           target_ip_text);
+                                } else if (operation == 2u) {
+                                    printf("  ARP reply: %s is at %s "
+                                           "(target %s, %s)\n",
+                                           sender_ip_text,
+                                           sender_mac_text,
+                                           target_ip_text,
+                                           target_mac_text);
+                                } else {
+                                    printf("  ARP operation=%u "
+                                           "sender=%s (%s) "
+                                           "target=%s (%s)\n",
+                                           (unsigned int)operation,
+                                           sender_ip_text,
+                                           sender_mac_text,
+                                           target_ip_text,
+                                           target_mac_text);
+                                }
+                            }
+                        } else if (arp_available < required_length) {
+                            if (full_mode) {
+                                printf("  Warning: truncated ARP payload\n");
+                            }
+                        } else if (full_mode) {
+                            printf("  ARP operation=%u "
+                                   "hardware=0x%04x "
+                                   "protocol=0x%04x "
+                                   "hlen=%u plen=%u\n",
+                                   (unsigned int)operation,
+                                   (unsigned int)hardware_type,
+                                   (unsigned int)protocol_type,
+                                   (unsigned int)hardware_length,
+                                   (unsigned int)protocol_length);
+                        }
+                    } else if (full_mode) {
+                        printf("  Warning: truncated ARP header\n");
+                    }
                 } else if (ether_type == 0x86ddu) {
                     ethernet_ipv6_frames++;
                 } else {

@@ -396,6 +396,37 @@ else
     fail "PCAP ICMP fixture missing"
 fi
 
+echo
+echo "[TEST] PCAP Ethernet ARP details"
+
+PCAP_ARP_FIXTURE="testdata/pcap/k1wi_ethernet_arp_request_reply.pcap"
+
+if [ -f "$PCAP_ARP_FIXTURE" ]; then
+    OUT=$($BIN PCAP "$PCAP_ARP_FIXTURE" 2>&1)
+
+    require_output "PCAP ARP reports packet count" \
+        "$OUT" "Packets: 2"
+
+    require_output "PCAP ARP reports ARP frame count" \
+        "$OUT" "ARP frames: 2"
+
+    OUT=$($BIN PCAP --full "$PCAP_ARP_FIXTURE" 2>&1)
+
+    require_output "PCAP ARP full mode reports request sender" \
+        "$OUT" "ARP request: 192.168.1.10 (66:77:88:99:aa:bb)"
+
+    require_output "PCAP ARP full mode reports requested target" \
+        "$OUT" "asks for 192.168.1.1"
+
+    require_output "PCAP ARP full mode reports reply sender" \
+        "$OUT" "ARP reply: 192.168.1.1 is at 00:11:22:33:44:55"
+
+    require_output "PCAP ARP full mode reports reply target" \
+        "$OUT" "(target 192.168.1.10, 66:77:88:99:aa:bb)"
+else
+    fail "PCAP ARP fixture missing"
+fi
+
 echo "[TEST] PCAP mixed Ethernet EtherType summary"
 
 PCAP_MIXED_ETH_FIXTURE="testdata/pcap/k1wi_ethernet_mixed_ethertypes.pcap"
