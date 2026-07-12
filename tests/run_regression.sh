@@ -315,6 +315,9 @@ if [ -f "$PCAP_ETH_FIXTURE" ]; then
     require_output "PCAP Ethernet full mode reports MAC addresses" \
         "$OUT" "Ethernet 66:77:88:99:aa:bb -> 00:11:22:33:44:55"
 
+    require_output "PCAP Ethernet full mode reports IPv4 EtherType" \
+        "$OUT" "EtherType=0x0800 (IPv4)"
+
     require_output "PCAP Ethernet full mode reports TCP endpoints" \
         "$OUT" "TCP 10.1.1.10:4444 -> 10.1.1.20:80"
 
@@ -411,6 +414,12 @@ if [ -f "$PCAP_VLAN_FIXTURE" ]; then
     require_output "PCAP VLAN full mode reports VLAN details" \
         "$OUT" "VLAN tags: 802.1Q VLAN 100"
 
+    require_output "PCAP VLAN full mode reports outer EtherType" \
+        "$OUT" "EtherType=0x8100 (802.1Q VLAN)"
+
+    require_output "PCAP VLAN full mode reports encapsulated EtherType" \
+        "$OUT" "VLAN encapsulated EtherType: 0x0800 (IPv4)"
+
     require_output "PCAP VLAN full mode reports TCP endpoints" \
         "$OUT" "TCP 10.1.1.10:4444 -> 10.1.1.20:80"
 
@@ -480,6 +489,12 @@ if [ -f "$PCAP_QINQ_FIXTURE" ]; then
 
     require_output "PCAP QinQ full mode reports stacked VLAN details" \
         "$OUT" "VLAN tags: 802.1ad VLAN 10 PCP 0 DEI 0, 802.1Q VLAN 100 PCP 0 DEI 0"
+
+    require_output "PCAP QinQ full mode reports outer EtherType" \
+        "$OUT" "EtherType=0x88a8 (802.1ad QinQ)"
+
+    require_output "PCAP QinQ full mode reports encapsulated EtherType" \
+        "$OUT" "VLAN encapsulated EtherType: 0x0800 (IPv4)"
 
     require_output "PCAP QinQ full mode reports TCP endpoints" \
         "$OUT" "TCP 10.1.1.10:4444 -> 10.1.1.20:80"
