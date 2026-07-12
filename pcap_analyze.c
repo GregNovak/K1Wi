@@ -85,6 +85,36 @@ static const char *ether_type_name(uint16_t ether_type)
     }
 }
 
+static const char *icmp_type_name(uint8_t type)
+{
+    switch (type) {
+        case 0u:
+            return "Echo Reply";
+        case 3u:
+            return "Destination Unreachable";
+        case 4u:
+            return "Source Quench";
+        case 5u:
+            return "Redirect";
+        case 8u:
+            return "Echo Request";
+        case 9u:
+            return "Router Advertisement";
+        case 10u:
+            return "Router Solicitation";
+        case 11u:
+            return "Time Exceeded";
+        case 12u:
+            return "Parameter Problem";
+        case 13u:
+            return "Timestamp Request";
+        case 14u:
+            return "Timestamp Reply";
+        default:
+            return "Unknown/other";
+    }
+}
+
 #define K1WI_PCAP_MAX_IPS 64
 #define K1WI_PCAP_MAX_PORTS 64
 #define K1WI_PCAP_MAX_VLANS 64
@@ -1351,7 +1381,34 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
 
                                 if (protocol == 1) {
                     icmp_packets++;
-                
+
+                    if (ip_available >= (size_t)ihl + 2u) {
+                        uint8_t icmp_type = ip_data[ihl];
+                        uint8_t icmp_code = ip_data[ihl + 1u];
+
+                        if (full_mode) {
+                            char src_ip_text[16];
+                            char dst_ip_text[16];
+
+                            format_ipv4(src_ip,
+                                        src_ip_text,
+                                        sizeof(src_ip_text));
+                            format_ipv4(dst_ip,
+                                        dst_ip_text,
+                                        sizeof(dst_ip_text));
+
+                            printf("  ICMP %s -> %s "
+                                   "type=%u code=%u (%s)\n",
+                                   src_ip_text,
+                                   dst_ip_text,
+                                   (unsigned int)icmp_type,
+                                   (unsigned int)icmp_code,
+                                   icmp_type_name(icmp_type));
+                        }
+                    } else if (full_mode) {
+                        printf("  Warning: truncated ICMP header\n");
+                    }
+
                                 } else if (protocol == 6) {
                     tcp_packets++;
 

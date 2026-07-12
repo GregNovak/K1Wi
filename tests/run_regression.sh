@@ -365,6 +365,37 @@ else
     fail "PCAP UDP fixture missing"
 fi
 
+echo
+echo "[TEST] PCAP Ethernet ICMP details"
+
+PCAP_ICMP_FIXTURE="testdata/pcap/k1wi_ethernet_icmp_echo.pcap"
+
+if [ -f "$PCAP_ICMP_FIXTURE" ]; then
+    OUT=$($BIN PCAP "$PCAP_ICMP_FIXTURE" 2>&1)
+
+    require_output "PCAP ICMP reports packet count" \
+        "$OUT" "Packets: 1"
+
+    require_output "PCAP ICMP reports IPv4 packet count" \
+        "$OUT" "IPv4 packets: 1"
+
+    require_output "PCAP ICMP reports ICMP packet count" \
+        "$OUT" "ICMP packets: 1"
+
+    OUT=$($BIN PCAP --full "$PCAP_ICMP_FIXTURE" 2>&1)
+
+    require_output "PCAP ICMP full mode reports endpoints" \
+        "$OUT" "ICMP 10.1.1.10 -> 10.1.1.20"
+
+    require_output "PCAP ICMP full mode reports type and code" \
+        "$OUT" "type=8 code=0"
+
+    require_output "PCAP ICMP full mode reports friendly type name" \
+        "$OUT" "(Echo Request)"
+else
+    fail "PCAP ICMP fixture missing"
+fi
+
 echo "[TEST] PCAP mixed Ethernet EtherType summary"
 
 PCAP_MIXED_ETH_FIXTURE="testdata/pcap/k1wi_ethernet_mixed_ethertypes.pcap"
