@@ -70,6 +70,7 @@ static const char *link_type_name(uint32_t link_type)
 #define K1WI_PCAP_MAX_IPS 64
 #define K1WI_PCAP_MAX_PORTS 64
 #define K1WI_PCAP_MAX_VLANS 64
+#define K1WI_PCAP_MAX_MACS 64
 #define K1WI_PCAP_PREVIEW_SIZE 128
 #define K1WI_PCAP_MAX_TCP_FRAGMENTS 512
 #define K1WI_PCAP_MAX_RECON_BYTES 8192
@@ -87,6 +88,12 @@ struct port_counter {
 
 struct vlan_counter {
     uint16_t vlan_id;
+    uint64_t count;
+    int used;
+};
+
+struct mac_counter {
+    unsigned char mac[6];
     uint64_t count;
     int used;
 };
@@ -165,6 +172,110 @@ static void print_port_table(const char *title, const struct port_counter *table
     }
 
     if (printed_indices[0] == -1) {
+        printf("n/a\n");
+    }
+}
+
+
+static void format_mac(const unsigned char *mac,
+                       char *out,
+                       size_t out_size)
+{
+    if (!mac || !out || out_size == 0u) {
+        return;
+    }
+
+    snprintf(out,
+             out_size,
+             "%02x:%02x:%02x:%02x:%02x:%02x",
+             (unsigned int)mac[0],
+             (unsigned int)mac[1],
+             (unsigned int)mac[2],
+             (unsigned int)mac[3],
+             (unsigned int)mac[4],
+             (unsigned int)mac[5]);
+}
+
+static void add_mac_count(struct mac_counter *table,
+                          size_t table_size,
+                          const unsigned char *mac)
+{
+    size_t i;
+    size_t free_slot = table_size;
+
+    if (!table || !mac) {
+        return;
+    }
+
+    for (i = 0; i < table_size; i++) {
+        if (table[i].used &&
+            memcmp(table[i].mac, mac, sizeof(table[i].mac)) == 0) {
+            table[i].count++;
+            return;
+        }
+
+        if (!table[i].used && free_slot == table_size) {
+            free_slot = i;
+        }
+    }
+
+    if (free_slot < table_size) {
+        memcpy(table[free_slot].mac,
+               mac,
+               sizeof(table[free_slot].mac));
+        table[free_slot].count = 1;
+        table[free_slot].used = 1;
+    }
+}
+
+static void print_mac_table(const char *title,
+                            const struct mac_counter *table,
+                            size_t table_size)
+{
+    int printed[K1WI_PCAP_MAX_MACS] = {0};
+    size_t rank;
+    int found = 0;
+
+    printf("\n%s\n", title);
+    printf("---------------------------\n");
+
+    for (rank = 0; rank < 5u; rank++) {
+        size_t best = table_size;
+        size_t i;
+
+        for (i = 0; i < table_size; i++) {
+            if (!table[i].used || printed[i]) {
+                continue;
+            }
+
+            if (best == table_size ||
+                table[i].count > table[best].count ||
+                (table[i].count == table[best].count &&
+                 memcmp(table[i].mac,
+                        table[best].mac,
+                        sizeof(table[i].mac)) < 0)) {
+                best = i;
+            }
+        }
+
+        if (best == table_size) {
+            break;
+        }
+
+        printed[best] = 1;
+
+        char mac_text[18];
+        format_mac(table[best].mac,
+                   mac_text,
+                   sizeof(mac_text));
+
+        printf("%-17s  %llu\n",
+               mac_text,
+               (unsigned long long)table[best].count);
+        found = 1;
+    }
+
+    if (!found) {
         printf("n/a\n");
     }
 }
@@ -962,6 +1073,9 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
 
     struct vlan_counter vlan_ids[K1WI_PCAP_MAX_VLANS] = {0};
 
+    struct mac_counter source_macs[K1WI_PCAP_MAX_MACS] = {0};
+    struct mac_counter destination_macs[K1WI_PCAP_MAX_MACS] = {0};
+
     struct port_counter tcp_source_ports[K1WI_PCAP_MAX_PORTS] = {0};
     struct port_counter tcp_destination_ports[K1WI_PCAP_MAX_PORTS] = {0};
     struct port_counter udp_source_ports[K1WI_PCAP_MAX_PORTS] = {0};
@@ -1067,6 +1181,31 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
                 unsigned int vlan_tag_count = 0;
                 char vlan_details[128] = "";
                 size_t vlan_details_used = 0;
+                const unsigned char *destination_mac = packet_data;
+                const unsigned char *source_mac = packet_data + 6u;
+
+                add_mac_count(source_macs,
+                              K1WI_PCAP_MAX_MACS,
+                              source_mac);
+                add_mac_count(destination_macs,
+                              K1WI_PCAP_MAX_MACS,
+                              destination_mac);
+
+                if (full_mode) {
+                    char source_mac_text[18];
+                    char destination_mac_text[18];
+
+                    format_mac(source_mac,
+                               source_mac_text,
+                               sizeof(source_mac_text));
+                    format_mac(destination_mac,
+                               destination_mac_text,
+                               sizeof(destination_mac_text));
+
+                    printf("  Ethernet %s -> %s\n",
+                           source_mac_text,
+                           destination_mac_text);
+                }
 
                 while ((ether_type == 0x8100u ||
                         ether_type == 0x88a8u) &&
@@ -1428,6 +1567,14 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
                (unsigned long long)ethernet_ipv6_frames);
         printf("Other EtherTypes: %llu\n",
                (unsigned long long)ethernet_other_frames);
+
+        print_mac_table("Top Ethernet Source MACs",
+                        source_macs,
+                        K1WI_PCAP_MAX_MACS);
+        print_mac_table("Top Ethernet Destination MACs",
+                        destination_macs,
+                        K1WI_PCAP_MAX_MACS);
+
                 printf("\nVLAN Summary\n");
         printf("------------\n");
         printf("Tagged frames: %llu\n",

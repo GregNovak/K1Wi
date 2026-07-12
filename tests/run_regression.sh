@@ -298,7 +298,22 @@ if [ -f "$PCAP_ETH_FIXTURE" ]; then
     require_output "PCAP Ethernet reconstructs time-order payload" \
         "$OUT" "K1Wi{time_order}"
 
+    require_output "PCAP Ethernet reports source MAC table" \
+        "$OUT" "Top Ethernet Source MACs"
+
+    require_output "PCAP Ethernet reports source MAC count" \
+        "$OUT" "66:77:88:99:aa:bb  3"
+
+    require_output "PCAP Ethernet reports destination MAC table" \
+        "$OUT" "Top Ethernet Destination MACs"
+
+    require_output "PCAP Ethernet reports destination MAC count" \
+        "$OUT" "00:11:22:33:44:55  3"
+
     OUT=$($BIN PCAP --full "$PCAP_ETH_FIXTURE" 2>&1)
+
+    require_output "PCAP Ethernet full mode reports MAC addresses" \
+        "$OUT" "Ethernet 66:77:88:99:aa:bb -> 00:11:22:33:44:55"
 
     require_output "PCAP Ethernet full mode reports TCP endpoints" \
         "$OUT" "TCP 10.1.1.10:4444 -> 10.1.1.20:80"
