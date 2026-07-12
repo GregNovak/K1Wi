@@ -479,6 +479,30 @@ else
 fi
     
 echo
+echo
+echo "[TEST] PCAP truncated VLAN handling"
+
+PCAP_TRUNCATED_VLAN_FIXTURE="testdata/pcap/k1wi_truncated_vlan.pcap"
+
+if [ -f "$PCAP_TRUNCATED_VLAN_FIXTURE" ]; then
+    OUT=$($BIN PCAP "$PCAP_TRUNCATED_VLAN_FIXTURE" 2>&1)
+
+    require_output "PCAP truncated VLAN reports packet count" \
+        "$OUT" "Packets: 1"
+
+    require_output "PCAP truncated VLAN reports zero tagged frames" \
+        "$OUT" "Tagged frames: 0"
+
+    require_output "PCAP truncated VLAN reports malformed frame count" \
+        "$OUT" "Malformed VLAN frames: 1"
+
+    OUT=$($BIN PCAP --full "$PCAP_TRUNCATED_VLAN_FIXTURE" 2>&1)
+
+    require_output "PCAP truncated VLAN full mode reports warning" \
+        "$OUT" "Warning: truncated 802.1Q VLAN tag"
+else
+    fail "PCAP truncated VLAN fixture missing"
+fi
 echo "[TEST] ELFINFO tiny ELF sample"
 
 ELF_SAMPLE="/tmp/k1wi_regression_hello_elf"

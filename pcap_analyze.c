@@ -942,6 +942,7 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
     uint64_t vlan_stacked_tagged_frames = 0;
     uint64_t vlan_8021q_tags = 0;
     uint64_t vlan_8021ad_tags = 0;
+    uint64_t malformed_vlan_frames = 0;
 
     uint64_t tcp_syn_packets = 0;
     uint64_t tcp_ack_packets = 0;
@@ -1120,6 +1121,19 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
                         vlan_single_tagged_frames++;
                     } else {
                         vlan_stacked_tagged_frames++;
+                    }
+                }
+
+                if ((ether_type == 0x8100u ||
+                     ether_type == 0x88a8u) &&
+                    (size_t)incl_len < ethernet_payload_offset + 4u) {
+                    malformed_vlan_frames++;
+
+                    if (full_mode) {
+                        printf("  Warning: truncated %s VLAN tag\n",
+                               ether_type == 0x8100u
+                                   ? "802.1Q"
+                                   : "802.1ad");
                     }
                 }
 
@@ -1426,6 +1440,8 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
                (unsigned long long)vlan_8021q_tags);
         printf("802.1ad tags: %llu\n",
                (unsigned long long)vlan_8021ad_tags);
+        printf("Malformed VLAN frames: %llu\n",
+               (unsigned long long)malformed_vlan_frames);
 
         print_vlan_table(vlan_ids, K1WI_PCAP_MAX_VLANS);
         }
