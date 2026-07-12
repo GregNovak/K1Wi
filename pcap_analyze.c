@@ -1503,15 +1503,68 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
                         }
                     }
                 } else if (protocol == 17) {
-                
+
                     udp_packets++;
 
-                    if (ip_available >= (size_t)ihl + 4u) {
-                        uint16_t src_port = read_u16_be(ip_data + ihl);
-                        uint16_t dst_port = read_u16_be(ip_data + ihl + 2u);
+                    if (ip_available >= (size_t)ihl + 8u) {
+                        uint16_t src_port =
+                            read_u16_be(ip_data + ihl);
+                        uint16_t dst_port =
+                            read_u16_be(ip_data + ihl + 2u);
+                        uint16_t udp_length =
+                            read_u16_be(ip_data + ihl + 4u);
+                        size_t udp_available =
+                            ip_available - (size_t)ihl;
+                        size_t udp_payload_len = 0u;
+                        int udp_length_valid = 1;
 
-                        add_port_count(udp_source_ports, K1WI_PCAP_MAX_PORTS, src_port);
-                        add_port_count(udp_destination_ports, K1WI_PCAP_MAX_PORTS, dst_port);
+                        add_port_count(udp_source_ports,
+                                       K1WI_PCAP_MAX_PORTS,
+                                       src_port);
+                        add_port_count(udp_destination_ports,
+                                       K1WI_PCAP_MAX_PORTS,
+                                       dst_port);
+
+                        if (udp_length < 8u) {
+                            udp_length_valid = 0;
+                        } else if ((size_t)udp_length > udp_available) {
+                            udp_length_valid = 0;
+                            udp_payload_len =
+                                udp_available > 8u
+                                    ? udp_available - 8u
+                                    : 0u;
+                        } else {
+                            udp_payload_len =
+                                (size_t)udp_length - 8u;
+                        }
+
+                        if (full_mode) {
+                            char src_ip_text[16];
+                            char dst_ip_text[16];
+
+                            format_ipv4(src_ip,
+                                        src_ip_text,
+                                        sizeof(src_ip_text));
+                            format_ipv4(dst_ip,
+                                        dst_ip_text,
+                                        sizeof(dst_ip_text));
+
+                            printf("  UDP %s:%u -> %s:%u "
+                                   "length=%u payload=%zu\n",
+                                   src_ip_text,
+                                   (unsigned int)src_port,
+                                   dst_ip_text,
+                                   (unsigned int)dst_port,
+                                   (unsigned int)udp_length,
+                                   udp_payload_len);
+
+                            if (!udp_length_valid) {
+                                printf("  Warning: invalid or truncated "
+                                       "UDP length\n");
+                            }
+                        }
+                    } else if (full_mode) {
+                        printf("  Warning: truncated UDP header\n");
                     }
                 } else {
                     other_ipv4_packets++;

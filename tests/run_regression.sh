@@ -331,6 +331,40 @@ else
 fi
   
 echo
+echo
+echo "[TEST] PCAP Ethernet UDP details"
+
+PCAP_UDP_FIXTURE="testdata/pcap/k1wi_ethernet_udp.pcap"
+
+if [ -f "$PCAP_UDP_FIXTURE" ]; then
+    OUT=$($BIN PCAP "$PCAP_UDP_FIXTURE" 2>&1)
+
+    require_output "PCAP UDP reports packet count" \
+        "$OUT" "Packets: 1"
+
+    require_output "PCAP UDP reports UDP packet count" \
+        "$OUT" "UDP packets: 1"
+
+    require_output "PCAP UDP reports source port" \
+        "$OUT" "5353"
+
+    require_output "PCAP UDP reports destination port" \
+        "$OUT" "53"
+
+    OUT=$($BIN PCAP --full "$PCAP_UDP_FIXTURE" 2>&1)
+
+    require_output "PCAP UDP full mode reports endpoints" \
+        "$OUT" "UDP 10.1.1.10:5353 -> 10.1.1.20:53"
+
+    require_output "PCAP UDP full mode reports length" \
+        "$OUT" "length=17"
+
+    require_output "PCAP UDP full mode reports payload size" \
+        "$OUT" "payload=9"
+else
+    fail "PCAP UDP fixture missing"
+fi
+
 echo "[TEST] PCAP mixed Ethernet EtherType summary"
 
 PCAP_MIXED_ETH_FIXTURE="testdata/pcap/k1wi_ethernet_mixed_ethertypes.pcap"
