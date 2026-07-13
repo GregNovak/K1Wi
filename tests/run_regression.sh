@@ -455,6 +455,38 @@ else
     fail "PCAP IPv6 fixture missing"
 fi
 
+echo
+echo "[TEST] PCAP TCP directional flow reconstruction"
+
+PCAP_TCP_FLOW_FIXTURE="testdata/pcap/k1wi_ethernet_two_tcp_flows.pcap"
+
+if [ -f "$PCAP_TCP_FLOW_FIXTURE" ]; then
+    OUT=$($BIN PCAP --full "$PCAP_TCP_FLOW_FIXTURE" 2>&1)
+
+    require_output "PCAP TCP flow reconstruction reports two flows" \
+        "$OUT" "Directional flows: 2"
+
+    require_output "PCAP TCP flow reconstruction reports first stream" \
+        "$OUT" "Stream: 10.0.0.1:5000 -> 10.0.0.2:80"
+
+    require_output "PCAP TCP flow reconstruction reports first payload" \
+        "$OUT" "FLOW1-AFLOW1-B"
+
+    require_output "PCAP TCP flow reconstruction reports second stream" \
+        "$OUT" "Stream: 10.0.0.3:6000 -> 10.0.0.4:443"
+
+    require_output "PCAP TCP flow reconstruction reports second payload" \
+        "$OUT" "FLOW2-AFLOW2-B"
+
+    if grep -Fq "FLOW1-AFLOW2-AFLOW1-BFLOW2-B" <<< "$OUT"; then
+        fail "PCAP TCP flow reconstruction mixed unrelated streams"
+    else
+        pass "PCAP TCP flow reconstruction keeps streams separate"
+    fi
+else
+    fail "PCAP TCP directional-flow fixture missing"
+fi
+
 echo "[TEST] PCAP mixed Ethernet EtherType summary"
 
 PCAP_MIXED_ETH_FIXTURE="testdata/pcap/k1wi_ethernet_mixed_ethertypes.pcap"

@@ -960,7 +960,23 @@ static void print_decoded_fragment_reconstruction(const struct tcp_fragment *fra
     }
 }
 
-static void print_tcp_stream_reconstruction(struct tcp_fragment *fragments, size_t fragment_count)
+static int tcp_fragments_same_flow(
+    const struct tcp_fragment *a,
+    const struct tcp_fragment *b)
+{
+    if (!a || !b) {
+        return 0;
+    }
+
+    return a->src_ip == b->src_ip &&
+           a->dst_ip == b->dst_ip &&
+           a->src_port == b->src_port &&
+           a->dst_port == b->dst_port;
+}
+
+static void print_single_tcp_flow_reconstruction(
+    struct tcp_fragment *fragments,
+    size_t fragment_count)
 {
     if (!fragments || fragment_count == 0) {
         printf("\nTCP Stream Reconstruction\n");
@@ -1064,6 +1080,92 @@ static void print_tcp_stream_reconstruction(struct tcp_fragment *fragments, size
 }
     
     
+static void print_tcp_stream_reconstruction(
+    struct tcp_fragment *fragments,
+    size_t fragment_count)
+{
+    if (!fragments || fragment_count == 0u) {
+        print_single_tcp_flow_reconstruction(fragments,
+                                             fragment_count);
+        return;
+    }
+
+    int *processed = calloc(fragment_count, sizeof(*processed));
+    struct tcp_fragment *flow_fragments =
+        malloc(fragment_count * sizeof(*flow_fragments));
+
+    if (!processed || !flow_fragments) {
+        free(processed);
+        free(flow_fragments);
+
+        printf("\nTCP Directional Flow Reconstruction\n");
+        printf("-----------------------------------\n");
+        printf("Unable to allocate flow-grouping workspace.\n");
+        return;
+    }
+
+    size_t flow_count = 0u;
+
+    /*
+     * Count unique directional flows. A reverse-direction conversation is
+     * intentionally treated as a separate flow.
+     */
+    for (size_t i = 0u; i < fragment_count; i++) {
+        if (processed[i]) {
+            continue;
+        }
+
+        flow_count++;
+        processed[i] = 1;
+
+        for (size_t j = i + 1u; j < fragment_count; j++) {
+            if (!processed[j] &&
+                tcp_fragments_same_flow(&fragments[i],
+                                        &fragments[j])) {
+                processed[j] = 1;
+            }
+        }
+    }
+
+    memset(processed, 0, fragment_count * sizeof(*processed));
+
+    printf("\nTCP Directional Flow Summary\n");
+    printf("----------------------------\n");
+    printf("Directional flows: %zu\n", flow_count);
+    printf("TCP payload fragments: %zu\n", fragment_count);
+
+    size_t flow_index = 0u;
+
+    for (size_t i = 0u; i < fragment_count; i++) {
+        if (processed[i]) {
+            continue;
+        }
+
+        size_t flow_fragment_count = 0u;
+
+        for (size_t j = i; j < fragment_count; j++) {
+            if (!processed[j] &&
+                tcp_fragments_same_flow(&fragments[i],
+                                        &fragments[j])) {
+                flow_fragments[flow_fragment_count++] = fragments[j];
+                processed[j] = 1;
+            }
+        }
+
+        flow_index++;
+
+        printf("\nDirectional flow %zu of %zu\n",
+               flow_index,
+               flow_count);
+
+        print_single_tcp_flow_reconstruction(flow_fragments,
+                                             flow_fragment_count);
+    }
+
+    free(flow_fragments);
+    free(processed);
+}
+
 int k1wi_pcap_analyze_file(const char *path, int full_mode)
 {
     FILE *fp = fopen(path, "rb");
