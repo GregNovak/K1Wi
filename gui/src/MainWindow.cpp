@@ -14,8 +14,48 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QComboBox>
+#include <QCoreApplication>
+#include <QStandardPaths>
 
-static const QString k1wiBinary = QStringLiteral("../bin/k1wi");
+static QString resolveK1wiBinary()
+{
+    const QString applicationDirectory =
+        QCoreApplication::applicationDirPath();
+
+    const QStringList candidates = {
+        QDir(applicationDirectory).absoluteFilePath(
+            QStringLiteral("../../bin/k1wi")
+        ),
+        QDir(applicationDirectory).absoluteFilePath(
+            QStringLiteral("../bin/k1wi")
+        ),
+        QDir::current().absoluteFilePath(
+            QStringLiteral("../../bin/k1wi")
+        ),
+        QDir::current().absoluteFilePath(
+            QStringLiteral("../bin/k1wi")
+        )
+    };
+
+    for (const QString &candidate : candidates) {
+        const QFileInfo info(candidate);
+
+        if (info.exists() &&
+            info.isFile() &&
+            info.isExecutable()) {
+            return info.canonicalFilePath();
+        }
+    }
+
+    const QString pathBinary =
+        QStandardPaths::findExecutable(QStringLiteral("k1wi"));
+
+    if (!pathBinary.isEmpty()) {
+        return pathBinary;
+    }
+
+    return candidates.first();
+}
 
 static QString stripAnsiCodes(const QString &text)
 {
@@ -765,8 +805,9 @@ void MainWindow::buildPcapTab()
     mainLayout->addWidget(title);
 
     QLabel *description = new QLabel(
-        "PCAP analyzes packet captures, summarizes IPv4/TCP/UDP traffic, "
-        "and reconstructs Base64-like TCP payloads by sequence and timestamp.",
+        "Analyze classic PCAP and PCAPNG captures. K1Wi reports Ethernet, "
+        "VLAN, IPv4, IPv6, TCP, UDP, ICMP, ARP, payload details, and "
+        "directional TCP stream reconstruction.",
         pcapTab
     );
     description->setWordWrap(true);
@@ -783,9 +824,14 @@ void MainWindow::buildPcapTab()
 
     QHBoxLayout *targetLayout = new QHBoxLayout();
     pcapTargetPath = new QLineEdit(pcapTab);
-    QPushButton *browseButton = new QPushButton("Browse PCAP", pcapTab);
+    pcapTargetPath->setPlaceholderText(
+        "Select a .pcap or .pcapng capture file"
+    );
 
-    targetLayout->addWidget(new QLabel("PCAP file:", pcapTab));
+    QPushButton *browseButton =
+        new QPushButton("Browse Capture", pcapTab);
+
+    targetLayout->addWidget(new QLabel("Capture file:", pcapTab));
     targetLayout->addWidget(pcapTargetPath);
     targetLayout->addWidget(browseButton);
     mainLayout->addLayout(targetLayout);
@@ -800,12 +846,21 @@ void MainWindow::buildPcapTab()
 
     pcapOutputLog = new QTextEdit(pcapTab);
     pcapOutputLog->setReadOnly(true);
-    pcapOutputLog->append("[GUI] PCAP panel ready.");
-    pcapOutputLog->append("[GUI] Select a PCAP file and choose Summary or Full packet view.");
+    pcapOutputLog->append("[GUI] Packet capture analyzer ready.");
+    pcapOutputLog->append(
+        "[GUI] Select a PCAP or PCAPNG file and choose Summary or Full packet view."
+    );
     mainLayout->addWidget(pcapOutputLog);
 
     connect(browseButton, &QPushButton::clicked, this, [this]() {
-        QString path = QFileDialog::getOpenFileName(this, "Select PCAP Target");
+        const QString path = QFileDialog::getOpenFileName(
+            this,
+            "Select Packet Capture",
+            QString(),
+            "Packet captures (*.pcap *.pcapng);;Classic PCAP (*.pcap);;"
+            "PCAPNG (*.pcapng);;All files (*)"
+        );
+
         if (!path.isEmpty()) {
             pcapTargetPath->setText(path);
         }
@@ -1204,7 +1259,7 @@ void MainWindow::runHashCommand()
         }
     }
 
-    QFileInfo cliInfo(k1wiBinary);
+    QFileInfo cliInfo(resolveK1wiBinary());
 
     if (!cliInfo.exists() || !cliInfo.isFile() || !cliInfo.isExecutable()) {
         QMessageBox::critical(
@@ -1405,14 +1460,14 @@ void MainWindow::runStringCommand()
         }
     }
 
-    const QFileInfo cliInfo(k1wiBinary);
+    const QFileInfo cliInfo(resolveK1wiBinary());
 
     if (!cliInfo.exists() || !cliInfo.isFile() || !cliInfo.isExecutable()) {
         QMessageBox::critical(
             this,
             "K1Wi STRING",
             "K1Wi CLI binary was not found or is not executable.\n\n"
-            "Expected: ../bin/k1wi\n\n"
+            "Checked the GUI build layout and system PATH.\n\n"
             "Build the CLI first from the project root."
         );
 
@@ -1602,14 +1657,14 @@ void MainWindow::runMagicCommand()
         return;
     }
 
-    const QFileInfo cliInfo(k1wiBinary);
+    const QFileInfo cliInfo(resolveK1wiBinary());
 
     if (!cliInfo.exists() || !cliInfo.isFile() || !cliInfo.isExecutable()) {
         QMessageBox::critical(
             this,
             "K1Wi MAGIC",
             "K1Wi CLI binary was not found or is not executable.\n\n"
-            "Expected: ../bin/k1wi\n\n"
+            "Checked the GUI build layout and system PATH.\n\n"
             "Build the CLI first from the project root."
         );
 
@@ -1759,14 +1814,14 @@ void MainWindow::runEntropyCommand()
         return;
     }
 
-    const QFileInfo cliInfo(k1wiBinary);
+    const QFileInfo cliInfo(resolveK1wiBinary());
 
     if (!cliInfo.exists() || !cliInfo.isFile() || !cliInfo.isExecutable()) {
         QMessageBox::critical(
             this,
             "K1Wi ENTROPY",
             "K1Wi CLI binary was not found or is not executable.\n\n"
-            "Expected: ../bin/k1wi\n\n"
+            "Checked the GUI build layout and system PATH.\n\n"
             "Build the CLI first from the project root."
         );
 
@@ -1925,14 +1980,14 @@ void MainWindow::runPcapCommand()
         return;
     }
 
-    const QFileInfo cliInfo(k1wiBinary);
+    const QFileInfo cliInfo(resolveK1wiBinary());
 
     if (!cliInfo.exists() || !cliInfo.isFile() || !cliInfo.isExecutable()) {
         QMessageBox::critical(
             this,
             "K1Wi PCAP",
             "K1Wi CLI binary was not found or is not executable.\n\n"
-            "Expected: ../bin/k1wi\n\n"
+            "Checked the GUI build layout and system PATH.\n\n"
             "Build the CLI first from the project root."
         );
 
@@ -2002,10 +2057,37 @@ void MainWindow::runPcapCommand()
                 if (exitCode == 0) {
                     appendStyledLine(
                         pcapOutputLog,
-                        "[RESULT] PCAP analysis completed successfully.",
+                        "[RESULT] Packet capture analysis completed successfully.",
                         "#0b7a0b",
                         true
                     );
+
+                    if (combinedOutput->contains("Format: PCAPNG")) {
+                        appendStyledLine(
+                            pcapOutputLog,
+                            "[RESULT] Capture format: PCAPNG.",
+                            "#0057b8",
+                            true
+                        );
+                    } else if (combinedOutput->contains("Format: PCAP classic")) {
+                        appendStyledLine(
+                            pcapOutputLog,
+                            "[RESULT] Capture format: classic PCAP.",
+                            "#0057b8",
+                            true
+                        );
+                    }
+
+                    if (combinedOutput->contains(
+                            "TCP Directional Flow Summary"
+                        )) {
+                        appendStyledLine(
+                            pcapOutputLog,
+                            "[RESULT] TCP payloads were reconstructed by directional flow.",
+                            "#0057b8",
+                            true
+                        );
+                    }
 
                     if (combinedOutput->contains("Decoded TCP Payload Reconstruction by Time")) {
                         appendStyledLine(
@@ -2016,10 +2098,16 @@ void MainWindow::runPcapCommand()
                         );
                     }
 
-                    if (combinedOutput->contains("Base64-like TCP payload packets:")) {
+                    static const QRegularExpression base64PayloadPattern(
+                        QStringLiteral(
+                            R"(Base64-like TCP payload packets:\s*[1-9][0-9]*)"
+                        )
+                    );
+
+                    if (base64PayloadPattern.match(*combinedOutput).hasMatch()) {
                         appendStyledLine(
                             pcapOutputLog,
-                            "[RESULT] Base64-like TCP payload analysis was included.",
+                            "[RESULT] Base64-like TCP payloads were detected.",
                             "#0057b8",
                             true
                         );
@@ -2140,14 +2228,14 @@ void MainWindow::runCopyCommand()
         return;
     }
 
-    const QFileInfo cliInfo(k1wiBinary);
+    const QFileInfo cliInfo(resolveK1wiBinary());
 
     if (!cliInfo.exists() || !cliInfo.isFile() || !cliInfo.isExecutable()) {
         QMessageBox::critical(
             this,
             "K1Wi COPY",
             "K1Wi CLI binary was not found or is not executable.\n\n"
-            "Expected: ../bin/k1wi\n\n"
+            "Checked the GUI build layout and system PATH.\n\n"
             "Build the CLI first from the project root."
         );
 
@@ -2299,14 +2387,14 @@ void MainWindow::runLyzerCommand()
         return;
     }
 
-    const QFileInfo cliInfo(k1wiBinary);
+    const QFileInfo cliInfo(resolveK1wiBinary());
 
     if (!cliInfo.exists() || !cliInfo.isFile() || !cliInfo.isExecutable()) {
         QMessageBox::critical(
             this,
             "K1Wi LYZER",
             "K1Wi CLI binary was not found or is not executable.\n\n"
-            "Expected: ../bin/k1wi\n\n"
+            "Checked the GUI build layout and system PATH.\n\n"
             "Build the CLI first from the project root."
         );
 
@@ -2465,14 +2553,14 @@ void MainWindow::runExtractCommand()
         return;
     }
 
-    const QFileInfo cliInfo(k1wiBinary);
+    const QFileInfo cliInfo(resolveK1wiBinary());
 
     if (!cliInfo.exists() || !cliInfo.isFile() || !cliInfo.isExecutable()) {
         QMessageBox::critical(
             this,
             "K1Wi EXTRACT",
             "K1Wi CLI binary was not found or is not executable.\n\n"
-            "Expected: ../bin/k1wi\n\n"
+            "Checked the GUI build layout and system PATH.\n\n"
             "Build the CLI first from the project root."
         );
 
@@ -2655,7 +2743,7 @@ void MainWindow::runDelCommand()
         }
     }
 
-    QFileInfo binaryInfo(k1wiBinary);
+    QFileInfo binaryInfo(resolveK1wiBinary());
     const QString binaryPath = binaryInfo.absoluteFilePath();
 
     if (!binaryInfo.exists() || !binaryInfo.isExecutable()) {
@@ -2663,7 +2751,7 @@ void MainWindow::runDelCommand()
             this,
             "K1Wi DEL",
             "K1Wi CLI binary was not found or is not executable.\n\n"
-            "Expected: ../bin/k1wi\n\n"
+            "Checked the GUI build layout and system PATH.\n\n"
             "Build the CLI first from the project root."
         );
 
