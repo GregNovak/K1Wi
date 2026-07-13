@@ -487,6 +487,38 @@ else
     fail "PCAP TCP directional-flow fixture missing"
 fi
 
+echo
+echo "[TEST] PCAPNG Ethernet UDP analysis"
+
+PCAPNG_UDP_FIXTURE="testdata/pcap/k1wi_ethernet_udp.pcapng"
+
+if [ -f "$PCAPNG_UDP_FIXTURE" ]; then
+    OUT=$($BIN PCAP --full "$PCAPNG_UDP_FIXTURE" 2>&1)
+
+    require_output "PCAPNG reports format" \
+        "$OUT" "Format: PCAPNG"
+
+    require_output "PCAPNG reports packet count" \
+        "$OUT" "Packets: 1"
+
+    require_output "PCAPNG reports IPv4 frame count" \
+        "$OUT" "IPv4 frames: 1"
+
+    require_output "PCAPNG reports UDP packet count" \
+        "$OUT" "UDP packets: 1"
+
+    require_output "PCAPNG preserves timestamp resolution" \
+        "$OUT" "ts=1700000700.123456"
+
+    require_output "PCAPNG reports UDP endpoints" \
+        "$OUT" "UDP 10.1.1.10:5353 -> 10.1.1.20:53"
+
+    require_output "PCAPNG reports UDP payload length" \
+        "$OUT" "length=18 payload=10"
+else
+    fail "PCAPNG UDP fixture missing"
+fi
+
 echo "[TEST] PCAP mixed Ethernet EtherType summary"
 
 PCAP_MIXED_ETH_FIXTURE="testdata/pcap/k1wi_ethernet_mixed_ethertypes.pcap"

@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include <arpa/inet.h>
 #include "pcap_analyze.h"
 
@@ -5,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 
 
@@ -611,7 +614,10 @@ static void format_ipv6(const unsigned char *ip,
         return;
     }
 
-    if (!inet_ntop(AF_INET6, ip, out, out_size)) {
+    if (!inet_ntop(AF_INET6,
+                   ip,
+                   out,
+                   (socklen_t)out_size)) {
         snprintf(out, out_size, "<invalid>");
     }
 }
@@ -1166,6 +1172,495 @@ static void print_tcp_stream_reconstruction(
     free(processed);
 }
 
+
+#define K1WI_PCAPNG_MAX_INTERFACES 64
+
+struct pcapng_interface {
+    uint32_t link_type;
+    uint32_t snaplen;
+    unsigned int ts_resolution;
+    int ts_resolution_base2;
+    int used;
+};
+
+static const char *pcap_display_path_override = NULL;
+static const char *pcap_format_override = NULL;
+
+static void write_u16_le(unsigned char *p, uint16_t value)
+{
+    p[0] = (unsigned char)(value & 0xffu);
+    p[1] = (unsigned char)((value >> 8) & 0xffu);
+}
+
+static void write_u32_le(unsigned char *p, uint32_t value)
+{
+    p[0] = (unsigned char)(value & 0xffu);
+    p[1] = (unsigned char)((value >> 8) & 0xffu);
+    p[2] = (unsigned char)((value >> 16) & 0xffu);
+    p[3] = (unsigned char)((value >> 24) & 0xffu);
+}
+
+static int write_classic_pcap_header(FILE *out,
+                                     uint32_t snaplen,
+                                     uint32_t link_type)
+{
+    unsigned char header[24] = {0};
+
+    write_u32_le(header + 0u, 0xa1b2c3d4u);
+    write_u16_le(header + 4u, 2u);
+    write_u16_le(header + 6u, 4u);
+    write_u32_le(header + 8u, 0u);
+    write_u32_le(header + 12u, 0u);
+    write_u32_le(header + 16u, snaplen);
+    write_u32_le(header + 20u, link_type);
+
+    return fwrite(header, 1u, sizeof(header), out) == sizeof(header);
+}
+
+static void pcapng_timestamp_to_microseconds(
+    uint64_t raw_timestamp,
+    unsigned int resolution,
+    int base2,
+    uint32_t *seconds_out,
+    uint32_t *microseconds_out)
+{
+    long double divisor = 1.0L;
+
+    for (unsigned int i = 0u; i < resolution; i++) {
+        divisor *= base2 ? 2.0L : 10.0L;
+    }
+
+    if (divisor <= 0.0L) {
+        divisor = 1000000.0L;
+    }
+
+    long double timestamp =
+        (long double)raw_timestamp / divisor;
+    uint64_t seconds = (uint64_t)timestamp;
+    long double fractional = timestamp - (long double)seconds;
+    uint64_t microseconds =
+        (uint64_t)(fractional * 1000000.0L);
+
+    if (microseconds > 999999u) {
+        microseconds = 999999u;
+    }
+
+    *seconds_out = seconds > UINT32_MAX
+        ? UINT32_MAX
+        : (uint32_t)seconds;
+    *microseconds_out = (uint32_t)microseconds;
+}
+
+static int convert_pcapng_to_classic(const char *path,
+                                     char **temporary_path_out)
+{
+    FILE *input = NULL;
+    FILE *output = NULL;
+    char *temporary_path = NULL;
+    int temporary_fd = -1;
+    int little_endian = 1;
+    int have_section = 0;
+    int wrote_global_header = 0;
+    uint32_t output_link_type = 0u;
+    uint32_t output_snaplen = 65535u;
+    size_t interface_count = 0u;
+    size_t packet_count = 0u;
+    struct pcapng_interface interfaces[
+        K1WI_PCAPNG_MAX_INTERFACES] = {{0}};
+
+    if (!path || !temporary_path_out) {
+        return 0;
+    }
+
+    input = fopen(path, "rb");
+
+    if (!input) {
+        fprintf(stderr, "Failed to open PCAPNG file: %s\n", path);
+        return 0;
+    }
+
+    temporary_path = malloc(32u);
+
+    if (!temporary_path) {
+        fprintf(stderr, "Out of memory creating PCAPNG workspace\n");
+        fclose(input);
+        return 0;
+    }
+
+    strcpy(temporary_path, "/tmp/k1wi_pcapng_XXXXXX");
+    temporary_fd = mkstemp(temporary_path);
+
+    if (temporary_fd < 0) {
+        fprintf(stderr, "Failed to create PCAPNG workspace\n");
+        free(temporary_path);
+        fclose(input);
+        return 0;
+    }
+
+    output = fdopen(temporary_fd, "wb");
+
+    if (!output) {
+        fprintf(stderr, "Failed to open PCAPNG workspace\n");
+        close(temporary_fd);
+        unlink(temporary_path);
+        free(temporary_path);
+        fclose(input);
+        return 0;
+    }
+
+    while (1) {
+        unsigned char block_header[8];
+        size_t got = fread(block_header, 1u,
+                           sizeof(block_header), input);
+
+        if (got == 0u) {
+            break;
+        }
+
+        if (got != sizeof(block_header)) {
+            fprintf(stderr, "Truncated PCAPNG block header\n");
+            goto fail;
+        }
+
+        uint32_t raw_block_type =
+            read_u32_le(block_header);
+        uint32_t block_type;
+        uint32_t block_length;
+
+        if (raw_block_type == 0x0a0d0d0au) {
+            unsigned char byte_order_magic[4];
+
+            if (fread(byte_order_magic, 1u,
+                      sizeof(byte_order_magic), input) !=
+                sizeof(byte_order_magic)) {
+                fprintf(stderr,
+                        "Truncated PCAPNG Section Header Block\n");
+                goto fail;
+            }
+
+            if (byte_order_magic[0] == 0x4du &&
+                byte_order_magic[1] == 0x3cu &&
+                byte_order_magic[2] == 0x2bu &&
+                byte_order_magic[3] == 0x1au) {
+                little_endian = 1;
+            } else if (byte_order_magic[0] == 0x1au &&
+                       byte_order_magic[1] == 0x2bu &&
+                       byte_order_magic[2] == 0x3cu &&
+                       byte_order_magic[3] == 0x4du) {
+                little_endian = 0;
+            } else {
+                fprintf(stderr,
+                        "Invalid PCAPNG byte-order magic\n");
+                goto fail;
+            }
+
+            block_type = 0x0a0d0d0au;
+            block_length =
+                read_u32(block_header + 4u, little_endian);
+
+            if (block_length < 28u ||
+                (block_length & 3u) != 0u) {
+                fprintf(stderr,
+                        "Invalid PCAPNG Section Header Block length\n");
+                goto fail;
+            }
+
+            size_t remaining = (size_t)block_length - 12u;
+            unsigned char *block = malloc(remaining);
+
+            if (!block) {
+                fprintf(stderr,
+                        "Out of memory reading PCAPNG section\n");
+                goto fail;
+            }
+
+            if (fread(block, 1u, remaining, input) != remaining) {
+                fprintf(stderr,
+                        "Truncated PCAPNG Section Header Block\n");
+                free(block);
+                goto fail;
+            }
+
+            uint32_t trailing_length =
+                read_u32(block + remaining - 4u,
+                         little_endian);
+
+            free(block);
+
+            if (trailing_length != block_length) {
+                fprintf(stderr,
+                        "PCAPNG Section Header Block length mismatch\n");
+                goto fail;
+            }
+
+            memset(interfaces, 0, sizeof(interfaces));
+            interface_count = 0u;
+            have_section = 1;
+            continue;
+        }
+
+        if (!have_section) {
+            fprintf(stderr,
+                    "PCAPNG block encountered before Section Header Block\n");
+            goto fail;
+        }
+
+        block_type = read_u32(block_header, little_endian);
+        block_length =
+            read_u32(block_header + 4u, little_endian);
+
+        if (block_length < 12u ||
+            (block_length & 3u) != 0u) {
+            fprintf(stderr,
+                    "Invalid PCAPNG block length: %u\n",
+                    block_length);
+            goto fail;
+        }
+
+        size_t body_length = (size_t)block_length - 12u;
+        unsigned char *body = malloc(body_length + 4u);
+
+        if (!body) {
+            fprintf(stderr,
+                    "Out of memory reading PCAPNG block\n");
+            goto fail;
+        }
+
+        if (fread(body, 1u, body_length + 4u, input) !=
+            body_length + 4u) {
+            fprintf(stderr, "Truncated PCAPNG block\n");
+            free(body);
+            goto fail;
+        }
+
+        uint32_t trailing_length =
+            read_u32(body + body_length, little_endian);
+
+        if (trailing_length != block_length) {
+            fprintf(stderr,
+                    "PCAPNG block length mismatch\n");
+            free(body);
+            goto fail;
+        }
+
+        if (block_type == 0x00000001u) {
+            if (body_length < 8u) {
+                fprintf(stderr,
+                        "Truncated PCAPNG Interface Description Block\n");
+                free(body);
+                goto fail;
+            }
+
+            if (interface_count >=
+                K1WI_PCAPNG_MAX_INTERFACES) {
+                fprintf(stderr,
+                        "Too many PCAPNG interfaces\n");
+                free(body);
+                goto fail;
+            }
+
+            struct pcapng_interface *interface =
+                &interfaces[interface_count];
+
+            interface->link_type =
+                read_u16(body, little_endian);
+            interface->snaplen =
+                read_u32(body + 4u, little_endian);
+            interface->ts_resolution = 6u;
+            interface->ts_resolution_base2 = 0;
+            interface->used = 1;
+
+            size_t option_offset = 8u;
+
+            while (option_offset + 4u <= body_length) {
+                uint16_t option_code =
+                    read_u16(body + option_offset,
+                             little_endian);
+                uint16_t option_length =
+                    read_u16(body + option_offset + 2u,
+                             little_endian);
+
+                option_offset += 4u;
+
+                if (option_code == 0u) {
+                    break;
+                }
+
+                size_t padded_length =
+                    ((size_t)option_length + 3u) & ~3u;
+
+                if (option_offset + padded_length >
+                    body_length) {
+                    fprintf(stderr,
+                            "Truncated PCAPNG interface option\n");
+                    free(body);
+                    goto fail;
+                }
+
+                if (option_code == 9u &&
+                    option_length >= 1u) {
+                    uint8_t resolution =
+                        body[option_offset];
+
+                    interface->ts_resolution_base2 =
+                        (resolution & 0x80u) != 0u;
+                    interface->ts_resolution =
+                        (unsigned int)(resolution & 0x7fu);
+                }
+
+                option_offset += padded_length;
+            }
+
+            interface_count++;
+        } else if (block_type == 0x00000006u) {
+            if (body_length < 20u) {
+                fprintf(stderr,
+                        "Truncated PCAPNG Enhanced Packet Block\n");
+                free(body);
+                goto fail;
+            }
+
+            uint32_t interface_id =
+                read_u32(body, little_endian);
+            uint32_t timestamp_high =
+                read_u32(body + 4u, little_endian);
+            uint32_t timestamp_low =
+                read_u32(body + 8u, little_endian);
+            uint32_t captured_length =
+                read_u32(body + 12u, little_endian);
+            uint32_t original_length =
+                read_u32(body + 16u, little_endian);
+
+            if (interface_id >= interface_count ||
+                !interfaces[interface_id].used) {
+                fprintf(stderr,
+                        "PCAPNG packet references unknown interface %u\n",
+                        interface_id);
+                free(body);
+                goto fail;
+            }
+
+            size_t padded_packet_length =
+                ((size_t)captured_length + 3u) & ~3u;
+
+            if (20u + padded_packet_length > body_length) {
+                fprintf(stderr,
+                        "Truncated PCAPNG packet data\n");
+                free(body);
+                goto fail;
+            }
+
+            struct pcapng_interface *interface =
+                &interfaces[interface_id];
+
+            if (!wrote_global_header) {
+                output_link_type = interface->link_type;
+                output_snaplen = interface->snaplen != 0u
+                    ? interface->snaplen
+                    : 65535u;
+
+                if (!write_classic_pcap_header(
+                        output,
+                        output_snaplen,
+                        output_link_type)) {
+                    fprintf(stderr,
+                            "Failed to write converted PCAP header\n");
+                    free(body);
+                    goto fail;
+                }
+
+                wrote_global_header = 1;
+            } else if (interface->link_type !=
+                       output_link_type) {
+                fprintf(stderr,
+                        "PCAPNG mixed link types are not supported "
+                        "in this analyzer pass "
+                        "(%u and %u)\n",
+                        output_link_type,
+                        interface->link_type);
+                free(body);
+                goto fail;
+            }
+
+            if (interface->snaplen != 0u &&
+                captured_length > interface->snaplen) {
+                fprintf(stderr,
+                        "PCAPNG packet length exceeds interface snaplen\n");
+                free(body);
+                goto fail;
+            }
+
+            uint64_t raw_timestamp =
+                ((uint64_t)timestamp_high << 32) |
+                (uint64_t)timestamp_low;
+            uint32_t timestamp_seconds = 0u;
+            uint32_t timestamp_microseconds = 0u;
+
+            pcapng_timestamp_to_microseconds(
+                raw_timestamp,
+                interface->ts_resolution,
+                interface->ts_resolution_base2,
+                &timestamp_seconds,
+                &timestamp_microseconds);
+
+            unsigned char packet_header[16];
+
+            write_u32_le(packet_header + 0u,
+                         timestamp_seconds);
+            write_u32_le(packet_header + 4u,
+                         timestamp_microseconds);
+            write_u32_le(packet_header + 8u,
+                         captured_length);
+            write_u32_le(packet_header + 12u,
+                         original_length);
+
+            if (fwrite(packet_header, 1u,
+                       sizeof(packet_header), output) !=
+                    sizeof(packet_header) ||
+                fwrite(body + 20u, 1u,
+                       captured_length, output) !=
+                    captured_length) {
+                fprintf(stderr,
+                        "Failed to write converted PCAP packet\n");
+                free(body);
+                goto fail;
+            }
+
+            packet_count++;
+        }
+
+        free(body);
+    }
+
+    if (!wrote_global_header || packet_count == 0u) {
+        fprintf(stderr,
+                "PCAPNG file contains no supported Enhanced Packet Blocks\n");
+        goto fail;
+    }
+
+    if (fclose(output) != 0) {
+        output = NULL;
+        fprintf(stderr,
+                "Failed to finalize converted PCAPNG data\n");
+        goto fail;
+    }
+
+    output = NULL;
+    fclose(input);
+    *temporary_path_out = temporary_path;
+    return 1;
+
+fail:
+    if (output) {
+        fclose(output);
+    }
+
+    fclose(input);
+    unlink(temporary_path);
+    free(temporary_path);
+    return 0;
+}
+
 int k1wi_pcap_analyze_file(const char *path, int full_mode)
 {
     FILE *fp = fopen(path, "rb");
@@ -1173,6 +1668,52 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
     if (!fp) {
         fprintf(stderr, "Failed to open PCAP file: %s\n", path);
         return 1;
+    }
+
+    unsigned char signature[4];
+
+    if (fread(signature, 1u, sizeof(signature), fp) !=
+        sizeof(signature)) {
+        fprintf(stderr, "Failed to read capture signature: %s\n", path);
+        fclose(fp);
+        return 1;
+    }
+
+    rewind(fp);
+
+    if (signature[0] == 0x0au &&
+        signature[1] == 0x0du &&
+        signature[2] == 0x0du &&
+        signature[3] == 0x0au) {
+        char *temporary_path = NULL;
+
+        fclose(fp);
+
+        if (!convert_pcapng_to_classic(path,
+                                       &temporary_path)) {
+            return 1;
+        }
+
+        const char *previous_display_path =
+            pcap_display_path_override;
+        const char *previous_format =
+            pcap_format_override;
+
+        pcap_display_path_override = path;
+        pcap_format_override = "PCAPNG";
+
+        int result =
+            k1wi_pcap_analyze_file(temporary_path,
+                                   full_mode);
+
+        pcap_display_path_override =
+            previous_display_path;
+        pcap_format_override =
+            previous_format;
+
+        unlink(temporary_path);
+        free(temporary_path);
+        return result;
     }
 
     unsigned char gh[24];
@@ -1949,8 +2490,14 @@ int k1wi_pcap_analyze_file(const char *path, int full_mode)
 
     printf("\nK1Wi PCAP Summary\n");
     printf("-----------------\n");
-    printf("File: %s\n", path);
-    printf("Format: PCAP classic\n");
+    printf("File: %s\n",
+           pcap_display_path_override
+               ? pcap_display_path_override
+               : path);
+    printf("Format: %s\n",
+           pcap_format_override
+               ? pcap_format_override
+               : "PCAP classic");
     printf("Endian: %s\n", little_endian ? "little-endian" : "big-endian");
     printf("Timestamp precision: %s\n", nanosecond_precision ? "nanoseconds" : "microseconds");
     printf("Version: %u.%u\n", version_major, version_minor);
