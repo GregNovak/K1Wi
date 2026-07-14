@@ -1045,53 +1045,60 @@ void MainWindow::buildPcapTab()
     buttonLayout->addWidget(clearButton);
     mainLayout->addLayout(buttonLayout);
 
-    QLabel *findingsLabel =
-        new QLabel("Key Findings", pcapTab);
-    mainLayout->addWidget(findingsLabel);
+    QTabWidget *pcapDetailsTabs = new QTabWidget(pcapTab);
 
-    pcapFindingsLog = new QTextEdit(pcapTab);
+    pcapFindingsLog = new QTextEdit(pcapDetailsTabs);
     pcapFindingsLog->setReadOnly(true);
-    pcapFindingsLog->setMaximumHeight(230);
     pcapFindingsLog->append(
         "[GUI] Findings will appear here after analysis."
     );
-    mainLayout->addWidget(pcapFindingsLog);
+    pcapDetailsTabs->addTab(
+        pcapFindingsLog,
+        "Overview"
+    );
 
-    QLabel *networkDetailsLabel =
-        new QLabel("Network Details", pcapTab);
-    mainLayout->addWidget(networkDetailsLabel);
-
-    pcapNetworkLog = new QTextEdit(pcapTab);
+    pcapNetworkLog = new QTextEdit(pcapDetailsTabs);
     pcapNetworkLog->setReadOnly(true);
-    pcapNetworkLog->setMaximumHeight(190);
     pcapNetworkLog->append(
         "[GUI] IP, MAC, and VLAN details will appear here."
     );
-    mainLayout->addWidget(pcapNetworkLog);
+    pcapDetailsTabs->addTab(
+        pcapNetworkLog,
+        "Network"
+    );
 
-    QLabel *transportDetailsLabel =
-        new QLabel("Transport Details", pcapTab);
-    mainLayout->addWidget(transportDetailsLabel);
-
-    pcapTransportLog = new QTextEdit(pcapTab);
+    pcapTransportLog = new QTextEdit(pcapDetailsTabs);
     pcapTransportLog->setReadOnly(true);
-    pcapTransportLog->setMaximumHeight(190);
     pcapTransportLog->append(
         "[GUI] TCP, UDP, and ICMP details will appear here."
     );
-    mainLayout->addWidget(pcapTransportLog);
+    pcapDetailsTabs->addTab(
+        pcapTransportLog,
+        "Transport"
+    );
 
-    QLabel *detailedOutputLabel =
-        new QLabel("Detailed CLI Output", pcapTab);
-    mainLayout->addWidget(detailedOutputLabel);
+    pcapPayloadLog = new QTextEdit(pcapDetailsTabs);
+    pcapPayloadLog->setReadOnly(true);
+    pcapPayloadLog->append(
+        "[GUI] TCP payload and reconstruction details will appear here."
+    );
+    pcapDetailsTabs->addTab(
+        pcapPayloadLog,
+        "Payloads"
+    );
 
-    pcapOutputLog = new QTextEdit(pcapTab);
+    pcapOutputLog = new QTextEdit(pcapDetailsTabs);
     pcapOutputLog->setReadOnly(true);
     pcapOutputLog->append("[GUI] Packet capture analyzer ready.");
     pcapOutputLog->append(
         "[GUI] Select a PCAP or PCAPNG file and choose Summary or Full packet view."
     );
-    mainLayout->addWidget(pcapOutputLog);
+    pcapDetailsTabs->addTab(
+        pcapOutputLog,
+        "Raw Output"
+    );
+
+    mainLayout->addWidget(pcapDetailsTabs);
 
     connect(browseButton, &QPushButton::clicked, this, [this]() {
         const QString path = QFileDialog::getOpenFileName(
@@ -1112,6 +1119,7 @@ void MainWindow::buildPcapTab()
         pcapFindingsLog->clear();
         pcapNetworkLog->clear();
         pcapTransportLog->clear();
+        pcapPayloadLog->clear();
         pcapOutputLog->clear();
     });
 }
@@ -2190,11 +2198,13 @@ void MainWindow::runPcapCommand()
     pcapFindingsLog->clear();
     pcapNetworkLog->clear();
     pcapTransportLog->clear();
+    pcapPayloadLog->clear();
     pcapOutputLog->clear();
 
     pcapFindingsLog->append("[GUI] Analysis in progress...");
     pcapNetworkLog->append("[GUI] Waiting for network details...");
     pcapTransportLog->append("[GUI] Waiting for transport details...");
+    pcapPayloadLog->append("[GUI] Waiting for payload details...");
 
     const QString target = pcapTargetPath->text().trimmed();
     const QString pcapMode = pcapModeCombo->currentData().toString();
@@ -2844,6 +2854,137 @@ void MainWindow::runPcapCommand()
                         appendStyledLine(
                             pcapTransportLog,
                             "[TRANSPORT] No summarized TCP, UDP, or ICMP details were available.",
+                            "#0057b8",
+                            false
+                        );
+                    }
+
+                    pcapPayloadLog->clear();
+
+                    const int tcpPayloadPackets =
+                        pcapReportCount(
+                            *combinedOutput,
+                            QStringLiteral("TCP payload packets:")
+                        );
+
+                    const int tcpPayloadBytes =
+                        pcapReportCount(
+                            *combinedOutput,
+                            QStringLiteral("TCP payload bytes:")
+                        );
+
+                    const int printablePayloadPackets =
+                        pcapReportCount(
+                            *combinedOutput,
+                            QStringLiteral(
+                                "Printable TCP payload packets:"
+                            )
+                        );
+
+                    const int base64PayloadPackets =
+                        pcapReportCount(
+                            *combinedOutput,
+                            QStringLiteral(
+                                "Base64-like TCP payload packets:"
+                            )
+                        );
+
+                    const int decodedPrintablePackets =
+                        pcapReportCount(
+                            *combinedOutput,
+                            QStringLiteral(
+                                "Base64 decoded printable packets:"
+                            )
+                        );
+
+                    if (tcpPayloadPackets > 0) {
+                        appendStyledLine(
+                            pcapPayloadLog,
+                            QStringLiteral(
+                                "[PAYLOAD] TCP payload packets: %1"
+                            ).arg(tcpPayloadPackets),
+                            "#0057b8",
+                            true
+                        );
+
+                        appendStyledLine(
+                            pcapPayloadLog,
+                            QStringLiteral(
+                                "[PAYLOAD] TCP payload bytes: %1"
+                            ).arg(tcpPayloadBytes),
+                            "#0057b8",
+                            false
+                        );
+
+                        if (printablePayloadPackets > 0) {
+                            appendStyledLine(
+                                pcapPayloadLog,
+                                QStringLiteral(
+                                    "[PAYLOAD] Printable payload packets: %1"
+                                ).arg(printablePayloadPackets),
+                                "#0057b8",
+                                false
+                            );
+                        }
+
+                        if (base64PayloadPackets > 0) {
+                            appendStyledLine(
+                                pcapPayloadLog,
+                                QStringLiteral(
+                                    "[PAYLOAD] Base64-like payload packets: %1"
+                                ).arg(base64PayloadPackets),
+                                "#b35c00",
+                                true
+                            );
+                        }
+
+                        if (decodedPrintablePackets > 0) {
+                            appendStyledLine(
+                                pcapPayloadLog,
+                                QStringLiteral(
+                                    "[PAYLOAD] Decoded printable packets: %1"
+                                ).arg(decodedPrintablePackets),
+                                "#b35c00",
+                                false
+                            );
+                        }
+
+                        if (combinedOutput->contains(
+                                "TCP Directional Flow Summary"
+                            )) {
+                            appendStyledLine(
+                                pcapPayloadLog,
+                                "[RECONSTRUCTION] Directional TCP flow reconstruction is available.",
+                                "#b35c00",
+                                true
+                            );
+                        }
+
+                        if (combinedOutput->contains(
+                                "Decoded TCP Payload Reconstruction by Sequence"
+                            )) {
+                            appendStyledLine(
+                                pcapPayloadLog,
+                                "[RECONSTRUCTION] Sequence-order decoded reconstruction is available.",
+                                "#b35c00",
+                                false
+                            );
+                        }
+
+                        if (combinedOutput->contains(
+                                "Decoded TCP Payload Reconstruction by Time"
+                            )) {
+                            appendStyledLine(
+                                pcapPayloadLog,
+                                "[RECONSTRUCTION] Time-order decoded reconstruction is available.",
+                                "#b35c00",
+                                false
+                            );
+                        }
+                    } else {
+                        appendStyledLine(
+                            pcapPayloadLog,
+                            "[PAYLOAD] No TCP payload data was found.",
                             "#0057b8",
                             false
                         );
