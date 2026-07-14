@@ -57,6 +57,28 @@ static QString resolveK1wiBinary()
     return candidates.first();
 }
 
+static int pcapReportCount(
+    const QString &output,
+    const QString &label
+)
+{
+    const QRegularExpression pattern(
+        QRegularExpression::escape(label) +
+        QStringLiteral(R"(\s*([0-9]+))")
+    );
+
+    const QRegularExpressionMatch match = pattern.match(output);
+
+    if (!match.hasMatch()) {
+        return -1;
+    }
+
+    bool ok = false;
+    const int value = match.captured(1).toInt(&ok);
+
+    return ok ? value : -1;
+}
+
 static QString stripAnsiCodes(const QString &text)
 {
     static const QRegularExpression ansiPattern(
@@ -84,6 +106,27 @@ static void appendStyledLine(
     log->append(
         QStringLiteral("<span style=\"%1\">%2</span>")
             .arg(style, text.toHtmlEscaped())
+    );
+}
+
+
+static void appendPcapFinding(
+    QTextEdit *log,
+    const QString &label,
+    int value
+)
+{
+    if (value < 0) {
+        return;
+    }
+
+    appendStyledLine(
+        log,
+        QStringLiteral("[FINDING] %1: %2")
+            .arg(label)
+            .arg(value),
+        QStringLiteral("#0057b8"),
+        false
     );
 }
 
@@ -2060,6 +2103,123 @@ void MainWindow::runPcapCommand()
                         "[RESULT] Packet capture analysis completed successfully.",
                         "#0b7a0b",
                         true
+                    );
+
+                    appendStyledLine(
+                        pcapOutputLog,
+                        "[RESULT] Key capture findings",
+                        "#0057b8",
+                        true
+                    );
+
+                    appendPcapFinding(
+                        pcapOutputLog,
+                        QStringLiteral("Packets"),
+                        pcapReportCount(
+                            *combinedOutput,
+                            QStringLiteral("Packets:")
+                        )
+                    );
+
+                    appendPcapFinding(
+                        pcapOutputLog,
+                        QStringLiteral("IPv4 packets"),
+                        pcapReportCount(
+                            *combinedOutput,
+                            QStringLiteral("IPv4 packets:")
+                        )
+                    );
+
+                    appendPcapFinding(
+                        pcapOutputLog,
+                        QStringLiteral("TCP packets"),
+                        pcapReportCount(
+                            *combinedOutput,
+                            QStringLiteral("TCP packets:")
+                        )
+                    );
+
+                    appendPcapFinding(
+                        pcapOutputLog,
+                        QStringLiteral("UDP packets"),
+                        pcapReportCount(
+                            *combinedOutput,
+                            QStringLiteral("UDP packets:")
+                        )
+                    );
+
+                    appendPcapFinding(
+                        pcapOutputLog,
+                        QStringLiteral("ICMP packets"),
+                        pcapReportCount(
+                            *combinedOutput,
+                            QStringLiteral("ICMP packets:")
+                        )
+                    );
+
+                    appendPcapFinding(
+                        pcapOutputLog,
+                        QStringLiteral("ARP frames"),
+                        pcapReportCount(
+                            *combinedOutput,
+                            QStringLiteral("ARP frames:")
+                        )
+                    );
+
+                    appendPcapFinding(
+                        pcapOutputLog,
+                        QStringLiteral("IPv6 frames"),
+                        pcapReportCount(
+                            *combinedOutput,
+                            QStringLiteral("IPv6 frames:")
+                        )
+                    );
+
+                    appendPcapFinding(
+                        pcapOutputLog,
+                        QStringLiteral("VLAN-tagged frames"),
+                        pcapReportCount(
+                            *combinedOutput,
+                            QStringLiteral("Tagged frames:")
+                        )
+                    );
+
+                    appendPcapFinding(
+                        pcapOutputLog,
+                        QStringLiteral("Directional TCP flows"),
+                        pcapReportCount(
+                            *combinedOutput,
+                            QStringLiteral("Directional flows:")
+                        )
+                    );
+
+                    appendPcapFinding(
+                        pcapOutputLog,
+                        QStringLiteral("TCP payload packets"),
+                        pcapReportCount(
+                            *combinedOutput,
+                            QStringLiteral("TCP payload packets:")
+                        )
+                    );
+
+                    appendPcapFinding(
+                        pcapOutputLog,
+                        QStringLiteral("TCP payload bytes"),
+                        pcapReportCount(
+                            *combinedOutput,
+                            QStringLiteral("TCP payload bytes:")
+                        )
+                    );
+
+                    appendPcapFinding(
+                        pcapOutputLog,
+                        QStringLiteral("Base64-like TCP payload packets"),
+                        pcapReportCount(
+                            *combinedOutput,
+                            QStringLiteral(
+                                "Base64-like TCP payload packets:"
+                            )
+                        )
                     );
 
                     if (combinedOutput->contains("Format: PCAPNG")) {
