@@ -130,6 +130,37 @@ static void appendPcapFinding(
     );
 }
 
+
+static void appendPcapOptionalFinding(
+    QTextEdit *log,
+    const QString &label,
+    int value,
+    const QString &message
+)
+{
+    if (value <= 0) {
+        return;
+    }
+
+    appendStyledLine(
+        log,
+        QStringLiteral("[FINDING] %1: %2")
+            .arg(label)
+            .arg(value),
+        QStringLiteral("#b35c00"),
+        true
+    );
+
+    if (!message.isEmpty()) {
+        appendStyledLine(
+            log,
+            QStringLiteral("[NOTE] ") + message,
+            QStringLiteral("#b35c00"),
+            false
+        );
+    }
+}
+
 static void appendStyledBlock(QTextEdit *log, const QString &text, const QString &color, bool bold = false)
 {
     const QStringList lines = text.split('\n');
@@ -887,6 +918,22 @@ void MainWindow::buildPcapTab()
     buttonLayout->addWidget(clearButton);
     mainLayout->addLayout(buttonLayout);
 
+    QLabel *findingsLabel =
+        new QLabel("Key Findings", pcapTab);
+    mainLayout->addWidget(findingsLabel);
+
+    pcapFindingsLog = new QTextEdit(pcapTab);
+    pcapFindingsLog->setReadOnly(true);
+    pcapFindingsLog->setMaximumHeight(230);
+    pcapFindingsLog->append(
+        "[GUI] Findings will appear here after analysis."
+    );
+    mainLayout->addWidget(pcapFindingsLog);
+
+    QLabel *detailedOutputLabel =
+        new QLabel("Detailed CLI Output", pcapTab);
+    mainLayout->addWidget(detailedOutputLabel);
+
     pcapOutputLog = new QTextEdit(pcapTab);
     pcapOutputLog->setReadOnly(true);
     pcapOutputLog->append("[GUI] Packet capture analyzer ready.");
@@ -910,7 +957,10 @@ void MainWindow::buildPcapTab()
     });
 
     connect(runButton, &QPushButton::clicked, this, &MainWindow::runPcapCommand);
-    connect(clearButton, &QPushButton::clicked, pcapOutputLog, &QTextEdit::clear);
+    connect(clearButton, &QPushButton::clicked, this, [this]() {
+        pcapFindingsLog->clear();
+        pcapOutputLog->clear();
+    });
 }
 
 void MainWindow::buildLyzerTab()
@@ -1984,7 +2034,10 @@ void MainWindow::runEntropyCommand()
 
 void MainWindow::runPcapCommand()
 {
+    pcapFindingsLog->clear();
     pcapOutputLog->clear();
+
+    pcapFindingsLog->append("[GUI] Analysis in progress...");
 
     const QString target = pcapTargetPath->text().trimmed();
     const QString pcapMode = pcapModeCombo->currentData().toString();
@@ -2098,22 +2151,40 @@ void MainWindow::runPcapCommand()
 
             if (exitStatus == QProcess::NormalExit) {
                 if (exitCode == 0) {
+                    pcapFindingsLog->clear();
+
                     appendStyledLine(
-                        pcapOutputLog,
+                        pcapFindingsLog,
                         "[RESULT] Packet capture analysis completed successfully.",
                         "#0b7a0b",
                         true
                     );
 
+                    if (combinedOutput->contains("Format: PCAPNG")) {
+                        appendStyledLine(
+                            pcapFindingsLog,
+                            "[RESULT] Capture format: PCAPNG.",
+                            "#0057b8",
+                            true
+                        );
+                    } else if (combinedOutput->contains("Format: PCAP classic")) {
+                        appendStyledLine(
+                            pcapFindingsLog,
+                            "[RESULT] Capture format: classic PCAP.",
+                            "#0057b8",
+                            true
+                        );
+                    }
+
                     appendStyledLine(
-                        pcapOutputLog,
-                        "[RESULT] Key capture findings",
+                        pcapFindingsLog,
+                        "[RESULT] Core traffic counts",
                         "#0057b8",
                         true
                     );
 
                     appendPcapFinding(
-                        pcapOutputLog,
+                        pcapFindingsLog,
                         QStringLiteral("Packets"),
                         pcapReportCount(
                             *combinedOutput,
@@ -2122,7 +2193,7 @@ void MainWindow::runPcapCommand()
                     );
 
                     appendPcapFinding(
-                        pcapOutputLog,
+                        pcapFindingsLog,
                         QStringLiteral("IPv4 packets"),
                         pcapReportCount(
                             *combinedOutput,
@@ -2131,7 +2202,7 @@ void MainWindow::runPcapCommand()
                     );
 
                     appendPcapFinding(
-                        pcapOutputLog,
+                        pcapFindingsLog,
                         QStringLiteral("TCP packets"),
                         pcapReportCount(
                             *combinedOutput,
@@ -2140,7 +2211,7 @@ void MainWindow::runPcapCommand()
                     );
 
                     appendPcapFinding(
-                        pcapOutputLog,
+                        pcapFindingsLog,
                         QStringLiteral("UDP packets"),
                         pcapReportCount(
                             *combinedOutput,
@@ -2149,7 +2220,7 @@ void MainWindow::runPcapCommand()
                     );
 
                     appendPcapFinding(
-                        pcapOutputLog,
+                        pcapFindingsLog,
                         QStringLiteral("ICMP packets"),
                         pcapReportCount(
                             *combinedOutput,
@@ -2157,124 +2228,147 @@ void MainWindow::runPcapCommand()
                         )
                     );
 
-                    appendPcapFinding(
-                        pcapOutputLog,
+                    const bool hasNotableActivity =
+                        pcapReportCount(
+                            *combinedOutput,
+                            QStringLiteral("ARP frames:")
+                        ) > 0 ||
+                        pcapReportCount(
+                            *combinedOutput,
+                            QStringLiteral("IPv6 frames:")
+                        ) > 0 ||
+                        pcapReportCount(
+                            *combinedOutput,
+                            QStringLiteral("Tagged frames:")
+                        ) > 0 ||
+                        pcapReportCount(
+                            *combinedOutput,
+                            QStringLiteral("Directional flows:")
+                        ) > 0 ||
+                        pcapReportCount(
+                            *combinedOutput,
+                            QStringLiteral("TCP payload packets:")
+                        ) > 0 ||
+                        pcapReportCount(
+                            *combinedOutput,
+                            QStringLiteral("TCP payload bytes:")
+                        ) > 0 ||
+                        pcapReportCount(
+                            *combinedOutput,
+                            QStringLiteral(
+                                "Base64-like TCP payload packets:"
+                            )
+                        ) > 0;
+
+                    if (hasNotableActivity) {
+                        appendStyledLine(
+                            pcapFindingsLog,
+                            "[RESULT] Notable activity",
+                            "#0057b8",
+                            true
+                        );
+                    }
+
+                    appendPcapOptionalFinding(
+                        pcapFindingsLog,
                         QStringLiteral("ARP frames"),
                         pcapReportCount(
                             *combinedOutput,
                             QStringLiteral("ARP frames:")
+                        ),
+                        QStringLiteral(
+                            "ARP traffic was observed in the capture."
                         )
                     );
 
-                    appendPcapFinding(
-                        pcapOutputLog,
+                    appendPcapOptionalFinding(
+                        pcapFindingsLog,
                         QStringLiteral("IPv6 frames"),
                         pcapReportCount(
                             *combinedOutput,
                             QStringLiteral("IPv6 frames:")
+                        ),
+                        QStringLiteral(
+                            "IPv6 traffic was observed in the capture."
                         )
                     );
 
-                    appendPcapFinding(
-                        pcapOutputLog,
+                    appendPcapOptionalFinding(
+                        pcapFindingsLog,
                         QStringLiteral("VLAN-tagged frames"),
                         pcapReportCount(
                             *combinedOutput,
                             QStringLiteral("Tagged frames:")
+                        ),
+                        QStringLiteral(
+                            "One or more VLAN-tagged Ethernet frames were found."
                         )
                     );
 
-                    appendPcapFinding(
-                        pcapOutputLog,
+                    appendPcapOptionalFinding(
+                        pcapFindingsLog,
                         QStringLiteral("Directional TCP flows"),
                         pcapReportCount(
                             *combinedOutput,
                             QStringLiteral("Directional flows:")
+                        ),
+                        QStringLiteral(
+                            "TCP payload fragments were grouped by directional flow."
                         )
                     );
 
-                    appendPcapFinding(
-                        pcapOutputLog,
+                    appendPcapOptionalFinding(
+                        pcapFindingsLog,
                         QStringLiteral("TCP payload packets"),
                         pcapReportCount(
                             *combinedOutput,
                             QStringLiteral("TCP payload packets:")
+                        ),
+                        QStringLiteral(
+                            "Application payload data was present in TCP packets."
                         )
                     );
 
-                    appendPcapFinding(
-                        pcapOutputLog,
+                    appendPcapOptionalFinding(
+                        pcapFindingsLog,
                         QStringLiteral("TCP payload bytes"),
                         pcapReportCount(
                             *combinedOutput,
                             QStringLiteral("TCP payload bytes:")
-                        )
+                        ),
+                        QString()
                     );
 
-                    appendPcapFinding(
-                        pcapOutputLog,
+                    appendPcapOptionalFinding(
+                        pcapFindingsLog,
                         QStringLiteral("Base64-like TCP payload packets"),
                         pcapReportCount(
                             *combinedOutput,
                             QStringLiteral(
                                 "Base64-like TCP payload packets:"
                             )
+                        ),
+                        QStringLiteral(
+                            "Base64-like data was detected in TCP payloads."
                         )
                     );
-
-                    if (combinedOutput->contains("Format: PCAPNG")) {
-                        appendStyledLine(
-                            pcapOutputLog,
-                            "[RESULT] Capture format: PCAPNG.",
-                            "#0057b8",
-                            true
-                        );
-                    } else if (combinedOutput->contains("Format: PCAP classic")) {
-                        appendStyledLine(
-                            pcapOutputLog,
-                            "[RESULT] Capture format: classic PCAP.",
-                            "#0057b8",
-                            true
-                        );
-                    }
 
                     if (combinedOutput->contains(
-                            "TCP Directional Flow Summary"
+                            "Decoded TCP Payload Reconstruction by Time"
                         )) {
                         appendStyledLine(
-                            pcapOutputLog,
-                            "[RESULT] TCP payloads were reconstructed by directional flow.",
-                            "#0057b8",
+                            pcapFindingsLog,
+                            "[NOTE] Time-order decoded TCP reconstruction is available.",
+                            "#b35c00",
                             true
                         );
                     }
 
-                    if (combinedOutput->contains("Decoded TCP Payload Reconstruction by Time")) {
-                        appendStyledLine(
-                            pcapOutputLog,
-                            "[RESULT] Time-order TCP payload reconstruction was found.",
-                            "#0057b8",
-                            true
-                        );
-                    }
-
-                    static const QRegularExpression base64PayloadPattern(
-                        QStringLiteral(
-                            R"(Base64-like TCP payload packets:\s*[1-9][0-9]*)"
-                        )
-                    );
-
-                    if (base64PayloadPattern.match(*combinedOutput).hasMatch()) {
-                        appendStyledLine(
-                            pcapOutputLog,
-                            "[RESULT] Base64-like TCP payloads were detected.",
-                            "#0057b8",
-                            true
-                        );
-                    }
                 } else {
+                    pcapFindingsLog->clear();
+
                     appendStyledLine(
-                        pcapOutputLog,
+                        pcapFindingsLog,
                         "[RESULT] PCAP analysis finished with a non-zero exit code.",
                         "#b00020",
                         true
@@ -2285,8 +2379,10 @@ void MainWindow::runPcapCommand()
                     QString("Process finished with exit code %1").arg(exitCode)
                 );
             } else {
+                pcapFindingsLog->clear();
+
                 appendStyledLine(
-                    pcapOutputLog,
+                    pcapFindingsLog,
                     "[RESULT] PCAP process crashed or was terminated.",
                     "#b00020",
                     true
@@ -2301,8 +2397,10 @@ void MainWindow::runPcapCommand()
     process->start(cliInfo.absoluteFilePath(), args);
 
     if (!process->waitForStarted()) {
+        pcapFindingsLog->clear();
+
         appendStyledLine(
-            pcapOutputLog,
+            pcapFindingsLog,
             "[RESULT] Failed to start PCAP process.",
             "#b00020",
             true
