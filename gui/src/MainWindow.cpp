@@ -165,6 +165,45 @@ static QStringList pcapReportSectionLines(
     return QStringList();
 }
 
+
+static QStringList pcapDirectionalFlowSections(
+    const QString &output
+)
+{
+    static const QRegularExpression flowHeadingPattern(
+        QStringLiteral(
+            R"((?m)^Directional flow [0-9]+ of [0-9]+\s*$)"
+        )
+    );
+
+    QStringList sections;
+    QRegularExpressionMatchIterator matches =
+        flowHeadingPattern.globalMatch(output);
+
+    QList<QRegularExpressionMatch> headings;
+
+    while (matches.hasNext()) {
+        headings.append(matches.next());
+    }
+
+    for (qsizetype i = 0; i < headings.size(); ++i) {
+        const qsizetype start = headings.at(i).capturedStart();
+        const qsizetype end =
+            (i + 1 < headings.size())
+                ? headings.at(i + 1).capturedStart()
+                : output.size();
+
+        const QString section =
+            output.mid(start, end - start).trimmed();
+
+        if (!section.isEmpty()) {
+            sections.append(section);
+        }
+    }
+
+    return sections;
+}
+
 static QString stripAnsiCodes(const QString &text)
 {
     static const QRegularExpression ansiPattern(
@@ -3014,149 +3053,226 @@ void MainWindow::runPcapCommand()
                             );
                         }
 
-                        const QString streamDirection =
-                            pcapReportValue(
-                                *combinedOutput,
-                                QStringLiteral("Stream:")
+                        const QStringList directionalFlows =
+                            pcapDirectionalFlowSections(
+                                *combinedOutput
                             );
 
-                        const QString reconstructedBytes =
-                            pcapReportValue(
-                                *combinedOutput,
-                                QStringLiteral(
-                                    "Reconstructed payload bytes:"
-                                )
-                            );
-
-                        const QString rawReconstruction =
-                            pcapReportFollowingLine(
-                                *combinedOutput,
-                                QStringLiteral(
-                                    "Reconstructed payload by TCP sequence:"
-                                )
-                            );
-
-                        const QStringList base64Section =
-                            pcapReportSectionLines(
-                                *combinedOutput,
-                                QStringLiteral("Base64 Reconstruction")
-                            );
-
-                        const QStringList sequenceSection =
-                            pcapReportSectionLines(
-                                *combinedOutput,
-                                QStringLiteral(
-                                    "Decoded TCP Payload Reconstruction by Sequence"
-                                )
-                            );
-
-                        const QStringList timeSection =
-                            pcapReportSectionLines(
-                                *combinedOutput,
-                                QStringLiteral(
-                                    "Decoded TCP Payload Reconstruction by Time"
-                                )
-                            );
-
-                        if (!streamDirection.isEmpty()) {
+                        if (!directionalFlows.isEmpty()) {
                             appendStyledLine(
                                 pcapPayloadLog,
-                                "[RECONSTRUCTION] First directional TCP flow",
+                                QStringLiteral(
+                                    "[RECONSTRUCTION] Directional TCP flows: %1"
+                                ).arg(directionalFlows.size()),
+                                "#b35c00",
+                                true
+                            );
+                        }
+
+                        for (qsizetype flowIndex = 0;
+                             flowIndex < directionalFlows.size();
+                             ++flowIndex) {
+                            const QString &flowOutput =
+                                directionalFlows.at(flowIndex);
+
+                            const QString flowHeading =
+                                flowOutput.section(
+                                    '\n',
+                                    0,
+                                    0
+                                ).trimmed();
+
+                            const QString streamDirection =
+                                pcapReportValue(
+                                    flowOutput,
+                                    QStringLiteral("Stream:")
+                                );
+
+                            const QString payloadFragments =
+                                pcapReportValue(
+                                    flowOutput,
+                                    QStringLiteral(
+                                        "TCP payload fragments:"
+                                    )
+                                );
+
+                            const QString reconstructedBytes =
+                                pcapReportValue(
+                                    flowOutput,
+                                    QStringLiteral(
+                                        "Reconstructed payload bytes:"
+                                    )
+                                );
+
+                            const QString rawReconstruction =
+                                pcapReportFollowingLine(
+                                    flowOutput,
+                                    QStringLiteral(
+                                        "Reconstructed payload by TCP sequence:"
+                                    )
+                                );
+
+                            const QStringList base64Section =
+                                pcapReportSectionLines(
+                                    flowOutput,
+                                    QStringLiteral(
+                                        "Base64 Reconstruction"
+                                    )
+                                );
+
+                            const QStringList sequenceSection =
+                                pcapReportSectionLines(
+                                    flowOutput,
+                                    QStringLiteral(
+                                        "Decoded TCP Payload Reconstruction by Sequence"
+                                    )
+                                );
+
+                            const QStringList timeSection =
+                                pcapReportSectionLines(
+                                    flowOutput,
+                                    QStringLiteral(
+                                        "Decoded TCP Payload Reconstruction by Time"
+                                    )
+                                );
+
+                            appendStyledLine(
+                                pcapPayloadLog,
+                                QStringLiteral(
+                                    "[FLOW] %1"
+                                ).arg(
+                                    flowHeading.isEmpty()
+                                        ? QStringLiteral(
+                                              "Directional flow %1"
+                                          ).arg(flowIndex + 1)
+                                        : flowHeading
+                                ),
                                 "#b35c00",
                                 true
                             );
 
-                            appendStyledLine(
-                                pcapPayloadLog,
-                                QStringLiteral("[STREAM] ") +
-                                    streamDirection,
-                                "#b35c00",
-                                false
-                            );
-                        }
-
-                        if (!reconstructedBytes.isEmpty()) {
-                            appendStyledLine(
-                                pcapPayloadLog,
-                                QStringLiteral(
-                                    "[RECONSTRUCTION] Payload bytes: "
-                                ) + reconstructedBytes,
-                                "#b35c00",
-                                false
-                            );
-                        }
-
-                        if (!rawReconstruction.isEmpty() &&
-                            rawReconstruction !=
-                                QStringLiteral("n/a")) {
-                            appendStyledLine(
-                                pcapPayloadLog,
-                                "[RECONSTRUCTION] Raw payload by TCP sequence:",
-                                "#b35c00",
-                                true
-                            );
-
-                            appendStyledLine(
-                                pcapPayloadLog,
-                                rawReconstruction,
-                                "#b35c00",
-                                false
-                            );
-                        }
-
-                        if (!base64Section.isEmpty()) {
-                            appendStyledLine(
-                                pcapPayloadLog,
-                                "[BASE64] Combined-stream result",
-                                "#b35c00",
-                                true
-                            );
-
-                            for (const QString &line : base64Section) {
+                            if (!streamDirection.isEmpty()) {
                                 appendStyledLine(
                                     pcapPayloadLog,
-                                    line,
+                                    QStringLiteral("[STREAM] ") +
+                                        streamDirection,
                                     "#b35c00",
                                     false
                                 );
                             }
-                        }
 
-                        if (!sequenceSection.isEmpty()) {
-                            appendStyledLine(
-                                pcapPayloadLog,
-                                "[RECONSTRUCTION] Decoded sequence-order result",
-                                "#b35c00",
-                                true
-                            );
-
-                            for (const QString &line : sequenceSection) {
+                            if (!payloadFragments.isEmpty()) {
                                 appendStyledLine(
                                     pcapPayloadLog,
-                                    line,
+                                    QStringLiteral(
+                                        "[RECONSTRUCTION] Payload fragments: "
+                                    ) + payloadFragments,
                                     "#b35c00",
                                     false
                                 );
                             }
-                        }
 
-                        if (!timeSection.isEmpty()) {
-                            appendStyledLine(
-                                pcapPayloadLog,
-                                "[RECONSTRUCTION] Decoded time-order result",
-                                "#b35c00",
-                                true
-                            );
-
-                            for (const QString &line : timeSection) {
+                            if (!reconstructedBytes.isEmpty()) {
                                 appendStyledLine(
                                     pcapPayloadLog,
-                                    line,
+                                    QStringLiteral(
+                                        "[RECONSTRUCTION] Payload bytes: "
+                                    ) + reconstructedBytes,
                                     "#b35c00",
                                     false
                                 );
                             }
+
+                            if (!rawReconstruction.isEmpty() &&
+                                rawReconstruction !=
+                                    QStringLiteral("n/a")) {
+                                appendStyledLine(
+                                    pcapPayloadLog,
+                                    "[RECONSTRUCTION] Raw payload by TCP sequence:",
+                                    "#b35c00",
+                                    true
+                                );
+
+                                appendStyledLine(
+                                    pcapPayloadLog,
+                                    rawReconstruction,
+                                    "#b35c00",
+                                    false
+                                );
+                            }
+
+                            if (!base64Section.isEmpty()) {
+                                appendStyledLine(
+                                    pcapPayloadLog,
+                                    "[BASE64] Combined-stream result",
+                                    "#b35c00",
+                                    true
+                                );
+
+                                for (const QString &line :
+                                     base64Section) {
+                                    appendStyledLine(
+                                        pcapPayloadLog,
+                                        line,
+                                        "#b35c00",
+                                        false
+                                    );
+                                }
+                            }
+
+                            if (!sequenceSection.isEmpty()) {
+                                appendStyledLine(
+                                    pcapPayloadLog,
+                                    "[RECONSTRUCTION] Decoded sequence-order result",
+                                    "#b35c00",
+                                    true
+                                );
+
+                                for (const QString &line :
+                                     sequenceSection) {
+                                    appendStyledLine(
+                                        pcapPayloadLog,
+                                        line,
+                                        "#b35c00",
+                                        false
+                                    );
+                                }
+                            }
+
+                            if (!timeSection.isEmpty()) {
+                                appendStyledLine(
+                                    pcapPayloadLog,
+                                    "[RECONSTRUCTION] Decoded time-order result",
+                                    "#b35c00",
+                                    true
+                                );
+
+                                for (const QString &line :
+                                     timeSection) {
+                                    appendStyledLine(
+                                        pcapPayloadLog,
+                                        line,
+                                        "#b35c00",
+                                        false
+                                    );
+                                }
+                            }
+
+                            if (flowIndex + 1 <
+                                directionalFlows.size()) {
+                                pcapPayloadLog->append("");
+                            }
                         }
+
+                        if (directionalFlows.isEmpty()) {
+                            appendStyledLine(
+                                pcapPayloadLog,
+                                "[RECONSTRUCTION] No directional-flow reconstruction blocks were available.",
+                                "#0057b8",
+                                false
+                            );
+                        }
+
                     } else {
                         appendStyledLine(
                             pcapPayloadLog,
