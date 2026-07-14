@@ -79,6 +79,27 @@ static int pcapReportCount(
     return ok ? value : -1;
 }
 
+
+static QString pcapReportValue(
+    const QString &output,
+    const QString &label
+)
+{
+    const QRegularExpression pattern(
+        QStringLiteral(R"((?:^|\n))") +
+        QRegularExpression::escape(label) +
+        QStringLiteral(R"(\s*([^\r\n]+))")
+    );
+
+    const QRegularExpressionMatch match = pattern.match(output);
+
+    if (!match.hasMatch()) {
+        return QString();
+    }
+
+    return match.captured(1).trimmed();
+}
+
 static QString stripAnsiCodes(const QString &text)
 {
     static const QRegularExpression ansiPattern(
@@ -2160,28 +2181,81 @@ void MainWindow::runPcapCommand()
                         true
                     );
 
-                    if (combinedOutput->contains("Format: PCAPNG")) {
-                        appendStyledLine(
-                            pcapFindingsLog,
-                            "[RESULT] Capture format: PCAPNG.",
-                            "#0057b8",
-                            true
-                        );
-                    } else if (combinedOutput->contains("Format: PCAP classic")) {
-                        appendStyledLine(
-                            pcapFindingsLog,
-                            "[RESULT] Capture format: classic PCAP.",
-                            "#0057b8",
-                            true
-                        );
-                    }
-
                     appendStyledLine(
                         pcapFindingsLog,
-                        "[RESULT] Core traffic counts",
+                        "[RESULT] Capture overview",
                         "#0057b8",
                         true
                     );
+
+                    const QString captureFormat =
+                        pcapReportValue(
+                            *combinedOutput,
+                            QStringLiteral("Format:")
+                        );
+
+                    const QString linkType =
+                        pcapReportValue(
+                            *combinedOutput,
+                            QStringLiteral("Link type:")
+                        );
+
+                    const QString timestampPrecision =
+                        pcapReportValue(
+                            *combinedOutput,
+                            QStringLiteral("Timestamp precision:")
+                        );
+
+                    const QString capturedBytes =
+                        pcapReportValue(
+                            *combinedOutput,
+                            QStringLiteral("Captured bytes:")
+                        );
+
+                    const QString duration =
+                        pcapReportValue(
+                            *combinedOutput,
+                            QStringLiteral("Duration:")
+                        );
+
+                    const QString averagePacketSize =
+                        pcapReportValue(
+                            *combinedOutput,
+                            QStringLiteral(
+                                "Average captured packet size:"
+                            )
+                        );
+
+                    if (!captureFormat.isEmpty()) {
+                        appendStyledLine(
+                            pcapFindingsLog,
+                            QStringLiteral("[FINDING] Format: ") +
+                                captureFormat,
+                            "#0057b8",
+                            false
+                        );
+                    }
+
+                    if (!linkType.isEmpty()) {
+                        appendStyledLine(
+                            pcapFindingsLog,
+                            QStringLiteral("[FINDING] Link type: ") +
+                                linkType,
+                            "#0057b8",
+                            false
+                        );
+                    }
+
+                    if (!timestampPrecision.isEmpty()) {
+                        appendStyledLine(
+                            pcapFindingsLog,
+                            QStringLiteral(
+                                "[FINDING] Timestamp precision: "
+                            ) + timestampPrecision,
+                            "#0057b8",
+                            false
+                        );
+                    }
 
                     appendPcapFinding(
                         pcapFindingsLog,
@@ -2190,6 +2264,44 @@ void MainWindow::runPcapCommand()
                             *combinedOutput,
                             QStringLiteral("Packets:")
                         )
+                    );
+
+                    if (!capturedBytes.isEmpty()) {
+                        appendStyledLine(
+                            pcapFindingsLog,
+                            QStringLiteral("[FINDING] Captured bytes: ") +
+                                capturedBytes,
+                            "#0057b8",
+                            false
+                        );
+                    }
+
+                    if (!duration.isEmpty()) {
+                        appendStyledLine(
+                            pcapFindingsLog,
+                            QStringLiteral("[FINDING] Duration: ") +
+                                duration,
+                            "#0057b8",
+                            false
+                        );
+                    }
+
+                    if (!averagePacketSize.isEmpty()) {
+                        appendStyledLine(
+                            pcapFindingsLog,
+                            QStringLiteral(
+                                "[FINDING] Average packet size: "
+                            ) + averagePacketSize,
+                            "#0057b8",
+                            false
+                        );
+                    }
+
+                    appendStyledLine(
+                        pcapFindingsLog,
+                        "[RESULT] Core traffic counts",
+                        "#0057b8",
+                        true
                     );
 
                     appendPcapFinding(
