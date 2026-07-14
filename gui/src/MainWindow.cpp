@@ -100,6 +100,71 @@ static QString pcapReportValue(
     return match.captured(1).trimmed();
 }
 
+
+static QString pcapReportFollowingLine(
+    const QString &output,
+    const QString &label
+)
+{
+    const QStringList lines = output.split('\n');
+
+    for (qsizetype i = 0; i < lines.size(); ++i) {
+        if (lines.at(i).trimmed() != label) {
+            continue;
+        }
+
+        for (qsizetype next = i + 1; next < lines.size(); ++next) {
+            const QString value = lines.at(next).trimmed();
+
+            if (value.isEmpty()) {
+                continue;
+            }
+
+            return value;
+        }
+    }
+
+    return QString();
+}
+
+static QStringList pcapReportSectionLines(
+    const QString &output,
+    const QString &heading
+)
+{
+    const QStringList lines = output.split('\n');
+
+    for (qsizetype i = 0; i < lines.size(); ++i) {
+        if (lines.at(i).trimmed() != heading) {
+            continue;
+        }
+
+        QStringList section;
+        qsizetype line = i + 1;
+
+        if (line < lines.size() &&
+            QRegularExpression(
+                QStringLiteral(R"(^-+$)")
+            ).match(lines.at(line).trimmed()).hasMatch()) {
+            ++line;
+        }
+
+        for (; line < lines.size(); ++line) {
+            const QString value = lines.at(line).trimmed();
+
+            if (value.isEmpty()) {
+                break;
+            }
+
+            section.append(value);
+        }
+
+        return section;
+    }
+
+    return QStringList();
+}
+
 static QString stripAnsiCodes(const QString &text)
 {
     static const QRegularExpression ansiPattern(
@@ -2949,37 +3014,148 @@ void MainWindow::runPcapCommand()
                             );
                         }
 
-                        if (combinedOutput->contains(
-                                "TCP Directional Flow Summary"
-                            )) {
+                        const QString streamDirection =
+                            pcapReportValue(
+                                *combinedOutput,
+                                QStringLiteral("Stream:")
+                            );
+
+                        const QString reconstructedBytes =
+                            pcapReportValue(
+                                *combinedOutput,
+                                QStringLiteral(
+                                    "Reconstructed payload bytes:"
+                                )
+                            );
+
+                        const QString rawReconstruction =
+                            pcapReportFollowingLine(
+                                *combinedOutput,
+                                QStringLiteral(
+                                    "Reconstructed payload by TCP sequence:"
+                                )
+                            );
+
+                        const QStringList base64Section =
+                            pcapReportSectionLines(
+                                *combinedOutput,
+                                QStringLiteral("Base64 Reconstruction")
+                            );
+
+                        const QStringList sequenceSection =
+                            pcapReportSectionLines(
+                                *combinedOutput,
+                                QStringLiteral(
+                                    "Decoded TCP Payload Reconstruction by Sequence"
+                                )
+                            );
+
+                        const QStringList timeSection =
+                            pcapReportSectionLines(
+                                *combinedOutput,
+                                QStringLiteral(
+                                    "Decoded TCP Payload Reconstruction by Time"
+                                )
+                            );
+
+                        if (!streamDirection.isEmpty()) {
                             appendStyledLine(
                                 pcapPayloadLog,
-                                "[RECONSTRUCTION] Directional TCP flow reconstruction is available.",
+                                "[RECONSTRUCTION] First directional TCP flow",
                                 "#b35c00",
                                 true
                             );
-                        }
 
-                        if (combinedOutput->contains(
-                                "Decoded TCP Payload Reconstruction by Sequence"
-                            )) {
                             appendStyledLine(
                                 pcapPayloadLog,
-                                "[RECONSTRUCTION] Sequence-order decoded reconstruction is available.",
+                                QStringLiteral("[STREAM] ") +
+                                    streamDirection,
                                 "#b35c00",
                                 false
                             );
                         }
 
-                        if (combinedOutput->contains(
-                                "Decoded TCP Payload Reconstruction by Time"
-                            )) {
+                        if (!reconstructedBytes.isEmpty()) {
                             appendStyledLine(
                                 pcapPayloadLog,
-                                "[RECONSTRUCTION] Time-order decoded reconstruction is available.",
+                                QStringLiteral(
+                                    "[RECONSTRUCTION] Payload bytes: "
+                                ) + reconstructedBytes,
                                 "#b35c00",
                                 false
                             );
+                        }
+
+                        if (!rawReconstruction.isEmpty() &&
+                            rawReconstruction !=
+                                QStringLiteral("n/a")) {
+                            appendStyledLine(
+                                pcapPayloadLog,
+                                "[RECONSTRUCTION] Raw payload by TCP sequence:",
+                                "#b35c00",
+                                true
+                            );
+
+                            appendStyledLine(
+                                pcapPayloadLog,
+                                rawReconstruction,
+                                "#b35c00",
+                                false
+                            );
+                        }
+
+                        if (!base64Section.isEmpty()) {
+                            appendStyledLine(
+                                pcapPayloadLog,
+                                "[BASE64] Combined-stream result",
+                                "#b35c00",
+                                true
+                            );
+
+                            for (const QString &line : base64Section) {
+                                appendStyledLine(
+                                    pcapPayloadLog,
+                                    line,
+                                    "#b35c00",
+                                    false
+                                );
+                            }
+                        }
+
+                        if (!sequenceSection.isEmpty()) {
+                            appendStyledLine(
+                                pcapPayloadLog,
+                                "[RECONSTRUCTION] Decoded sequence-order result",
+                                "#b35c00",
+                                true
+                            );
+
+                            for (const QString &line : sequenceSection) {
+                                appendStyledLine(
+                                    pcapPayloadLog,
+                                    line,
+                                    "#b35c00",
+                                    false
+                                );
+                            }
+                        }
+
+                        if (!timeSection.isEmpty()) {
+                            appendStyledLine(
+                                pcapPayloadLog,
+                                "[RECONSTRUCTION] Decoded time-order result",
+                                "#b35c00",
+                                true
+                            );
+
+                            for (const QString &line : timeSection) {
+                                appendStyledLine(
+                                    pcapPayloadLog,
+                                    line,
+                                    "#b35c00",
+                                    false
+                                );
+                            }
                         }
                     } else {
                         appendStyledLine(
