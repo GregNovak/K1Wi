@@ -73,6 +73,7 @@ private:
     QComboBox *pcapModeCombo;
     QLineEdit *pcapTargetPath;
     QTextEdit *pcapFindingsLog;
+    QTextEdit *pcapNetworkLog;
     QTextEdit *pcapOutputLog;
 
     void buildCopyTab();

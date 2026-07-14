@@ -182,6 +182,87 @@ static void appendPcapOptionalFinding(
     }
 }
 
+
+static QStringList pcapReportTableRows(
+    const QString &output,
+    const QString &heading
+)
+{
+    const QStringList lines = output.split('\n');
+
+    for (qsizetype i = 0; i < lines.size(); ++i) {
+        if (lines.at(i).trimmed() != heading) {
+            continue;
+        }
+
+        QStringList rows;
+        qsizetype row = i + 1;
+
+        if (row < lines.size() &&
+            QRegularExpression(
+                QStringLiteral(R"(^-+$)")
+            ).match(lines.at(row).trimmed()).hasMatch()) {
+            ++row;
+        }
+
+        for (; row < lines.size(); ++row) {
+            const QString value = lines.at(row).trimmed();
+
+            if (value.isEmpty()) {
+                break;
+            }
+
+            rows.append(value);
+        }
+
+        return rows;
+    }
+
+    return QStringList();
+}
+
+static bool appendPcapReportTable(
+    QTextEdit *log,
+    const QString &output,
+    const QString &reportHeading,
+    const QString &displayHeading
+)
+{
+    const QStringList rows =
+        pcapReportTableRows(output, reportHeading);
+
+    if (rows.isEmpty()) {
+        return false;
+    }
+
+    if (rows.size() == 1) {
+        const QString normalized = rows.first().trimmed().toLower();
+
+        if (normalized == QStringLiteral("n/a") ||
+            normalized == QStringLiteral("none")) {
+            return false;
+        }
+    }
+
+    appendStyledLine(
+        log,
+        QStringLiteral("[NETWORK] ") + displayHeading,
+        QStringLiteral("#0057b8"),
+        true
+    );
+
+    for (const QString &row : rows) {
+        appendStyledLine(
+            log,
+            QStringLiteral("  ") + row,
+            QStringLiteral("#0057b8"),
+            false
+        );
+    }
+
+    return true;
+}
+
 static void appendStyledBlock(QTextEdit *log, const QString &text, const QString &color, bool bold = false)
 {
     const QStringList lines = text.split('\n');
@@ -951,6 +1032,18 @@ void MainWindow::buildPcapTab()
     );
     mainLayout->addWidget(pcapFindingsLog);
 
+    QLabel *networkDetailsLabel =
+        new QLabel("Network Details", pcapTab);
+    mainLayout->addWidget(networkDetailsLabel);
+
+    pcapNetworkLog = new QTextEdit(pcapTab);
+    pcapNetworkLog->setReadOnly(true);
+    pcapNetworkLog->setMaximumHeight(190);
+    pcapNetworkLog->append(
+        "[GUI] IP, MAC, and VLAN details will appear here."
+    );
+    mainLayout->addWidget(pcapNetworkLog);
+
     QLabel *detailedOutputLabel =
         new QLabel("Detailed CLI Output", pcapTab);
     mainLayout->addWidget(detailedOutputLabel);
@@ -980,6 +1073,7 @@ void MainWindow::buildPcapTab()
     connect(runButton, &QPushButton::clicked, this, &MainWindow::runPcapCommand);
     connect(clearButton, &QPushButton::clicked, this, [this]() {
         pcapFindingsLog->clear();
+        pcapNetworkLog->clear();
         pcapOutputLog->clear();
     });
 }
@@ -2056,9 +2150,11 @@ void MainWindow::runEntropyCommand()
 void MainWindow::runPcapCommand()
 {
     pcapFindingsLog->clear();
+    pcapNetworkLog->clear();
     pcapOutputLog->clear();
 
     pcapFindingsLog->append("[GUI] Analysis in progress...");
+    pcapNetworkLog->append("[GUI] Waiting for network details...");
 
     const QString target = pcapTargetPath->text().trimmed();
     const QString pcapMode = pcapModeCombo->currentData().toString();
@@ -2473,6 +2569,67 @@ void MainWindow::runPcapCommand()
                             "[NOTE] Time-order decoded TCP reconstruction is available.",
                             "#b35c00",
                             true
+                        );
+                    }
+
+                    pcapNetworkLog->clear();
+
+                    bool networkDetailsFound = false;
+
+                    networkDetailsFound =
+                        appendPcapReportTable(
+                            pcapNetworkLog,
+                            *combinedOutput,
+                            QStringLiteral("Top Source IPs"),
+                            QStringLiteral("Top source IP addresses")
+                        ) || networkDetailsFound;
+
+                    networkDetailsFound =
+                        appendPcapReportTable(
+                            pcapNetworkLog,
+                            *combinedOutput,
+                            QStringLiteral("Top Destination IPs"),
+                            QStringLiteral("Top destination IP addresses")
+                        ) || networkDetailsFound;
+
+                    networkDetailsFound =
+                        appendPcapReportTable(
+                            pcapNetworkLog,
+                            *combinedOutput,
+                            QStringLiteral(
+                                "Top Ethernet Source MACs"
+                            ),
+                            QStringLiteral(
+                                "Top source MAC addresses"
+                            )
+                        ) || networkDetailsFound;
+
+                    networkDetailsFound =
+                        appendPcapReportTable(
+                            pcapNetworkLog,
+                            *combinedOutput,
+                            QStringLiteral(
+                                "Top Ethernet Destination MACs"
+                            ),
+                            QStringLiteral(
+                                "Top destination MAC addresses"
+                            )
+                        ) || networkDetailsFound;
+
+                    networkDetailsFound =
+                        appendPcapReportTable(
+                            pcapNetworkLog,
+                            *combinedOutput,
+                            QStringLiteral("Top VLAN IDs"),
+                            QStringLiteral("Observed VLAN IDs")
+                        ) || networkDetailsFound;
+
+                    if (!networkDetailsFound) {
+                        appendStyledLine(
+                            pcapNetworkLog,
+                            "[NETWORK] No summarized IP, MAC, or VLAN details were available.",
+                            "#0057b8",
+                            false
                         );
                     }
 
