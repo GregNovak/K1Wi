@@ -74,6 +74,7 @@ private:
     QLineEdit *pcapTargetPath;
     QTextEdit *pcapFindingsLog;
     QTextEdit *pcapNetworkLog;
+    QTextEdit *pcapTransportLog;
     QTextEdit *pcapOutputLog;
 
     void buildCopyTab();

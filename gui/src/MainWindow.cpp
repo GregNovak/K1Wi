@@ -225,7 +225,8 @@ static bool appendPcapReportTable(
     QTextEdit *log,
     const QString &output,
     const QString &reportHeading,
-    const QString &displayHeading
+    const QString &displayHeading,
+    const QString &category
 )
 {
     const QStringList rows =
@@ -246,7 +247,8 @@ static bool appendPcapReportTable(
 
     appendStyledLine(
         log,
-        QStringLiteral("[NETWORK] ") + displayHeading,
+        QStringLiteral("[%1] %2")
+            .arg(category, displayHeading),
         QStringLiteral("#0057b8"),
         true
     );
@@ -259,6 +261,29 @@ static bool appendPcapReportTable(
             false
         );
     }
+
+    return true;
+}
+
+
+static bool appendPcapTransportCount(
+    QTextEdit *log,
+    const QString &label,
+    int value
+)
+{
+    if (value <= 0) {
+        return false;
+    }
+
+    appendStyledLine(
+        log,
+        QStringLiteral("[TRANSPORT] %1: %2")
+            .arg(label)
+            .arg(value),
+        QStringLiteral("#0057b8"),
+        false
+    );
 
     return true;
 }
@@ -1044,6 +1069,18 @@ void MainWindow::buildPcapTab()
     );
     mainLayout->addWidget(pcapNetworkLog);
 
+    QLabel *transportDetailsLabel =
+        new QLabel("Transport Details", pcapTab);
+    mainLayout->addWidget(transportDetailsLabel);
+
+    pcapTransportLog = new QTextEdit(pcapTab);
+    pcapTransportLog->setReadOnly(true);
+    pcapTransportLog->setMaximumHeight(190);
+    pcapTransportLog->append(
+        "[GUI] TCP, UDP, and ICMP details will appear here."
+    );
+    mainLayout->addWidget(pcapTransportLog);
+
     QLabel *detailedOutputLabel =
         new QLabel("Detailed CLI Output", pcapTab);
     mainLayout->addWidget(detailedOutputLabel);
@@ -1074,6 +1111,7 @@ void MainWindow::buildPcapTab()
     connect(clearButton, &QPushButton::clicked, this, [this]() {
         pcapFindingsLog->clear();
         pcapNetworkLog->clear();
+        pcapTransportLog->clear();
         pcapOutputLog->clear();
     });
 }
@@ -2151,10 +2189,12 @@ void MainWindow::runPcapCommand()
 {
     pcapFindingsLog->clear();
     pcapNetworkLog->clear();
+    pcapTransportLog->clear();
     pcapOutputLog->clear();
 
     pcapFindingsLog->append("[GUI] Analysis in progress...");
     pcapNetworkLog->append("[GUI] Waiting for network details...");
+    pcapTransportLog->append("[GUI] Waiting for transport details...");
 
     const QString target = pcapTargetPath->text().trimmed();
     const QString pcapMode = pcapModeCombo->currentData().toString();
@@ -2581,7 +2621,8 @@ void MainWindow::runPcapCommand()
                             pcapNetworkLog,
                             *combinedOutput,
                             QStringLiteral("Top Source IPs"),
-                            QStringLiteral("Top source IP addresses")
+                            QStringLiteral("Top source IP addresses"),
+                            QStringLiteral("NETWORK")
                         ) || networkDetailsFound;
 
                     networkDetailsFound =
@@ -2589,7 +2630,8 @@ void MainWindow::runPcapCommand()
                             pcapNetworkLog,
                             *combinedOutput,
                             QStringLiteral("Top Destination IPs"),
-                            QStringLiteral("Top destination IP addresses")
+                            QStringLiteral("Top destination IP addresses"),
+                            QStringLiteral("NETWORK")
                         ) || networkDetailsFound;
 
                     networkDetailsFound =
@@ -2601,7 +2643,8 @@ void MainWindow::runPcapCommand()
                             ),
                             QStringLiteral(
                                 "Top source MAC addresses"
-                            )
+                            ),
+                            QStringLiteral("NETWORK")
                         ) || networkDetailsFound;
 
                     networkDetailsFound =
@@ -2613,7 +2656,8 @@ void MainWindow::runPcapCommand()
                             ),
                             QStringLiteral(
                                 "Top destination MAC addresses"
-                            )
+                            ),
+                            QStringLiteral("NETWORK")
                         ) || networkDetailsFound;
 
                     networkDetailsFound =
@@ -2621,13 +2665,185 @@ void MainWindow::runPcapCommand()
                             pcapNetworkLog,
                             *combinedOutput,
                             QStringLiteral("Top VLAN IDs"),
-                            QStringLiteral("Observed VLAN IDs")
+                            QStringLiteral("Observed VLAN IDs"),
+                            QStringLiteral("NETWORK")
                         ) || networkDetailsFound;
 
                     if (!networkDetailsFound) {
                         appendStyledLine(
                             pcapNetworkLog,
                             "[NETWORK] No summarized IP, MAC, or VLAN details were available.",
+                            "#0057b8",
+                            false
+                        );
+                    }
+
+                    pcapTransportLog->clear();
+
+                    bool transportDetailsFound = false;
+
+                    transportDetailsFound =
+                        appendPcapReportTable(
+                            pcapTransportLog,
+                            *combinedOutput,
+                            QStringLiteral("Top TCP Source Ports"),
+                            QStringLiteral("Top TCP source ports"),
+                            QStringLiteral("TRANSPORT")
+                        ) || transportDetailsFound;
+
+                    transportDetailsFound =
+                        appendPcapReportTable(
+                            pcapTransportLog,
+                            *combinedOutput,
+                            QStringLiteral(
+                                "Top TCP Destination Ports"
+                            ),
+                            QStringLiteral(
+                                "Top TCP destination ports"
+                            ),
+                            QStringLiteral("TRANSPORT")
+                        ) || transportDetailsFound;
+
+                    transportDetailsFound =
+                        appendPcapReportTable(
+                            pcapTransportLog,
+                            *combinedOutput,
+                            QStringLiteral("Top UDP Source Ports"),
+                            QStringLiteral("Top UDP source ports"),
+                            QStringLiteral("TRANSPORT")
+                        ) || transportDetailsFound;
+
+                    transportDetailsFound =
+                        appendPcapReportTable(
+                            pcapTransportLog,
+                            *combinedOutput,
+                            QStringLiteral(
+                                "Top UDP Destination Ports"
+                            ),
+                            QStringLiteral(
+                                "Top UDP destination ports"
+                            ),
+                            QStringLiteral("TRANSPORT")
+                        ) || transportDetailsFound;
+
+                    const int synPackets = pcapReportCount(
+                        *combinedOutput,
+                        QStringLiteral("SYN packets:")
+                    );
+
+                    const int ackPackets = pcapReportCount(
+                        *combinedOutput,
+                        QStringLiteral("ACK packets:")
+                    );
+
+                    const int finPackets = pcapReportCount(
+                        *combinedOutput,
+                        QStringLiteral("FIN packets:")
+                    );
+
+                    const int rstPackets = pcapReportCount(
+                        *combinedOutput,
+                        QStringLiteral("RST packets:")
+                    );
+
+                    const int pshPackets = pcapReportCount(
+                        *combinedOutput,
+                        QStringLiteral("PSH packets:")
+                    );
+
+                    const int urgPackets = pcapReportCount(
+                        *combinedOutput,
+                        QStringLiteral("URG packets:")
+                    );
+
+                    const bool hasTcpFlags =
+                        synPackets > 0 ||
+                        ackPackets > 0 ||
+                        finPackets > 0 ||
+                        rstPackets > 0 ||
+                        pshPackets > 0 ||
+                        urgPackets > 0;
+
+                    if (hasTcpFlags) {
+                        appendStyledLine(
+                            pcapTransportLog,
+                            "[TRANSPORT] TCP flag activity",
+                            "#0057b8",
+                            true
+                        );
+
+                        transportDetailsFound =
+                            appendPcapTransportCount(
+                                pcapTransportLog,
+                                QStringLiteral("SYN packets"),
+                                synPackets
+                            ) || transportDetailsFound;
+
+                        transportDetailsFound =
+                            appendPcapTransportCount(
+                                pcapTransportLog,
+                                QStringLiteral("ACK packets"),
+                                ackPackets
+                            ) || transportDetailsFound;
+
+                        transportDetailsFound =
+                            appendPcapTransportCount(
+                                pcapTransportLog,
+                                QStringLiteral("FIN packets"),
+                                finPackets
+                            ) || transportDetailsFound;
+
+                        transportDetailsFound =
+                            appendPcapTransportCount(
+                                pcapTransportLog,
+                                QStringLiteral("RST packets"),
+                                rstPackets
+                            ) || transportDetailsFound;
+
+                        transportDetailsFound =
+                            appendPcapTransportCount(
+                                pcapTransportLog,
+                                QStringLiteral("PSH packets"),
+                                pshPackets
+                            ) || transportDetailsFound;
+
+                        transportDetailsFound =
+                            appendPcapTransportCount(
+                                pcapTransportLog,
+                                QStringLiteral("URG packets"),
+                                urgPackets
+                            ) || transportDetailsFound;
+                    }
+
+                    const int icmpPackets = pcapReportCount(
+                        *combinedOutput,
+                        QStringLiteral("ICMP packets:")
+                    );
+
+                    if (icmpPackets > 0) {
+                        appendStyledLine(
+                            pcapTransportLog,
+                            QStringLiteral(
+                                "[TRANSPORT] ICMP packets: %1"
+                            ).arg(icmpPackets),
+                            "#b35c00",
+                            true
+                        );
+
+                        appendStyledLine(
+                            pcapTransportLog,
+                            "[NOTE] Run Full packet view for ICMP type and code details.",
+                            "#b35c00",
+                            false
+                        );
+
+                        transportDetailsFound = true;
+                    }
+
+                    if (!transportDetailsFound) {
+                        appendStyledLine(
+                            pcapTransportLog,
+                            "[TRANSPORT] No summarized TCP, UDP, or ICMP details were available.",
                             "#0057b8",
                             false
                         );
