@@ -3222,10 +3222,63 @@ void MainWindow::runPcapCommand()
                             }
 
                             if (!base64Section.isEmpty()) {
+                                const QString base64Result =
+                                    base64Section.join(
+                                        QStringLiteral("\n")
+                                    );
+
+                                QString base64Status;
+                                QString base64Color =
+                                    QStringLiteral("#b35c00");
+
+                                if (base64Result.contains(
+                                        QStringLiteral(
+                                            "Decoded bytes:"
+                                        )
+                                    ) &&
+                                    base64Result.contains(
+                                        QStringLiteral(
+                                            "Decoded preview:"
+                                        )
+                                    )) {
+                                    base64Status =
+                                        QStringLiteral(
+                                            "[BASE64] Clean stream decoded successfully"
+                                        );
+
+                                    base64Color =
+                                        QStringLiteral("#0b7a0b");
+                                } else if (base64Result.contains(
+                                               QStringLiteral(
+                                                   "decode failed"
+                                               ),
+                                               Qt::CaseInsensitive
+                                           )) {
+                                    base64Status =
+                                        QStringLiteral(
+                                            "[BASE64] Base64-like stream detected, but decoding failed"
+                                        );
+                                } else if (base64Result.contains(
+                                               QStringLiteral(
+                                                   "not clean Base64"
+                                               ),
+                                               Qt::CaseInsensitive
+                                           )) {
+                                    base64Status =
+                                        QStringLiteral(
+                                            "[BASE64] Reconstructed stream is not clean Base64"
+                                        );
+                                } else {
+                                    base64Status =
+                                        QStringLiteral(
+                                            "[BASE64] Combined-stream result"
+                                        );
+                                }
+
                                 appendStyledLine(
                                     pcapPayloadLog,
-                                    "[BASE64] Combined-stream result",
-                                    "#b35c00",
+                                    base64Status,
+                                    base64Color,
                                     true
                                 );
 
@@ -3234,7 +3287,7 @@ void MainWindow::runPcapCommand()
                                     appendStyledLine(
                                         pcapPayloadLog,
                                         line,
-                                        "#b35c00",
+                                        base64Color,
                                         false
                                     );
                                 }
