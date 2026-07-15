@@ -3136,6 +3136,26 @@ void MainWindow::runPcapCommand()
                                     )
                                 );
 
+                            const int sequenceDecodedFragments =
+                                pcapReportCount(
+                                    sequenceSection.join(
+                                        QStringLiteral("\n")
+                                    ),
+                                    QStringLiteral(
+                                        "Decoded printable fragments:"
+                                    )
+                                );
+
+                            const int timeDecodedFragments =
+                                pcapReportCount(
+                                    timeSection.join(
+                                        QStringLiteral("\n")
+                                    ),
+                                    QStringLiteral(
+                                        "Decoded printable fragments:"
+                                    )
+                                );
+
                             appendStyledLine(
                                 pcapPayloadLog,
                                 QStringLiteral(
@@ -3220,7 +3240,8 @@ void MainWindow::runPcapCommand()
                                 }
                             }
 
-                            if (!sequenceSection.isEmpty()) {
+                            if (!sequenceSection.isEmpty() &&
+                                sequenceDecodedFragments > 0) {
                                 appendStyledLine(
                                     pcapPayloadLog,
                                     "[RECONSTRUCTION] Decoded sequence-order result",
@@ -3239,7 +3260,8 @@ void MainWindow::runPcapCommand()
                                 }
                             }
 
-                            if (!timeSection.isEmpty()) {
+                            if (!timeSection.isEmpty() &&
+                                timeDecodedFragments > 0) {
                                 appendStyledLine(
                                     pcapPayloadLog,
                                     "[RECONSTRUCTION] Decoded time-order result",
