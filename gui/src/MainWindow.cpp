@@ -1169,7 +1169,7 @@ void MainWindow::buildPcapTab()
     buttonLayout->addWidget(clearButton);
     mainLayout->addLayout(buttonLayout);
 
-    QTabWidget *pcapDetailsTabs = new QTabWidget(pcapTab);
+    pcapDetailsTabs = new QTabWidget(pcapTab);
 
     pcapFindingsLog = new QTextEdit(pcapDetailsTabs);
     pcapFindingsLog->setReadOnly(true);
@@ -3539,6 +3539,24 @@ void MainWindow::runPcapCommand()
                             "#0057b8",
                             false
                         );
+                    }
+
+                    /*
+                     * Select the most useful result tab automatically.
+                     * Priority:
+                     *   1. Payload data
+                     *   2. Transport activity
+                     *   3. Network activity
+                     *   4. Overview fallback
+                     */
+                    if (tcpPayloadPackets > 0) {
+                        pcapDetailsTabs->setCurrentIndex(3);
+                    } else if (transportDetailsFound) {
+                        pcapDetailsTabs->setCurrentIndex(2);
+                    } else if (networkDetailsFound) {
+                        pcapDetailsTabs->setCurrentIndex(1);
+                    } else {
+                        pcapDetailsTabs->setCurrentIndex(0);
                     }
 
                 } else {

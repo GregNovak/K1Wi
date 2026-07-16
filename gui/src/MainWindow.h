@@ -70,6 +70,7 @@ private:
     QTextEdit *entropyOutputLog;
     
     QWidget *pcapTab;
+    QTabWidget *pcapDetailsTabs;
     QComboBox *pcapModeCombo;
     QLineEdit *pcapTargetPath;
     QTextEdit *pcapFindingsLog;
