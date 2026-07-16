@@ -53,11 +53,13 @@ private:
     QTextEdit *hashOutputLog;
     
     QWidget *stringTab;
+    QTabWidget *stringDetailsTabs;
     QComboBox *stringInputModeCombo;
     QLineEdit *stringTextInput;
     QLineEdit *stringFilePath;
     QCheckBox *stringDecodeCheck;
     QLineEdit *stringMinLength;
+    QTextEdit *stringFindingsLog;
     QTextEdit *stringOutputLog;
     
     QWidget *magicTab;

@@ -4,6 +4,10 @@
 #include <QFileDialog>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QGroupBox>
+#include <QStackedWidget>
+#include <QList>
+#include <QMap>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QProcess>
@@ -927,92 +931,263 @@ void MainWindow::buildStringTab()
     stringTab = new QWidget(this);
     QVBoxLayout *mainLayout = new QVBoxLayout(stringTab);
 
-    QLabel *title = new QLabel("K1Wi Framework - STRING Analyzer", stringTab);
+    QLabel *title = new QLabel(
+        QStringLiteral("K1Wi Framework - STRING Analyzer"),
+        stringTab
+    );
     mainLayout->addWidget(title);
 
     QLabel *description = new QLabel(
-        "STRING analyzes direct text or printable strings inside a file. "
-        "It can detect Base64, hex, URLs, hashes, credentials, JWTs, emails, UTF-8, ROT13, and more.",
+        QStringLiteral(
+            "Analyze direct text or extract printable strings from a file. "
+            "STRING detects encoded data, URLs, email addresses, hashes, "
+            "credentials, JWTs, UTF-8 text, ROT13, and other useful patterns."
+        ),
         stringTab
     );
     description->setWordWrap(true);
     mainLayout->addWidget(description);
 
+    /*
+     * Input mode
+     */
+    QGroupBox *inputGroup = new QGroupBox(
+        QStringLiteral("Analysis input"),
+        stringTab
+    );
+    QVBoxLayout *inputGroupLayout = new QVBoxLayout(inputGroup);
+
     QHBoxLayout *modeLayout = new QHBoxLayout();
-    stringInputModeCombo = new QComboBox(stringTab);
-    stringInputModeCombo->addItem("Direct text", "text");
-    stringInputModeCombo->addItem("File mode", "file");
-    modeLayout->addWidget(new QLabel("Input mode:", stringTab));
-    modeLayout->addWidget(stringInputModeCombo);
-    mainLayout->addLayout(modeLayout);
+    modeLayout->addWidget(new QLabel(QStringLiteral("Input mode:"), inputGroup));
+
+    stringInputModeCombo = new QComboBox(inputGroup);
+    stringInputModeCombo->addItem(QStringLiteral("Direct text"), QStringLiteral("text"));
+    stringInputModeCombo->addItem(QStringLiteral("File analysis"), QStringLiteral("file"));
+    modeLayout->addWidget(stringInputModeCombo, 1);
+
+    inputGroupLayout->addLayout(modeLayout);
+
+    QStackedWidget *inputStack = new QStackedWidget(inputGroup);
+
+    /*
+     * Direct-text page
+     */
+    QWidget *textPage = new QWidget(inputStack);
+    QVBoxLayout *textPageLayout = new QVBoxLayout(textPage);
+    textPageLayout->setContentsMargins(0, 0, 0, 0);
+
+    QLabel *textHelp = new QLabel(
+        QStringLiteral(
+            "Enter one value, token, URL, email address, encoded string, "
+            "hash, or other text for analysis."
+        ),
+        textPage
+    );
+    textHelp->setWordWrap(true);
+    textPageLayout->addWidget(textHelp);
 
     QHBoxLayout *textLayout = new QHBoxLayout();
-    stringTextInput = new QLineEdit(stringTab);
-    stringTextInput->setPlaceholderText("Example: SGVsbG8= or 48656c6c6f");
-    textLayout->addWidget(new QLabel("Text:", stringTab));
-    textLayout->addWidget(stringTextInput);
-    mainLayout->addLayout(textLayout);
+    textLayout->addWidget(new QLabel(QStringLiteral("Text:"), textPage));
+
+    stringTextInput = new QLineEdit(textPage);
+    stringTextInput->setPlaceholderText(
+        QStringLiteral("Example: SGVsbG8= or 48656c6c6f")
+    );
+    textLayout->addWidget(stringTextInput, 1);
+
+    textPageLayout->addLayout(textLayout);
+    inputStack->addWidget(textPage);
+
+    /*
+     * File-analysis page
+     */
+    QWidget *filePage = new QWidget(inputStack);
+    QVBoxLayout *filePageLayout = new QVBoxLayout(filePage);
+    filePageLayout->setContentsMargins(0, 0, 0, 0);
+
+    QLabel *fileHelp = new QLabel(
+        QStringLiteral(
+            "Select a file to extract and classify its printable strings."
+        ),
+        filePage
+    );
+    fileHelp->setWordWrap(true);
+    filePageLayout->addWidget(fileHelp);
 
     QHBoxLayout *fileLayout = new QHBoxLayout();
-    stringFilePath = new QLineEdit(stringTab);
-    QPushButton *fileBrowse = new QPushButton("Browse File", stringTab);
-    fileLayout->addWidget(new QLabel("File:", stringTab));
-    fileLayout->addWidget(stringFilePath);
-    fileLayout->addWidget(fileBrowse);
-    mainLayout->addLayout(fileLayout);
+    fileLayout->addWidget(new QLabel(QStringLiteral("File:"), filePage));
 
-    stringDecodeCheck = new QCheckBox("Force decoded output", stringTab);
-    mainLayout->addWidget(stringDecodeCheck);
+    stringFilePath = new QLineEdit(filePage);
+    stringFilePath->setPlaceholderText(
+        QStringLiteral("Select a file to analyze")
+    );
+    fileLayout->addWidget(stringFilePath, 1);
+
+    QPushButton *fileBrowse = new QPushButton(
+        QStringLiteral("Browse File"),
+        filePage
+    );
+    fileLayout->addWidget(fileBrowse);
+
+    filePageLayout->addLayout(fileLayout);
 
     QHBoxLayout *minLayout = new QHBoxLayout();
-    stringMinLength = new QLineEdit(stringTab);
-    stringMinLength->setPlaceholderText("Optional, file mode only");
-    minLayout->addWidget(new QLabel("Minimum string length:", stringTab));
-    minLayout->addWidget(stringMinLength);
-    mainLayout->addLayout(minLayout);
+    minLayout->addWidget(
+        new QLabel(QStringLiteral("Minimum string length:"), filePage)
+    );
 
-    QPushButton *runButton = new QPushButton("Run STRING", stringTab);
-    QPushButton *clearButton = new QPushButton("Clear Output", stringTab);
+    stringMinLength = new QLineEdit(filePage);
+    stringMinLength->setPlaceholderText(
+        QStringLiteral("Optional — use the CLI default when blank")
+    );
+    minLayout->addWidget(stringMinLength, 1);
+
+    filePageLayout->addLayout(minLayout);
+    inputStack->addWidget(filePage);
+
+    inputGroupLayout->addWidget(inputStack);
+    mainLayout->addWidget(inputGroup);
+
+    /*
+     * Analysis options
+     */
+    QGroupBox *optionsGroup = new QGroupBox(
+        QStringLiteral("Analysis options"),
+        stringTab
+    );
+    QHBoxLayout *optionsLayout = new QHBoxLayout(optionsGroup);
+
+    stringDecodeCheck = new QCheckBox(
+        QStringLiteral("Show decoded output when available"),
+        optionsGroup
+    );
+    stringDecodeCheck->setToolTip(
+        QStringLiteral(
+            "Requests decoded previews for supported encoded values."
+        )
+    );
+    optionsLayout->addWidget(stringDecodeCheck);
+    optionsLayout->addStretch();
+
+    mainLayout->addWidget(optionsGroup);
+
+    /*
+     * Actions
+     */
+    QPushButton *runButton = new QPushButton(
+        QStringLiteral("Analyze with STRING"),
+        stringTab
+    );
+    runButton->setDefault(true);
+
+    QPushButton *clearButton = new QPushButton(
+        QStringLiteral("Clear Results"),
+        stringTab
+    );
 
     QHBoxLayout *buttonLayout = new QHBoxLayout();
-    buttonLayout->addWidget(runButton);
-    buttonLayout->addWidget(clearButton);
+    buttonLayout->addWidget(runButton, 1);
+    buttonLayout->addWidget(clearButton, 1);
     mainLayout->addLayout(buttonLayout);
 
-    stringOutputLog = new QTextEdit(stringTab);
+    /*
+     * Results
+     */
+    stringDetailsTabs = new QTabWidget(stringTab);
+
+    stringFindingsLog = new QTextEdit(stringDetailsTabs);
+    stringFindingsLog->setReadOnly(true);
+    stringFindingsLog->append(
+        QStringLiteral("[GUI] Structured STRING findings will appear here.")
+    );
+    stringDetailsTabs->addTab(
+        stringFindingsLog,
+        QStringLiteral("Findings")
+    );
+
+    stringOutputLog = new QTextEdit(stringDetailsTabs);
     stringOutputLog->setReadOnly(true);
-    stringOutputLog->append("[GUI] STRING panel ready.");
-    stringOutputLog->append("[GUI] Analyze direct text or printable strings inside a file.");
-    mainLayout->addWidget(stringOutputLog);
+    stringOutputLog->append(QStringLiteral("[GUI] STRING panel ready."));
+    stringOutputLog->append(
+        QStringLiteral(
+            "[GUI] Choose an input mode, provide a value, and run the analyzer."
+        )
+    );
+    stringDetailsTabs->addTab(
+        stringOutputLog,
+        QStringLiteral("Raw Output")
+    );
 
-    auto updateStringModeFields = [this]() {
-        const QString mode = stringInputModeCombo->currentData().toString();
-        const bool fileMode = mode == QStringLiteral("file");
+    mainLayout->addWidget(stringDetailsTabs, 1);
 
-        stringTextInput->setEnabled(!fileMode);
-        stringFilePath->setEnabled(fileMode);
-        stringMinLength->setEnabled(fileMode);
+    auto updateStringModeFields =
+        [this, inputStack]() {
+            const bool fileMode =
+                stringInputModeCombo->currentData().toString() ==
+                QStringLiteral("file");
 
-        if (fileMode) {
-            stringTextInput->clear();
-        } else {
-            stringFilePath->clear();
-            stringMinLength->clear();
-        }
-    };
+            inputStack->setCurrentIndex(fileMode ? 1 : 0);
 
-    connect(stringInputModeCombo, &QComboBox::currentIndexChanged, this, updateStringModeFields);
+            if (fileMode) {
+                stringTextInput->clear();
+                stringFilePath->setFocus();
+            } else {
+                stringFilePath->clear();
+                stringMinLength->clear();
+                stringTextInput->setFocus();
+            }
+        };
+
+    connect(
+        stringInputModeCombo,
+        &QComboBox::currentIndexChanged,
+        this,
+        updateStringModeFields
+    );
 
     connect(fileBrowse, &QPushButton::clicked, this, [this]() {
-        QString path = QFileDialog::getOpenFileName(this, "Select STRING File");
+        const QString path = QFileDialog::getOpenFileName(
+            this,
+            QStringLiteral("Select STRING File")
+        );
+
         if (!path.isEmpty()) {
             stringFilePath->setText(path);
         }
     });
 
-    connect(runButton, &QPushButton::clicked, this, &MainWindow::runStringCommand);
+    connect(
+        stringTextInput,
+        &QLineEdit::returnPressed,
+        this,
+        &MainWindow::runStringCommand
+    );
 
-    connect(clearButton, &QPushButton::clicked, stringOutputLog, &QTextEdit::clear);
+    connect(
+        runButton,
+        &QPushButton::clicked,
+        this,
+        &MainWindow::runStringCommand
+    );
+
+    connect(clearButton, &QPushButton::clicked, this, [this]() {
+        stringDetailsTabs->setCurrentIndex(0);
+
+        stringFindingsLog->clear();
+        stringOutputLog->clear();
+
+        stringFindingsLog->append(
+            QStringLiteral("[GUI] Structured STRING findings will appear here.")
+        );
+
+        stringOutputLog->append(QStringLiteral("[GUI] STRING panel ready."));
+        stringOutputLog->append(
+            QStringLiteral(
+                "[GUI] Choose an input mode, provide a value, "
+                "and run the analyzer."
+            )
+        );
+    });
 
     updateStringModeFields();
 }
@@ -2070,7 +2245,13 @@ connect(
 
 void MainWindow::runStringCommand()
 {
+    stringDetailsTabs->setCurrentIndex(0);
+    stringFindingsLog->clear();
     stringOutputLog->clear();
+
+    stringFindingsLog->append(
+        QStringLiteral("[GUI] STRING analysis in progress...")
+    );
 
     const QString inputMode = stringInputModeCombo->currentData().toString();
     const bool fileMode = inputMode == QStringLiteral("file");
@@ -2255,6 +2436,230 @@ void MainWindow::runStringCommand()
             stringOutputLog->append("");
 
             if (exitStatus == QProcess::NormalExit) {
+                stringFindingsLog->clear();
+
+                const QString normalizedOutput =
+                    stripAnsiCodes(*combinedOutput).replace(
+                        QStringLiteral("\r\n"),
+                        QStringLiteral("\n")
+                    );
+
+                const QStringList lines =
+                    normalizedOutput.split(
+                        QChar('\n'),
+                        Qt::KeepEmptyParts
+                    );
+
+                struct StringFinding {
+                    QString offset;
+                    QString raw;
+                    QString type;
+                    QString decoded;
+                };
+
+                QList<StringFinding> findings;
+                QMap<QString, int> typeCounts;
+
+                StringFinding current;
+                bool collectingDecodedOutput = false;
+
+                auto finishCurrentFinding = [&]() {
+                    if (
+                        current.raw.isEmpty() &&
+                        current.type.isEmpty() &&
+                        current.decoded.isEmpty()
+                    ) {
+                        return;
+                    }
+
+                    findings.append(current);
+
+                    if (!current.type.isEmpty()) {
+                        typeCounts[current.type] += 1;
+                    }
+
+                    current = StringFinding();
+                    collectingDecodedOutput = false;
+                };
+
+                const QRegularExpression offsetPattern(
+                    QStringLiteral(
+                        R"(^\[STRING\]\s+offset\s+(0x[0-9A-Fa-f]+))"
+                    )
+                );
+
+                for (const QString &line : lines) {
+                    const QString trimmed = line.trimmed();
+
+                    const QRegularExpressionMatch offsetMatch =
+                        offsetPattern.match(trimmed);
+
+                    if (offsetMatch.hasMatch()) {
+                        finishCurrentFinding();
+                        current.offset = offsetMatch.captured(1);
+                        continue;
+                    }
+
+                    if (trimmed.startsWith(QStringLiteral("Input:"))) {
+                        finishCurrentFinding();
+
+                        current.raw =
+                            trimmed.mid(QStringLiteral("Input:").size()).trimmed();
+
+                        if (
+                            current.raw.size() >= 2 &&
+                            current.raw.startsWith(QChar('"')) &&
+                            current.raw.endsWith(QChar('"'))
+                        ) {
+                            current.raw =
+                                current.raw.mid(1, current.raw.size() - 2);
+                        }
+
+                        continue;
+                    }
+
+                    if (trimmed.startsWith(QStringLiteral("Raw:"))) {
+                        current.raw =
+                            trimmed.mid(QStringLiteral("Raw:").size()).trimmed();
+                        continue;
+                    }
+
+                    if (
+                        trimmed.startsWith(
+                            QStringLiteral("Detected Type:")
+                        )
+                    ) {
+                        current.type =
+                            trimmed.mid(
+                                QStringLiteral("Detected Type:").size()
+                            ).trimmed();
+                        continue;
+                    }
+
+                    if (trimmed == QStringLiteral("Decoded Output:")) {
+                        collectingDecodedOutput = true;
+                        continue;
+                    }
+
+                    if (collectingDecodedOutput) {
+                        if (trimmed.isEmpty()) {
+                            if (!current.decoded.isEmpty()) {
+                                collectingDecodedOutput = false;
+                            }
+                            continue;
+                        }
+
+                        if (!current.decoded.isEmpty()) {
+                            current.decoded += QChar('\n');
+                        }
+
+                        current.decoded += line;
+                    }
+                }
+
+                finishCurrentFinding();
+
+                appendStyledLine(
+                    stringFindingsLog,
+                    QStringLiteral("[STRING] Analysis findings"),
+                    QStringLiteral("#0057b8"),
+                    true
+                );
+
+                stringFindingsLog->append(
+                    QStringLiteral("Detected strings: %1")
+                        .arg(findings.size())
+                );
+
+                if (!typeCounts.isEmpty()) {
+                    stringFindingsLog->append(QString());
+                    appendStyledLine(
+                        stringFindingsLog,
+                        QStringLiteral("Detection summary"),
+                        QStringLiteral("#0057b8"),
+                        true
+                    );
+
+                    for (
+                        auto iterator = typeCounts.cbegin();
+                        iterator != typeCounts.cend();
+                        ++iterator
+                    ) {
+                        stringFindingsLog->append(
+                            QStringLiteral("  %1: %2")
+                                .arg(iterator.key())
+                                .arg(iterator.value())
+                        );
+                    }
+                }
+
+                if (!findings.isEmpty()) {
+                    stringFindingsLog->append(QString());
+
+                    for (int index = 0; index < findings.size(); ++index) {
+                        const StringFinding &finding = findings.at(index);
+
+                        appendStyledLine(
+                            stringFindingsLog,
+                            QStringLiteral("[FINDING %1] %2")
+                                .arg(index + 1)
+                                .arg(
+                                    finding.type.isEmpty()
+                                        ? QStringLiteral("Unknown")
+                                        : finding.type
+                                ),
+                            QStringLiteral("#0057b8"),
+                            true
+                        );
+
+                        if (!finding.offset.isEmpty()) {
+                            stringFindingsLog->append(
+                                QStringLiteral("  Offset: %1")
+                                    .arg(finding.offset)
+                            );
+                        }
+
+                        if (!finding.raw.isEmpty()) {
+                            stringFindingsLog->append(
+                                QStringLiteral("  Raw: %1")
+                                    .arg(finding.raw)
+                            );
+                        }
+
+                        if (!finding.decoded.isEmpty()) {
+                            appendStyledLine(
+                                stringFindingsLog,
+                                QStringLiteral("  Decoded output:"),
+                                QStringLiteral("#2e7d32"),
+                                true
+                            );
+
+                            QString decodedDisplay = finding.decoded;
+                            decodedDisplay.replace(
+                                QChar('\n'),
+                                QStringLiteral("\n  ")
+                            );
+
+                            stringFindingsLog->append(
+                                QStringLiteral("  %1").arg(decodedDisplay)
+                            );
+                        }
+
+                        if (index + 1 < findings.size()) {
+                            stringFindingsLog->append(QString());
+                        }
+                    }
+                } else {
+                    stringFindingsLog->append(QString());
+                    stringFindingsLog->append(
+                        QStringLiteral(
+                            "[STRING] No structured detections were found."
+                        )
+                    );
+                }
+
+                stringDetailsTabs->setCurrentIndex(0);
+
                 const QString summary = stringFriendlySummary(
                     *combinedOutput,
                     exitCode,
