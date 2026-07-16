@@ -325,6 +325,26 @@ static QStringList pcapReportTableRows(
     return QStringList();
 }
 
+static QStringList pcapReportMatchingLines(
+    const QString &output,
+    const QRegularExpression &pattern
+)
+{
+    QStringList matches;
+    const QStringList lines = output.split('\n');
+
+    for (const QString &line : lines) {
+        const QString trimmed = line.trimmed();
+
+        if (pattern.match(trimmed).hasMatch()) {
+            matches.append(trimmed);
+        }
+    }
+
+    return matches;
+}
+
+
 static bool appendPcapReportTable(
     QTextEdit *log,
     const QString &output,
@@ -2782,6 +2802,38 @@ void MainWindow::runPcapCommand()
                             QStringLiteral("Observed VLAN IDs"),
                             QStringLiteral("NETWORK")
                         ) || networkDetailsFound;
+
+                    const QStringList arpDetails =
+                        pcapReportMatchingLines(
+                            *combinedOutput,
+                            QRegularExpression(
+                                QStringLiteral(
+                                    R"(^(ARP request:|ARP reply:|ARP operation=))"
+                                )
+                            )
+                        );
+
+                    if (!arpDetails.isEmpty()) {
+                        appendStyledLine(
+                            pcapNetworkLog,
+                            QStringLiteral(
+                                "[NETWORK] Full-mode ARP activity"
+                            ),
+                            QStringLiteral("#b35c00"),
+                            true
+                        );
+
+                        for (const QString &arpDetail : arpDetails) {
+                            appendStyledLine(
+                                pcapNetworkLog,
+                                QStringLiteral("  ") + arpDetail,
+                                QStringLiteral("#b35c00"),
+                                false
+                            );
+                        }
+
+                        networkDetailsFound = true;
+                    }
 
                     if (!networkDetailsFound) {
                         appendStyledLine(
