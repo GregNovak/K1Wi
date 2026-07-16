@@ -3137,6 +3137,38 @@ void MainWindow::runPcapCommand()
                         networkDetailsFound = true;
                     }
 
+                    const QStringList networkWarnings =
+                        pcapReportMatchingLines(
+                            *combinedOutput,
+                            QRegularExpression(
+                                QStringLiteral(
+                                    R"(^Warning: (truncated .+ VLAN tag|truncated ARP payload|truncated ARP header|truncated IPv6 payload.*|invalid IPv6 version [0-9]+|truncated IPv6 header)$)"
+                                )
+                            )
+                        );
+
+                    if (!networkWarnings.isEmpty()) {
+                        appendStyledLine(
+                            pcapNetworkLog,
+                            QStringLiteral(
+                                "[WARNING] Network parsing warnings"
+                            ),
+                            QStringLiteral("#b00020"),
+                            true
+                        );
+
+                        for (const QString &warning : networkWarnings) {
+                            appendStyledLine(
+                                pcapNetworkLog,
+                                QStringLiteral("  ") + warning,
+                                QStringLiteral("#b00020"),
+                                false
+                            );
+                        }
+
+                        networkDetailsFound = true;
+                    }
+
                     if (!networkDetailsFound) {
                         appendStyledLine(
                             pcapNetworkLog,
@@ -3401,6 +3433,39 @@ void MainWindow::runPcapCommand()
                                 pcapTransportLog,
                                 QStringLiteral("  ") + icmpDetail,
                                 QStringLiteral("#b35c00"),
+                                false
+                            );
+                        }
+
+                        transportDetailsFound = true;
+                    }
+
+                    const QStringList transportWarnings =
+                        pcapReportMatchingLines(
+                            *combinedOutput,
+                            QRegularExpression(
+                                QStringLiteral(
+                                    R"(^Warning: (truncated ICMP header|invalid or truncated UDP length|truncated UDP header)$)"
+                                )
+                            )
+                        );
+
+                    if (!transportWarnings.isEmpty()) {
+                        appendStyledLine(
+                            pcapTransportLog,
+                            QStringLiteral(
+                                "[WARNING] Transport parsing warnings"
+                            ),
+                            QStringLiteral("#b00020"),
+                            true
+                        );
+
+                        for (const QString &warning :
+                             transportWarnings) {
+                            appendStyledLine(
+                                pcapTransportLog,
+                                QStringLiteral("  ") + warning,
+                                QStringLiteral("#b00020"),
                                 false
                             );
                         }
