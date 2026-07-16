@@ -2924,6 +2924,38 @@ void MainWindow::runPcapCommand()
                             QStringLiteral("TRANSPORT")
                         ) || transportDetailsFound;
 
+                    const QStringList udpDetails =
+                        pcapReportMatchingLines(
+                            *combinedOutput,
+                            QRegularExpression(
+                                QStringLiteral(
+                                    R"(^UDP .+:[0-9]+ -> .+:[0-9]+ length=[0-9]+ payload=[0-9]+$)"
+                                )
+                            )
+                        );
+
+                    if (!udpDetails.isEmpty()) {
+                        appendStyledLine(
+                            pcapTransportLog,
+                            QStringLiteral(
+                                "[TRANSPORT] Full-mode UDP activity"
+                            ),
+                            QStringLiteral("#0b7a6f"),
+                            true
+                        );
+
+                        for (const QString &udpDetail : udpDetails) {
+                            appendStyledLine(
+                                pcapTransportLog,
+                                QStringLiteral("  ") + udpDetail,
+                                QStringLiteral("#0b7a6f"),
+                                false
+                            );
+                        }
+
+                        transportDetailsFound = true;
+                    }
+
                     const int synPackets = pcapReportCount(
                         *combinedOutput,
                         QStringLiteral("SYN packets:")
