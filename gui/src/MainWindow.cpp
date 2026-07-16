@@ -3018,22 +3018,58 @@ void MainWindow::runPcapCommand()
                         QStringLiteral("ICMP packets:")
                     );
 
+                    const QStringList icmpDetails =
+                        pcapReportMatchingLines(
+                            *combinedOutput,
+                            QRegularExpression(
+                                QStringLiteral(
+                                    R"(^ICMP .+ -> .+ type=[0-9]+ code=[0-9]+ \([^)]+\)$)"
+                                )
+                            )
+                        );
+
                     if (icmpPackets > 0) {
                         appendStyledLine(
                             pcapTransportLog,
                             QStringLiteral(
                                 "[TRANSPORT] ICMP packets: %1"
                             ).arg(icmpPackets),
-                            "#b35c00",
+                            QStringLiteral("#b35c00"),
                             true
                         );
 
+                        if (icmpDetails.isEmpty()) {
+                            appendStyledLine(
+                                pcapTransportLog,
+                                QStringLiteral(
+                                    "[NOTE] Run Full packet view for ICMP type and code details."
+                                ),
+                                QStringLiteral("#b35c00"),
+                                false
+                            );
+                        }
+
+                        transportDetailsFound = true;
+                    }
+
+                    if (!icmpDetails.isEmpty()) {
                         appendStyledLine(
                             pcapTransportLog,
-                            "[NOTE] Run Full packet view for ICMP type and code details.",
-                            "#b35c00",
-                            false
+                            QStringLiteral(
+                                "[TRANSPORT] Full-mode ICMP activity"
+                            ),
+                            QStringLiteral("#b35c00"),
+                            true
                         );
+
+                        for (const QString &icmpDetail : icmpDetails) {
+                            appendStyledLine(
+                                pcapTransportLog,
+                                QStringLiteral("  ") + icmpDetail,
+                                QStringLiteral("#b35c00"),
+                                false
+                            );
+                        }
 
                         transportDetailsFound = true;
                     }
