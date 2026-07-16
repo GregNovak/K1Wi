@@ -16,6 +16,10 @@
 #include <QComboBox>
 #include <QCoreApplication>
 #include <QStandardPaths>
+#include <QApplication>
+#include <QClipboard>
+#include <QSaveFile>
+#include <QTextStream>
 
 static QString resolveK1wiBinary()
 {
@@ -1169,6 +1173,21 @@ void MainWindow::buildPcapTab()
     buttonLayout->addWidget(clearButton);
     mainLayout->addLayout(buttonLayout);
 
+    QPushButton *copyViewButton =
+        new QPushButton("Copy Current View", pcapTab);
+
+    QPushButton *saveViewButton =
+        new QPushButton("Save Current View", pcapTab);
+
+    QPushButton *saveRawButton =
+        new QPushButton("Save Raw Report", pcapTab);
+
+    QHBoxLayout *exportLayout = new QHBoxLayout();
+    exportLayout->addWidget(copyViewButton);
+    exportLayout->addWidget(saveViewButton);
+    exportLayout->addWidget(saveRawButton);
+    mainLayout->addLayout(exportLayout);
+
     pcapDetailsTabs = new QTabWidget(pcapTab);
 
     pcapFindingsLog = new QTextEdit(pcapDetailsTabs);
@@ -1237,6 +1256,204 @@ void MainWindow::buildPcapTab()
             pcapTargetPath->setText(path);
         }
     });
+
+    const auto suggestedPcapExportPath =
+        [this](const QString &suffix) {
+            const QFileInfo captureInfo(
+                pcapTargetPath->text().trimmed()
+            );
+
+            QString baseName = captureInfo.completeBaseName();
+
+            if (baseName.isEmpty()) {
+                baseName = QStringLiteral("k1wi_pcap");
+            }
+
+            const QString modeName =
+                pcapModeCombo->currentData().toString() ==
+                        QStringLiteral("--full")
+                    ? QStringLiteral("full")
+                    : QStringLiteral("summary");
+
+            QString directory = QDir::currentPath();
+
+            if (!captureInfo.absolutePath().isEmpty() &&
+                captureInfo.absoluteDir().exists()) {
+                directory = captureInfo.absolutePath();
+            }
+
+            return QDir(directory).absoluteFilePath(
+                QStringLiteral("%1_%2_%3.txt")
+                    .arg(baseName, modeName, suffix)
+            );
+        };
+
+    const auto savePcapText =
+        [this](
+            const QString &textToSave,
+            const QString &dialogTitle,
+            const QString &suggestedPath
+        ) {
+            if (textToSave.trimmed().isEmpty()) {
+                QMessageBox::warning(
+                    this,
+                    QStringLiteral("K1Wi PCAP"),
+                    QStringLiteral(
+                        "There is no report content to save."
+                    )
+                );
+
+                return;
+            }
+
+            const QString destination =
+                QFileDialog::getSaveFileName(
+                    this,
+                    dialogTitle,
+                    suggestedPath,
+                    QStringLiteral(
+                        "Text reports (*.txt);;All files (*)"
+                    )
+                );
+
+            if (destination.isEmpty()) {
+                return;
+            }
+
+            QSaveFile outputFile(destination);
+
+            if (!outputFile.open(
+                    QIODevice::WriteOnly |
+                    QIODevice::Text
+                )) {
+                QMessageBox::critical(
+                    this,
+                    QStringLiteral("K1Wi PCAP"),
+                    QStringLiteral(
+                        "Unable to open the selected report file.\n\n%1"
+                    ).arg(outputFile.errorString())
+                );
+
+                return;
+            }
+
+            QTextStream stream(&outputFile);
+            stream << textToSave;
+
+            if (!textToSave.endsWith('\n')) {
+                stream << '\n';
+            }
+
+            if (stream.status() != QTextStream::Ok ||
+                !outputFile.commit()) {
+                QMessageBox::critical(
+                    this,
+                    QStringLiteral("K1Wi PCAP"),
+                    QStringLiteral(
+                        "The report could not be saved completely.\n\n%1"
+                    ).arg(outputFile.errorString())
+                );
+
+                return;
+            }
+
+            QMessageBox::information(
+                this,
+                QStringLiteral("K1Wi PCAP"),
+                QStringLiteral(
+                    "Report saved successfully.\n\n%1"
+                ).arg(destination)
+            );
+        };
+
+    connect(
+        copyViewButton,
+        &QPushButton::clicked,
+        this,
+        [this]() {
+            QTextEdit *currentLog =
+                qobject_cast<QTextEdit *>(
+                    pcapDetailsTabs->currentWidget()
+                );
+
+            if (currentLog == nullptr ||
+                currentLog->toPlainText().trimmed().isEmpty()) {
+                QMessageBox::warning(
+                    this,
+                    QStringLiteral("K1Wi PCAP"),
+                    QStringLiteral(
+                        "The current PCAP view has no content to copy."
+                    )
+                );
+
+                return;
+            }
+
+            QApplication::clipboard()->setText(
+                currentLog->toPlainText()
+            );
+
+            QMessageBox::information(
+                this,
+                QStringLiteral("K1Wi PCAP"),
+                QStringLiteral(
+                    "The current PCAP view was copied to the clipboard."
+                )
+            );
+        }
+    );
+
+    connect(
+        saveViewButton,
+        &QPushButton::clicked,
+        this,
+        [this, savePcapText, suggestedPcapExportPath]() {
+            QTextEdit *currentLog =
+                qobject_cast<QTextEdit *>(
+                    pcapDetailsTabs->currentWidget()
+                );
+
+            if (currentLog == nullptr) {
+                QMessageBox::warning(
+                    this,
+                    QStringLiteral("K1Wi PCAP"),
+                    QStringLiteral(
+                        "The current PCAP tab cannot be exported."
+                    )
+                );
+
+                return;
+            }
+
+            QString tabName =
+                pcapDetailsTabs
+                    ->tabText(pcapDetailsTabs->currentIndex())
+                    .toLower();
+
+            tabName.replace(' ', '_');
+
+            savePcapText(
+                currentLog->toPlainText(),
+                QStringLiteral("Save Current PCAP View"),
+                suggestedPcapExportPath(tabName)
+            );
+        }
+    );
+
+    connect(
+        saveRawButton,
+        &QPushButton::clicked,
+        this,
+        [this, savePcapText, suggestedPcapExportPath]() {
+            savePcapText(
+                pcapOutputLog->toPlainText(),
+                QStringLiteral("Save Complete PCAP Raw Report"),
+                suggestedPcapExportPath(
+                    QStringLiteral("raw_report")
+                )
+            );
+        }
+    );
 
     connect(runButton, &QPushButton::clicked, this, &MainWindow::runPcapCommand);
     connect(clearButton, &QPushButton::clicked, this, [this]() {
