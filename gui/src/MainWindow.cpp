@@ -20,6 +20,8 @@
 #include <QClipboard>
 #include <QSaveFile>
 #include <QTextStream>
+#include <QAction>
+#include <QToolBar>
 
 static QString resolveK1wiBinary()
 {
@@ -1173,20 +1175,52 @@ void MainWindow::buildPcapTab()
     buttonLayout->addWidget(clearButton);
     mainLayout->addLayout(buttonLayout);
 
-    QPushButton *copyViewButton =
-        new QPushButton("Copy Current View", pcapTab);
+    QToolBar *reportToolBar =
+        addToolBar(QStringLiteral("Report Tools"));
 
-    QPushButton *saveViewButton =
-        new QPushButton("Save Current View", pcapTab);
+    reportToolBar->setObjectName(
+        QStringLiteral("k1wiReportToolBar")
+    );
 
-    QPushButton *saveRawButton =
-        new QPushButton("Save Raw Report", pcapTab);
+    reportToolBar->setMovable(true);
+    reportToolBar->setFloatable(false);
 
-    QHBoxLayout *exportLayout = new QHBoxLayout();
-    exportLayout->addWidget(copyViewButton);
-    exportLayout->addWidget(saveViewButton);
-    exportLayout->addWidget(saveRawButton);
-    mainLayout->addLayout(exportLayout);
+    QAction *copyViewAction =
+        reportToolBar->addAction(
+            QStringLiteral("Copy View")
+        );
+
+    QAction *saveViewAction =
+        reportToolBar->addAction(
+            QStringLiteral("Save View")
+        );
+
+    QAction *saveRawAction =
+        reportToolBar->addAction(
+            QStringLiteral("Save Raw")
+        );
+
+    copyViewAction->setToolTip(
+        QStringLiteral(
+            "Copy the currently selected PCAP results view"
+        )
+    );
+
+    saveViewAction->setToolTip(
+        QStringLiteral(
+            "Save the currently selected PCAP results view"
+        )
+    );
+
+    saveRawAction->setToolTip(
+        QStringLiteral(
+            "Save the complete PCAP Raw Output report"
+        )
+    );
+
+    copyViewAction->setEnabled(false);
+    saveViewAction->setEnabled(false);
+    saveRawAction->setEnabled(false);
 
     pcapDetailsTabs = new QTabWidget(pcapTab);
 
@@ -1367,8 +1401,8 @@ void MainWindow::buildPcapTab()
         };
 
     connect(
-        copyViewButton,
-        &QPushButton::clicked,
+        copyViewAction,
+        &QAction::triggered,
         this,
         [this]() {
             QTextEdit *currentLog =
@@ -1404,8 +1438,8 @@ void MainWindow::buildPcapTab()
     );
 
     connect(
-        saveViewButton,
-        &QPushButton::clicked,
+        saveViewAction,
+        &QAction::triggered,
         this,
         [this, savePcapText, suggestedPcapExportPath]() {
             QTextEdit *currentLog =
@@ -1441,8 +1475,8 @@ void MainWindow::buildPcapTab()
     );
 
     connect(
-        saveRawButton,
-        &QPushButton::clicked,
+        saveRawAction,
+        &QAction::triggered,
         this,
         [this, savePcapText, suggestedPcapExportPath]() {
             savePcapText(
@@ -1453,6 +1487,25 @@ void MainWindow::buildPcapTab()
                 )
             );
         }
+    );
+
+    const auto updateReportToolActions =
+        [this, copyViewAction, saveViewAction, saveRawAction](
+            int index
+        ) {
+            const bool pcapSelected =
+                tabs->widget(index) == pcapTab;
+
+            copyViewAction->setEnabled(pcapSelected);
+            saveViewAction->setEnabled(pcapSelected);
+            saveRawAction->setEnabled(pcapSelected);
+        };
+
+    connect(
+        tabs,
+        &QTabWidget::currentChanged,
+        this,
+        updateReportToolActions
     );
 
     connect(runButton, &QPushButton::clicked, this, &MainWindow::runPcapCommand);
