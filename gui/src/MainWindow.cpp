@@ -2835,6 +2835,38 @@ void MainWindow::runPcapCommand()
                         networkDetailsFound = true;
                     }
 
+                    const QStringList ipv6Details =
+                        pcapReportMatchingLines(
+                            *combinedOutput,
+                            QRegularExpression(
+                                QStringLiteral(
+                                    R"(^IPv6 .+ -> .+ next-header=[0-9]+ \([^)]+\) payload=[0-9]+$)"
+                                )
+                            )
+                        );
+
+                    if (!ipv6Details.isEmpty()) {
+                        appendStyledLine(
+                            pcapNetworkLog,
+                            QStringLiteral(
+                                "[NETWORK] Full-mode IPv6 activity"
+                            ),
+                            QStringLiteral("#6a3db5"),
+                            true
+                        );
+
+                        for (const QString &ipv6Detail : ipv6Details) {
+                            appendStyledLine(
+                                pcapNetworkLog,
+                                QStringLiteral("  ") + ipv6Detail,
+                                QStringLiteral("#6a3db5"),
+                                false
+                            );
+                        }
+
+                        networkDetailsFound = true;
+                    }
+
                     if (!networkDetailsFound) {
                         appendStyledLine(
                             pcapNetworkLog,
