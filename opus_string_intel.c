@@ -627,6 +627,70 @@ static bool a1z26_decode(const unsigned char *in, size_t len,
     return true;
 }
 
+/* ---------- Plain PEM private-key boundaries ---------- */
+
+static const char *detect_pem_private_key_boundary(
+    const unsigned char *s,
+    size_t len
+) {
+    struct pem_boundary {
+        const char *text;
+        const char *type;
+    };
+
+    static const struct pem_boundary boundaries[] = {
+        {
+            "-----BEGIN PRIVATE KEY-----",
+            "PEM private key header"
+        },
+        {
+            "-----END PRIVATE KEY-----",
+            "PEM private key footer"
+        },
+        {
+            "-----BEGIN RSA PRIVATE KEY-----",
+            "RSA private key header"
+        },
+        {
+            "-----END RSA PRIVATE KEY-----",
+            "RSA private key footer"
+        },
+        {
+            "-----BEGIN EC PRIVATE KEY-----",
+            "EC private key header"
+        },
+        {
+            "-----END EC PRIVATE KEY-----",
+            "EC private key footer"
+        },
+        {
+            "-----BEGIN OPENSSH PRIVATE KEY-----",
+            "OpenSSH private key header"
+        },
+        {
+            "-----END OPENSSH PRIVATE KEY-----",
+            "OpenSSH private key footer"
+        }
+    };
+
+    for (
+        size_t i = 0;
+        i < sizeof(boundaries) / sizeof(boundaries[0]);
+        i++
+    ) {
+        const size_t marker_len = strlen(boundaries[i].text);
+
+        if (
+            len == marker_len &&
+            memcmp(s, boundaries[i].text, marker_len) == 0
+        ) {
+            return boundaries[i].type;
+        }
+    }
+
+    return NULL;
+}
+
 /* ---------- Hash heuristics ---------- */
 
 static bool looks_like_md5(const unsigned char *s, size_t len) {
@@ -657,6 +721,20 @@ OpusStringIntelResult opus_string_intel(const char *input_cstr) {
         if (!is_printable_ascii_byte(input[i])) {
             res.is_printable = false;
             break;
+        }
+    }
+
+    /*
+     * Plain PEM private-key boundaries must be classified before
+     * URL, encoding, secret, and generic UTF-8 heuristics.
+     */
+    {
+        const char *pem_boundary_type =
+            detect_pem_private_key_boundary(input, res.length);
+
+        if (pem_boundary_type != NULL) {
+            res.detected_type = pem_boundary_type;
+            return res;
         }
     }
 

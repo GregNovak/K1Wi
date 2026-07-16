@@ -100,6 +100,25 @@ OUT=$($BIN string "R2d2d2d2d2d424547494e2050524956415445204b45592d")
 echo "$OUT"
 require_output "STRING shifted hex private key detection" "$OUT" "Shifted hex encoded private key"
 
+echo
+echo "[TEST] STRING plain PEM private key boundaries"
+
+OUT=$($BIN STRING '-----BEGIN PRIVATE KEY-----' 2>&1)
+printf "%s\n" "$OUT"
+require_output     "STRING detects PEM private key header"     "$OUT"     "Detected Type: PEM private key header"
+
+OUT=$($BIN STRING '-----END RSA PRIVATE KEY-----' 2>&1)
+printf "%s\n" "$OUT"
+require_output     "STRING detects RSA private key footer"     "$OUT"     "Detected Type: RSA private key footer"
+
+OUT=$($BIN STRING '-----BEGIN EC PRIVATE KEY-----' 2>&1)
+printf "%s\n" "$OUT"
+require_output     "STRING detects EC private key header"     "$OUT"     "Detected Type: EC private key header"
+
+OUT=$($BIN STRING '-----BEGIN OPENSSH PRIVATE KEY-----' 2>&1)
+printf "%s\n" "$OUT"
+require_output     "STRING detects OpenSSH private key header"     "$OUT"     "Detected Type: OpenSSH private key header"
+
 OUT=$($BIN STRING --decode 'cGljb0NURntwdXp6bDNkX20zdGFkYXRhX2YwdW5kIV9lZTQ1NDk1MH0\075' 2>&1)
 printf "%s\n" "$OUT"
 require_output "STRING decodes escaped Base64 padding" "$OUT" "Detected Type: Base64"
