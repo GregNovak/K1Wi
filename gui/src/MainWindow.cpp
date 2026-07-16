@@ -1510,11 +1510,52 @@ void MainWindow::buildPcapTab()
 
     connect(runButton, &QPushButton::clicked, this, &MainWindow::runPcapCommand);
     connect(clearButton, &QPushButton::clicked, this, [this]() {
+        pcapDetailsTabs->setCurrentIndex(0);
+
         pcapFindingsLog->clear();
         pcapNetworkLog->clear();
         pcapTransportLog->clear();
         pcapPayloadLog->clear();
         pcapOutputLog->clear();
+
+        pcapFindingsLog->append(
+            QStringLiteral(
+                "[GUI] Findings will appear here after analysis."
+            )
+        );
+
+        pcapNetworkLog->append(
+            QStringLiteral(
+                "[GUI] IP, MAC, VLAN, ARP, and IPv6 details "
+                "will appear here."
+            )
+        );
+
+        pcapTransportLog->append(
+            QStringLiteral(
+                "[GUI] TCP, UDP, and ICMP details will appear here."
+            )
+        );
+
+        pcapPayloadLog->append(
+            QStringLiteral(
+                "[GUI] TCP payload and reconstruction details "
+                "will appear here."
+            )
+        );
+
+        pcapOutputLog->append(
+            QStringLiteral(
+                "[GUI] Packet capture analyzer ready."
+            )
+        );
+
+        pcapOutputLog->append(
+            QStringLiteral(
+                "[GUI] Select a PCAP or PCAPNG file and choose "
+                "Summary or Full packet view."
+            )
+        );
     });
 }
 
@@ -2589,6 +2630,12 @@ void MainWindow::runEntropyCommand()
 
 void MainWindow::runPcapCommand()
 {
+    /*
+     * Begin every analysis on Overview. After successful parsing,
+     * automatic result selection opens the most relevant detail tab.
+     */
+    pcapDetailsTabs->setCurrentIndex(0);
+
     pcapFindingsLog->clear();
     pcapNetworkLog->clear();
     pcapTransportLog->clear();
@@ -3172,7 +3219,7 @@ void MainWindow::runPcapCommand()
                     if (!networkDetailsFound) {
                         appendStyledLine(
                             pcapNetworkLog,
-                            "[NETWORK] No summarized IP, MAC, or VLAN details were available.",
+                            "[NETWORK] No IP, MAC, VLAN, ARP, or IPv6 details were found.",
                             "#0057b8",
                             false
                         );
@@ -3476,7 +3523,7 @@ void MainWindow::runPcapCommand()
                     if (!transportDetailsFound) {
                         appendStyledLine(
                             pcapTransportLog,
-                            "[TRANSPORT] No summarized TCP, UDP, or ICMP details were available.",
+                            "[TRANSPORT] No TCP, UDP, or ICMP activity was found.",
                             "#0057b8",
                             false
                         );
@@ -3870,7 +3917,7 @@ void MainWindow::runPcapCommand()
                     } else {
                         appendStyledLine(
                             pcapPayloadLog,
-                            "[PAYLOAD] No TCP payload data was found.",
+                            "[PAYLOAD] No TCP payload or reconstruction data was found.",
                             "#0057b8",
                             false
                         );
