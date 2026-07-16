@@ -2956,6 +2956,38 @@ void MainWindow::runPcapCommand()
                         transportDetailsFound = true;
                     }
 
+                    const QStringList tcpDetails =
+                        pcapReportMatchingLines(
+                            *combinedOutput,
+                            QRegularExpression(
+                                QStringLiteral(
+                                    R"(^TCP .+:[0-9]+ -> .+:[0-9]+ seq=[0-9]+ flags=[^ ]+ payload=[0-9]+$)"
+                                )
+                            )
+                        );
+
+                    if (!tcpDetails.isEmpty()) {
+                        appendStyledLine(
+                            pcapTransportLog,
+                            QStringLiteral(
+                                "[TRANSPORT] Full-mode TCP activity"
+                            ),
+                            QStringLiteral("#6a3db5"),
+                            true
+                        );
+
+                        for (const QString &tcpDetail : tcpDetails) {
+                            appendStyledLine(
+                                pcapTransportLog,
+                                QStringLiteral("  ") + tcpDetail,
+                                QStringLiteral("#6a3db5"),
+                                false
+                            );
+                        }
+
+                        transportDetailsFound = true;
+                    }
+
                     const int synPackets = pcapReportCount(
                         *combinedOutput,
                         QStringLiteral("SYN packets:")
