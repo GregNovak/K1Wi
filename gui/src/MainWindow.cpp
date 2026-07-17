@@ -2761,6 +2761,92 @@ void MainWindow::runStringCommand()
 
                 finishCurrentFinding();
 
+                const auto stringFindingRisk =
+                    [](const QString &findingType) {
+                        if (
+                            findingType.contains(
+                                QStringLiteral("private key"),
+                                Qt::CaseInsensitive
+                            ) ||
+                            findingType.contains(
+                                QStringLiteral("AWS access key"),
+                                Qt::CaseInsensitive
+                            ) ||
+                            findingType.contains(
+                                QStringLiteral("GitHub token"),
+                                Qt::CaseInsensitive
+                            ) ||
+                            findingType.contains(
+                                QStringLiteral("OpenAI API key"),
+                                Qt::CaseInsensitive
+                            ) ||
+                            findingType.contains(
+                                QStringLiteral("Bearer token"),
+                                Qt::CaseInsensitive
+                            ) ||
+                            findingType.contains(
+                                QStringLiteral("JWT token"),
+                                Qt::CaseInsensitive
+                            )
+                        ) {
+                            return 2;
+                        }
+
+                        if (
+                            findingType.contains(
+                                QStringLiteral("credential"),
+                                Qt::CaseInsensitive
+                            ) ||
+                            findingType.contains(
+                                QStringLiteral("secret"),
+                                Qt::CaseInsensitive
+                            ) ||
+                            findingType.contains(
+                                QStringLiteral("SSH public key"),
+                                Qt::CaseInsensitive
+                            ) ||
+                            findingType.contains(
+                                QStringLiteral("PEM certificate"),
+                                Qt::CaseInsensitive
+                            )
+                        ) {
+                            return 1;
+                        }
+
+                        return 0;
+                    };
+
+                const auto stringRiskColor =
+                    [&stringFindingRisk](const QString &findingType) {
+                        const int risk = stringFindingRisk(findingType);
+
+                        if (risk == 2) {
+                            return QStringLiteral("#b00020");
+                        }
+
+                        if (risk == 1) {
+                            return QStringLiteral("#b26a00");
+                        }
+
+                        return QStringLiteral("#0057b8");
+                    };
+
+                int highRiskCount = 0;
+                int warningCount = 0;
+                int informationalCount = 0;
+
+                for (const StringFinding &finding : findings) {
+                    const int risk = stringFindingRisk(finding.type);
+
+                    if (risk == 2) {
+                        highRiskCount++;
+                    } else if (risk == 1) {
+                        warningCount++;
+                    } else {
+                        informationalCount++;
+                    }
+                }
+
                 appendStyledLine(
                     stringFindingsLog,
                     QStringLiteral("[STRING] Analysis findings"),
@@ -2771,6 +2857,43 @@ void MainWindow::runStringCommand()
                 stringFindingsLog->append(
                     QStringLiteral("Detected strings: %1")
                         .arg(findings.size())
+                );
+
+                stringFindingsLog->append(QString());
+
+                appendStyledLine(
+                    stringFindingsLog,
+                    QStringLiteral("Risk summary"),
+                    QStringLiteral("#0057b8"),
+                    true
+                );
+
+                appendStyledLine(
+                    stringFindingsLog,
+                    QStringLiteral("  High-risk findings: %1")
+                        .arg(highRiskCount),
+                    highRiskCount > 0
+                        ? QStringLiteral("#b00020")
+                        : QStringLiteral("#2e7d32"),
+                    highRiskCount > 0
+                );
+
+                appendStyledLine(
+                    stringFindingsLog,
+                    QStringLiteral("  Warning findings: %1")
+                        .arg(warningCount),
+                    warningCount > 0
+                        ? QStringLiteral("#b26a00")
+                        : QStringLiteral("#2e7d32"),
+                    warningCount > 0
+                );
+
+                appendStyledLine(
+                    stringFindingsLog,
+                    QStringLiteral("  Informational findings: %1")
+                        .arg(informationalCount),
+                    QStringLiteral("#0057b8"),
+                    false
                 );
 
                 if (!typeCounts.isEmpty()) {
@@ -2787,10 +2910,13 @@ void MainWindow::runStringCommand()
                         iterator != typeCounts.cend();
                         ++iterator
                     ) {
-                        stringFindingsLog->append(
+                        appendStyledLine(
+                            stringFindingsLog,
                             QStringLiteral("  %1: %2")
                                 .arg(iterator.key())
-                                .arg(iterator.value())
+                                .arg(iterator.value()),
+                            stringRiskColor(iterator.key()),
+                            stringFindingRisk(iterator.key()) > 0
                         );
                     }
                 }
