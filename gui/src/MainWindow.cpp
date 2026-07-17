@@ -1575,26 +1575,153 @@ void MainWindow::buildPcapTab()
             );
         };
 
+    const auto saveStringText =
+        [this](
+            const QString &textToSave,
+            const QString &dialogTitle,
+            const QString &suggestedPath
+        ) {
+            if (textToSave.trimmed().isEmpty()) {
+                QMessageBox::warning(
+                    this,
+                    QStringLiteral("K1Wi STRING"),
+                    QStringLiteral(
+                        "There is no STRING report content to save."
+                    )
+                );
+                return;
+            }
+
+            const QString destination =
+                QFileDialog::getSaveFileName(
+                    this,
+                    dialogTitle,
+                    suggestedPath,
+                    QStringLiteral(
+                        "Text reports (*.txt);;All files (*)"
+                    )
+                );
+
+            if (destination.isEmpty()) {
+                return;
+            }
+
+            QSaveFile outputFile(destination);
+
+            if (!outputFile.open(
+                    QIODevice::WriteOnly |
+                    QIODevice::Text
+                )) {
+                QMessageBox::critical(
+                    this,
+                    QStringLiteral("K1Wi STRING"),
+                    QStringLiteral(
+                        "Unable to open the selected report file.\n\n%1"
+                    ).arg(outputFile.errorString())
+                );
+                return;
+            }
+
+            QTextStream stream(&outputFile);
+            stream << textToSave;
+
+            if (!textToSave.endsWith(QChar('\n'))) {
+                stream << QChar('\n');
+            }
+
+            if (
+                stream.status() != QTextStream::Ok ||
+                !outputFile.commit()
+            ) {
+                QMessageBox::critical(
+                    this,
+                    QStringLiteral("K1Wi STRING"),
+                    QStringLiteral(
+                        "The STRING report could not be saved completely.\n\n%1"
+                    ).arg(outputFile.errorString())
+                );
+                return;
+            }
+
+            QMessageBox::information(
+                this,
+                QStringLiteral("K1Wi STRING"),
+                QStringLiteral(
+                    "STRING report saved successfully.\n\n%1"
+                ).arg(destination)
+            );
+        };
+
+    const auto suggestedStringExportPath =
+        [this](const QString &suffix) {
+            const bool fileMode =
+                stringInputModeCombo->currentData().toString() ==
+                QStringLiteral("file");
+
+            QString baseName;
+            QString directory = QDir::currentPath();
+
+            if (fileMode) {
+                const QFileInfo sourceInfo(
+                    stringFilePath->text().trimmed()
+                );
+
+                baseName = sourceInfo.completeBaseName();
+
+                if (
+                    !sourceInfo.absolutePath().isEmpty() &&
+                    sourceInfo.absoluteDir().exists()
+                ) {
+                    directory = sourceInfo.absolutePath();
+                }
+            } else {
+                baseName = QStringLiteral("k1wi_string");
+            }
+
+            if (baseName.isEmpty()) {
+                baseName = QStringLiteral("k1wi_string");
+            }
+
+            return QDir(directory).absoluteFilePath(
+                QStringLiteral("%1_%2.txt")
+                    .arg(baseName, suffix)
+            );
+        };
+
     connect(
         copyViewAction,
         &QAction::triggered,
         this,
         [this]() {
+            const bool stringSelected =
+                tabs->currentWidget() == stringTab;
+
+            QTabWidget *detailsTabs =
+                stringSelected
+                    ? stringDetailsTabs
+                    : pcapDetailsTabs;
+
             QTextEdit *currentLog =
                 qobject_cast<QTextEdit *>(
-                    pcapDetailsTabs->currentWidget()
+                    detailsTabs->currentWidget()
                 );
 
-            if (currentLog == nullptr ||
-                currentLog->toPlainText().trimmed().isEmpty()) {
+            const QString moduleName =
+                stringSelected
+                    ? QStringLiteral("STRING")
+                    : QStringLiteral("PCAP");
+
+            if (
+                currentLog == nullptr ||
+                currentLog->toPlainText().trimmed().isEmpty()
+            ) {
                 QMessageBox::warning(
                     this,
-                    QStringLiteral("K1Wi PCAP"),
+                    QStringLiteral("K1Wi %1").arg(moduleName),
                     QStringLiteral(
-                        "The current PCAP view has no content to copy."
-                    )
+                        "The current %1 view has no content to copy."
+                    ).arg(moduleName)
                 );
-
                 return;
             }
 
@@ -1604,10 +1731,10 @@ void MainWindow::buildPcapTab()
 
             QMessageBox::information(
                 this,
-                QStringLiteral("K1Wi PCAP"),
+                QStringLiteral("K1Wi %1").arg(moduleName),
                 QStringLiteral(
-                    "The current PCAP view was copied to the clipboard."
-                )
+                    "The current %1 view was copied to the clipboard."
+                ).arg(moduleName)
             );
         }
     );
@@ -1616,36 +1743,59 @@ void MainWindow::buildPcapTab()
         saveViewAction,
         &QAction::triggered,
         this,
-        [this, savePcapText, suggestedPcapExportPath]() {
+        [
+            this,
+            savePcapText,
+            suggestedPcapExportPath,
+            saveStringText,
+            suggestedStringExportPath
+        ]() {
+            const bool stringSelected =
+                tabs->currentWidget() == stringTab;
+
+            QTabWidget *detailsTabs =
+                stringSelected
+                    ? stringDetailsTabs
+                    : pcapDetailsTabs;
+
             QTextEdit *currentLog =
                 qobject_cast<QTextEdit *>(
-                    pcapDetailsTabs->currentWidget()
+                    detailsTabs->currentWidget()
                 );
 
             if (currentLog == nullptr) {
                 QMessageBox::warning(
                     this,
-                    QStringLiteral("K1Wi PCAP"),
+                    stringSelected
+                        ? QStringLiteral("K1Wi STRING")
+                        : QStringLiteral("K1Wi PCAP"),
                     QStringLiteral(
-                        "The current PCAP tab cannot be exported."
+                        "The current results tab cannot be exported."
                     )
                 );
-
                 return;
             }
 
             QString tabName =
-                pcapDetailsTabs
-                    ->tabText(pcapDetailsTabs->currentIndex())
+                detailsTabs
+                    ->tabText(detailsTabs->currentIndex())
                     .toLower();
 
-            tabName.replace(' ', '_');
+            tabName.replace(QChar(' '), QChar('_'));
 
-            savePcapText(
-                currentLog->toPlainText(),
-                QStringLiteral("Save Current PCAP View"),
-                suggestedPcapExportPath(tabName)
-            );
+            if (stringSelected) {
+                saveStringText(
+                    currentLog->toPlainText(),
+                    QStringLiteral("Save Current STRING View"),
+                    suggestedStringExportPath(tabName)
+                );
+            } else {
+                savePcapText(
+                    currentLog->toPlainText(),
+                    QStringLiteral("Save Current PCAP View"),
+                    suggestedPcapExportPath(tabName)
+                );
+            }
         }
     );
 
@@ -1653,14 +1803,33 @@ void MainWindow::buildPcapTab()
         saveRawAction,
         &QAction::triggered,
         this,
-        [this, savePcapText, suggestedPcapExportPath]() {
-            savePcapText(
-                pcapOutputLog->toPlainText(),
-                QStringLiteral("Save Complete PCAP Raw Report"),
-                suggestedPcapExportPath(
-                    QStringLiteral("raw_report")
-                )
-            );
+        [
+            this,
+            savePcapText,
+            suggestedPcapExportPath,
+            saveStringText,
+            suggestedStringExportPath
+        ]() {
+            const bool stringSelected =
+                tabs->currentWidget() == stringTab;
+
+            if (stringSelected) {
+                saveStringText(
+                    stringOutputLog->toPlainText(),
+                    QStringLiteral("Save Complete STRING Raw Report"),
+                    suggestedStringExportPath(
+                        QStringLiteral("raw_report")
+                    )
+                );
+            } else {
+                savePcapText(
+                    pcapOutputLog->toPlainText(),
+                    QStringLiteral("Save Complete PCAP Raw Report"),
+                    suggestedPcapExportPath(
+                        QStringLiteral("raw_report")
+                    )
+                );
+            }
         }
     );
 
@@ -1668,12 +1837,45 @@ void MainWindow::buildPcapTab()
         [this, copyViewAction, saveViewAction, saveRawAction](
             int index
         ) {
-            const bool pcapSelected =
-                tabs->widget(index) == pcapTab;
+            const QWidget *selectedTab = tabs->widget(index);
 
-            copyViewAction->setEnabled(pcapSelected);
-            saveViewAction->setEnabled(pcapSelected);
-            saveRawAction->setEnabled(pcapSelected);
+            const bool reportTabSelected =
+                selectedTab == pcapTab ||
+                selectedTab == stringTab;
+
+            copyViewAction->setEnabled(reportTabSelected);
+            saveViewAction->setEnabled(reportTabSelected);
+            saveRawAction->setEnabled(reportTabSelected);
+
+            copyViewAction->setToolTip(
+                reportTabSelected
+                    ? QStringLiteral(
+                        "Copy the currently selected results view"
+                    )
+                    : QStringLiteral(
+                        "Available in STRING and PCAP"
+                    )
+            );
+
+            saveViewAction->setToolTip(
+                reportTabSelected
+                    ? QStringLiteral(
+                        "Save the currently selected results view"
+                    )
+                    : QStringLiteral(
+                        "Available in STRING and PCAP"
+                    )
+            );
+
+            saveRawAction->setToolTip(
+                reportTabSelected
+                    ? QStringLiteral(
+                        "Save the complete raw analysis report"
+                    )
+                    : QStringLiteral(
+                        "Available in STRING and PCAP"
+                    )
+            );
         };
 
     connect(
@@ -2599,16 +2801,68 @@ void MainWindow::runStringCommand()
                     for (int index = 0; index < findings.size(); ++index) {
                         const StringFinding &finding = findings.at(index);
 
+                        const QString findingType =
+                            finding.type.isEmpty()
+                                ? QStringLiteral("Unknown")
+                                : finding.type;
+
+                        QString findingColor =
+                            QStringLiteral("#0057b8");
+
+                        if (
+                            findingType.contains(
+                                QStringLiteral("private key"),
+                                Qt::CaseInsensitive
+                            ) ||
+                            findingType.contains(
+                                QStringLiteral("AWS access key"),
+                                Qt::CaseInsensitive
+                            ) ||
+                            findingType.contains(
+                                QStringLiteral("GitHub token"),
+                                Qt::CaseInsensitive
+                            ) ||
+                            findingType.contains(
+                                QStringLiteral("OpenAI API key"),
+                                Qt::CaseInsensitive
+                            ) ||
+                            findingType.contains(
+                                QStringLiteral("Bearer token"),
+                                Qt::CaseInsensitive
+                            ) ||
+                            findingType.contains(
+                                QStringLiteral("JWT token"),
+                                Qt::CaseInsensitive
+                            )
+                        ) {
+                            findingColor = QStringLiteral("#b00020");
+                        } else if (
+                            findingType.contains(
+                                QStringLiteral("credential"),
+                                Qt::CaseInsensitive
+                            ) ||
+                            findingType.contains(
+                                QStringLiteral("secret"),
+                                Qt::CaseInsensitive
+                            ) ||
+                            findingType.contains(
+                                QStringLiteral("SSH public key"),
+                                Qt::CaseInsensitive
+                            ) ||
+                            findingType.contains(
+                                QStringLiteral("PEM certificate"),
+                                Qt::CaseInsensitive
+                            )
+                        ) {
+                            findingColor = QStringLiteral("#b26a00");
+                        }
+
                         appendStyledLine(
                             stringFindingsLog,
                             QStringLiteral("[FINDING %1] %2")
                                 .arg(index + 1)
-                                .arg(
-                                    finding.type.isEmpty()
-                                        ? QStringLiteral("Unknown")
-                                        : finding.type
-                                ),
-                            QStringLiteral("#0057b8"),
+                                .arg(findingType),
+                            findingColor,
                             true
                         );
 
