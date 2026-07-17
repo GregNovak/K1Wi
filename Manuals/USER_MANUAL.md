@@ -165,8 +165,8 @@ sudo apt install \
 Clone the repository:
 
 ```bash
-git clone https://github.com/GregNovak/K1Wi.git
-cd K1Wi
+git clone https://github.com/GregNovak/K1Wi-Framework.git
+cd K1Wi-Framework
 ```
 
 Or extract a source archive:
