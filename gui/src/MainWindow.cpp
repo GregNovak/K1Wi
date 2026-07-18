@@ -488,8 +488,8 @@ static QString hashFriendlySummary(const QString &output)
         );
     }
 
-    if (output.contains(QStringLiteral("MD5 FAIL")) ||
-        output.contains(QStringLiteral("SHA256 FAIL"))) {
+    if (output.contains(QStringLiteral("MD5 MISMATCH")) ||
+        output.contains(QStringLiteral("SHA256 MISMATCH"))) {
         return QStringLiteral(
             "[RESULT] Verification failed.\n"
             "[RESULT] The selected file does not match the expected hash."
@@ -3061,111 +3061,252 @@ void MainWindow::buildHashTab()
     hashTab = new QWidget(this);
     QVBoxLayout *mainLayout = new QVBoxLayout(hashTab);
 
-    QLabel *title = new QLabel("K1Wi Framework - HASH Prototype", hashTab);
+    QLabel *title = new QLabel(
+        QStringLiteral("K1Wi Framework - HASH"),
+        hashTab
+    );
     mainLayout->addWidget(title);
 
     QLabel *description = new QLabel(
-        "HASH combines the K1Wi MD5 and SHA256 modules in one GUI panel.",
+        QStringLiteral(
+            "Compute, verify, or compare MD5 and SHA-256 file hashes. "
+            "Structured results appear under Findings while complete CLI "
+            "output remains available under Raw Output."
+        ),
         hashTab
     );
     description->setWordWrap(true);
     mainLayout->addWidget(description);
 
     QHBoxLayout *algorithmLayout = new QHBoxLayout();
+
     hashAlgorithmCombo = new QComboBox(hashTab);
-    hashAlgorithmCombo->addItem("MD5", "MD5");
-    hashAlgorithmCombo->addItem("SHA-256", "SHA256");
-    algorithmLayout->addWidget(new QLabel("Algorithm:", hashTab));
+    hashAlgorithmCombo->addItem(
+        QStringLiteral("MD5"),
+        QStringLiteral("MD5")
+    );
+    hashAlgorithmCombo->addItem(
+        QStringLiteral("SHA-256"),
+        QStringLiteral("SHA256")
+    );
+
+    algorithmLayout->addWidget(
+        new QLabel(QStringLiteral("Algorithm:"), hashTab)
+    );
     algorithmLayout->addWidget(hashAlgorithmCombo);
+
     mainLayout->addLayout(algorithmLayout);
 
     QHBoxLayout *modeLayout = new QHBoxLayout();
+
     hashModeCombo = new QComboBox(hashTab);
-    hashModeCombo->addItem("Compute hash", "compute");
-    hashModeCombo->addItem("Verify hash", "verify");
-    hashModeCombo->addItem("Compare files", "compare");
-    modeLayout->addWidget(new QLabel("Mode:", hashTab));
+    hashModeCombo->addItem(
+        QStringLiteral("Compute hash"),
+        QStringLiteral("compute")
+    );
+    hashModeCombo->addItem(
+        QStringLiteral("Verify hash"),
+        QStringLiteral("verify")
+    );
+    hashModeCombo->addItem(
+        QStringLiteral("Compare files"),
+        QStringLiteral("compare")
+    );
+
+    modeLayout->addWidget(
+        new QLabel(QStringLiteral("Mode:"), hashTab)
+    );
     modeLayout->addWidget(hashModeCombo);
+
     mainLayout->addLayout(modeLayout);
 
     QHBoxLayout *fileLayout = new QHBoxLayout();
+
     hashFilePath = new QLineEdit(hashTab);
-    QPushButton *fileBrowse = new QPushButton("Browse File", hashTab);
-    fileLayout->addWidget(new QLabel("File:", hashTab));
+
+    QPushButton *fileBrowse = new QPushButton(
+        QStringLiteral("Browse File"),
+        hashTab
+    );
+
+    fileLayout->addWidget(
+        new QLabel(QStringLiteral("File:"), hashTab)
+    );
     fileLayout->addWidget(hashFilePath);
     fileLayout->addWidget(fileBrowse);
+
     mainLayout->addLayout(fileLayout);
 
     QHBoxLayout *expectedLayout = new QHBoxLayout();
+
     hashExpectedValue = new QLineEdit(hashTab);
-    hashExpectedValue->setPlaceholderText("Expected hash for verify mode");
-    expectedLayout->addWidget(new QLabel("Expected hash:", hashTab));
+    hashExpectedValue->setPlaceholderText(
+        QStringLiteral("Expected hash for verify mode")
+    );
+
+    expectedLayout->addWidget(
+        new QLabel(QStringLiteral("Expected hash:"), hashTab)
+    );
     expectedLayout->addWidget(hashExpectedValue);
+
     mainLayout->addLayout(expectedLayout);
 
     QHBoxLayout *compareLayout = new QHBoxLayout();
+
     hashCompareFilePath = new QLineEdit(hashTab);
-    QPushButton *compareBrowse = new QPushButton("Browse Compare File", hashTab);
-    compareLayout->addWidget(new QLabel("Compare file:", hashTab));
+
+    QPushButton *compareBrowse = new QPushButton(
+        QStringLiteral("Browse Compare File"),
+        hashTab
+    );
+
+    compareLayout->addWidget(
+        new QLabel(QStringLiteral("Compare file:"), hashTab)
+    );
     compareLayout->addWidget(hashCompareFilePath);
     compareLayout->addWidget(compareBrowse);
+
     mainLayout->addLayout(compareLayout);
 
-    QPushButton *runButton = new QPushButton("Run HASH", hashTab);
-    QPushButton *clearButton = new QPushButton("Clear Output", hashTab);
+    QPushButton *runButton = new QPushButton(
+        QStringLiteral("Run HASH"),
+        hashTab
+    );
+
+    QPushButton *clearButton = new QPushButton(
+        QStringLiteral("Clear Results"),
+        hashTab
+    );
 
     QHBoxLayout *buttonLayout = new QHBoxLayout();
     buttonLayout->addWidget(runButton);
     buttonLayout->addWidget(clearButton);
+
     mainLayout->addLayout(buttonLayout);
 
-    hashOutputLog = new QTextEdit(hashTab);
+    hashDetailsTabs = new QTabWidget(hashTab);
+
+    hashFindingsLog = new QTextEdit(hashDetailsTabs);
+    hashFindingsLog->setReadOnly(true);
+    hashFindingsLog->append(
+        QStringLiteral("[GUI] HASH findings will appear here.")
+    );
+
+    hashOutputLog = new QTextEdit(hashDetailsTabs);
     hashOutputLog->setReadOnly(true);
-    hashOutputLog->append("[GUI] HASH panel ready.");
-    hashOutputLog->append("[GUI] Select MD5 or SHA-256, then choose Compute, Verify, or Compare.");
-    mainLayout->addWidget(hashOutputLog);
+    hashOutputLog->append(
+        QStringLiteral("[GUI] HASH panel ready.")
+    );
+    hashOutputLog->append(
+        QStringLiteral(
+            "[GUI] Select MD5 or SHA-256, then choose "
+            "Compute, Verify, or Compare."
+        )
+    );
 
-    auto updateHashModeFields = [this]() {
-        const QString mode = hashModeCombo->currentData().toString();
+    hashDetailsTabs->addTab(
+        hashFindingsLog,
+        QStringLiteral("Findings")
+    );
+    hashDetailsTabs->addTab(
+        hashOutputLog,
+        QStringLiteral("Raw Output")
+    );
 
-        hashExpectedValue->setEnabled(mode == QStringLiteral("verify"));
-        hashCompareFilePath->setEnabled(mode == QStringLiteral("compare"));
+    mainLayout->addWidget(hashDetailsTabs);
 
-        if (mode != QStringLiteral("verify")) {
+    auto updateHashModeFields = [this, compareBrowse]() {
+        const QString mode =
+            hashModeCombo->currentData().toString();
+
+        const bool verifyMode =
+            mode == QStringLiteral("verify");
+
+        const bool compareMode =
+            mode == QStringLiteral("compare");
+
+        hashExpectedValue->setEnabled(verifyMode);
+        hashCompareFilePath->setEnabled(compareMode);
+        compareBrowse->setEnabled(compareMode);
+
+        if (!verifyMode) {
             hashExpectedValue->clear();
         }
 
-        if (mode != QStringLiteral("compare")) {
+        if (!compareMode) {
             hashCompareFilePath->clear();
         }
     };
 
-    connect(hashModeCombo, &QComboBox::currentIndexChanged, this, updateHashModeFields);
+    connect(
+        hashModeCombo,
+        &QComboBox::currentIndexChanged,
+        this,
+        updateHashModeFields
+    );
 
-    connect(fileBrowse, &QPushButton::clicked, this, [this]() {
-        QString path = QFileDialog::getOpenFileName(this, "Select HASH File");
-        if (!path.isEmpty()) {
-            hashFilePath->setText(path);
+    connect(
+        fileBrowse,
+        &QPushButton::clicked,
+        this,
+        [this]() {
+            const QString path = QFileDialog::getOpenFileName(
+                this,
+                QStringLiteral("Select HASH File")
+            );
+
+            if (!path.isEmpty()) {
+                hashFilePath->setText(path);
+            }
         }
-    });
+    );
 
-    connect(compareBrowse, &QPushButton::clicked, this, [this]() {
-        QString path = QFileDialog::getOpenFileName(this, "Select Compare File");
-        if (!path.isEmpty()) {
-            hashCompareFilePath->setText(path);
+    connect(
+        compareBrowse,
+        &QPushButton::clicked,
+        this,
+        [this]() {
+            const QString path = QFileDialog::getOpenFileName(
+                this,
+                QStringLiteral("Select Compare File")
+            );
+
+            if (!path.isEmpty()) {
+                hashCompareFilePath->setText(path);
+            }
         }
-    });
+    );
 
-    connect(runButton, &QPushButton::clicked, this, &MainWindow::runHashCommand);
+    connect(
+        runButton,
+        &QPushButton::clicked,
+        this,
+        &MainWindow::runHashCommand
+    );
 
-    connect(clearButton, &QPushButton::clicked, hashOutputLog, &QTextEdit::clear);
+    connect(
+        clearButton,
+        &QPushButton::clicked,
+        this,
+        [this]() {
+            hashFindingsLog->clear();
+            hashOutputLog->clear();
+            hashDetailsTabs->setCurrentIndex(0);
+        }
+    );
 
     updateHashModeFields();
 }
 
 void MainWindow::runHashCommand()
 {
+    hashDetailsTabs->setCurrentIndex(1);
+    hashFindingsLog->clear();
     hashOutputLog->clear();
+
+    hashFindingsLog->append(
+        QStringLiteral("[GUI] HASH analysis in progress...")
+    );
 
     const QString algorithm = hashAlgorithmCombo->currentData().toString();
     const QString algorithmLabel = hashAlgorithmCombo->currentText();
@@ -3350,10 +3491,172 @@ connect(
         process,
         QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
         this,
-        [this, process, combinedOutput](int exitCode, QProcess::ExitStatus exitStatus) {
+        [
+            this,
+            process,
+            combinedOutput,
+            algorithmLabel,
+            mode,
+            modeLabel,
+            filePath,
+            expectedHash,
+            compareFilePath
+        ](int exitCode, QProcess::ExitStatus exitStatus) {
             hashOutputLog->append("");
 
             if (exitStatus == QProcess::NormalExit) {
+                const QString normalizedOutput =
+                    stripAnsiCodes(*combinedOutput).replace(
+                        QStringLiteral("\r\n"),
+                        QStringLiteral("\n")
+                    );
+
+                hashFindingsLog->clear();
+
+                appendStyledLine(
+                    hashFindingsLog,
+                    QStringLiteral("HASH Analysis Findings"),
+                    QStringLiteral("#0057b8"),
+                    true
+                );
+
+                hashFindingsLog->append(
+                    QStringLiteral("Algorithm: %1").arg(algorithmLabel)
+                );
+                hashFindingsLog->append(
+                    QStringLiteral("Mode: %1").arg(modeLabel)
+                );
+                hashFindingsLog->append(
+                    QStringLiteral("Primary file: %1").arg(filePath)
+                );
+
+                const QFileInfo primaryInfo(filePath);
+
+                if (primaryInfo.exists()) {
+                    hashFindingsLog->append(
+                        QStringLiteral("Primary file size: %1 bytes")
+                            .arg(primaryInfo.size())
+                    );
+                }
+
+                QString resultText;
+                QString resultColor = QStringLiteral("#0057b8");
+
+                if (mode == QStringLiteral("compute")) {
+                    const QRegularExpression digestPattern(
+                        QStringLiteral(
+                            R"((?:MD5|SHA256)\(.*\)\s*=\s*([0-9A-Fa-f]+))"
+                        )
+                    );
+
+                    const QRegularExpressionMatch digestMatch =
+                        digestPattern.match(normalizedOutput);
+
+                    hashFindingsLog->append(QString());
+
+                    appendStyledLine(
+                        hashFindingsLog,
+                        QStringLiteral("Computed digest"),
+                        QStringLiteral("#0057b8"),
+                        true
+                    );
+
+                    if (digestMatch.hasMatch()) {
+                        hashFindingsLog->append(digestMatch.captured(1));
+                        resultText =
+                            QStringLiteral("Hash computed successfully.");
+                        resultColor = QStringLiteral("#0b7a0b");
+                    } else {
+                        hashFindingsLog->append(
+                            QStringLiteral("No digest detected.")
+                        );
+                        resultText =
+                            QStringLiteral("Hash computation failed.");
+                        resultColor = QStringLiteral("#b00020");
+                    }
+                } else if (mode == QStringLiteral("verify")) {
+                    hashFindingsLog->append(QString());
+                    hashFindingsLog->append(
+                        QStringLiteral("Expected digest: %1")
+                            .arg(expectedHash)
+                    );
+
+                    if (
+                        normalizedOutput.contains(
+                            QStringLiteral("MD5 OK")
+                        ) ||
+                        normalizedOutput.contains(
+                            QStringLiteral("SHA256 OK")
+                        )
+                    ) {
+                        resultText =
+                            QStringLiteral("MATCH — verification passed.");
+                        resultColor = QStringLiteral("#0b7a0b");
+                    } else {
+                        resultText =
+                            QStringLiteral("MISMATCH — verification failed.");
+                        resultColor = QStringLiteral("#b00020");
+                    }
+                } else if (mode == QStringLiteral("compare")) {
+                    hashFindingsLog->append(QString());
+                    hashFindingsLog->append(
+                        QStringLiteral("Second file: %1")
+                            .arg(compareFilePath)
+                    );
+
+                    const QFileInfo compareInfo(compareFilePath);
+
+                    if (compareInfo.exists()) {
+                        hashFindingsLog->append(
+                            QStringLiteral("Second file size: %1 bytes")
+                                .arg(compareInfo.size())
+                        );
+                    }
+
+                    if (
+                        normalizedOutput.contains(
+                            QStringLiteral("MD5 MATCH")
+                        ) ||
+                        normalizedOutput.contains(
+                            QStringLiteral("SHA256 MATCH")
+                        )
+                    ) {
+                        resultText =
+                            QStringLiteral(
+                                "MATCH — files have identical hashes."
+                            );
+                        resultColor = QStringLiteral("#0b7a0b");
+                    } else {
+                        resultText =
+                            QStringLiteral(
+                                "DIFFER — files have different hashes."
+                            );
+                        resultColor = QStringLiteral("#b00020");
+                    }
+                }
+
+                hashFindingsLog->append(QString());
+
+                appendStyledLine(
+                    hashFindingsLog,
+                    QStringLiteral("Result"),
+                    QStringLiteral("#0057b8"),
+                    true
+                );
+
+                appendStyledLine(
+                    hashFindingsLog,
+                    resultText,
+                    resultColor,
+                    true
+                );
+
+                hashFindingsLog->append(
+                    QStringLiteral("Exit code: %1").arg(exitCode)
+                );
+
+                hashDetailsTabs->setCurrentIndex(0);
+
                 const QString summary = hashFriendlySummary(*combinedOutput);
 
                 if (!summary.isEmpty()) {

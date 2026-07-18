@@ -45,11 +45,13 @@ private:
     QTextEdit *delOutputLog;
     
     QWidget *hashTab;
+    QTabWidget *hashDetailsTabs;
     QComboBox *hashAlgorithmCombo;
     QComboBox *hashModeCombo;
     QLineEdit *hashFilePath;
     QLineEdit *hashExpectedValue;
     QLineEdit *hashCompareFilePath;
+    QTextEdit *hashFindingsLog;
     QTextEdit *hashOutputLog;
     
     QWidget *stringTab;
