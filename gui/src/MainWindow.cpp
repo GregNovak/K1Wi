@@ -789,6 +789,212 @@ static QString stringFriendlySummary(
 
     return summary;
 }
+static QString magicReportValue(
+    const QString &output,
+    const QString &label
+)
+{
+    const QRegularExpression pattern(
+        QStringLiteral(R"((?:^|\n))") +
+        QRegularExpression::escape(label) +
+        QStringLiteral(R"(\s*([^\r\n]+))")
+    );
+
+    const QRegularExpressionMatch match = pattern.match(output);
+
+    if (!match.hasMatch()) {
+        return QString();
+    }
+
+    return match.captured(1).trimmed();
+}
+
+
+static QString magicFindingsReport(
+    const QString &output,
+    const QString &target,
+    bool recoveryEnabled,
+    const QString &recoveryPath,
+    int exitCode
+)
+{
+    const QString detectedFormat =
+        magicReportValue(output, QStringLiteral("Detected format:"));
+
+    const QString rawFormat =
+        magicReportValue(output, QStringLiteral("Detected raw format:"));
+
+    const QString decodedFormat =
+        magicReportValue(output, QStringLiteral("Decoded magic:"));
+
+    const QString bitstreamLength =
+        magicReportValue(output, QStringLiteral("Bitstream length:"));
+
+    const QString byteAligned =
+        magicReportValue(output, QStringLiteral("Byte aligned:"));
+
+    const QString decodedBytes =
+        magicReportValue(output, QStringLiteral("Decoded first bytes:"));
+
+    const QString recoveredPath =
+        magicReportValue(
+            output,
+            QStringLiteral("Recovered decoded bitstream to:")
+        );
+
+    const QString recoveredBytes =
+        magicReportValue(output, QStringLiteral("Recovered bytes:"));
+
+    const bool unknownFormat =
+        output.contains(
+            QStringLiteral("Unknown format."),
+            Qt::CaseInsensitive
+        );
+
+    const bool recoverySkipped =
+        output.contains(
+            QStringLiteral("Recovery skipped:"),
+            Qt::CaseInsensitive
+        );
+
+    const bool errorDetected =
+        exitCode != 0 ||
+        output.contains(QStringLiteral("failed"), Qt::CaseInsensitive) ||
+        output.contains(QStringLiteral("fatal"), Qt::CaseInsensitive) ||
+        output.contains(QStringLiteral("error:"), Qt::CaseInsensitive) ||
+        output.contains(QStringLiteral("[ERROR]"), Qt::CaseInsensitive);
+
+    QString classification;
+    QString status;
+
+    if (errorDetected) {
+        classification =
+            QStringLiteral("Process or recovery error");
+        status =
+            QStringLiteral("Review the raw output before using this result.");
+    } else if (!recoveredPath.isEmpty()) {
+        classification =
+            QStringLiteral("Recovered ASCII bitstream");
+        status =
+            QStringLiteral("Recovery completed successfully.");
+    } else if (recoverySkipped) {
+        classification =
+            QStringLiteral("Non-byte-aligned ASCII bitstream");
+        status =
+            QStringLiteral(
+                "Recovery was skipped because the stream is not byte-aligned."
+            );
+    } else if (!rawFormat.isEmpty()) {
+        classification =
+            QStringLiteral("Encoded ASCII bitstream detected");
+        status =
+            recoveryEnabled
+                ? QStringLiteral(
+                    "The stream was inspected but no recovered output "
+                    "was confirmed."
+                )
+                : QStringLiteral(
+                    "Run recovery mode to write the decoded bytes to a file."
+                );
+    } else if (!detectedFormat.isEmpty()) {
+        classification =
+            QStringLiteral("Recognized file signature");
+        status =
+            QStringLiteral("No recovery is required.");
+    } else if (unknownFormat) {
+        classification =
+            QStringLiteral("Unknown file signature");
+        status =
+            QStringLiteral(
+                "K1Wi did not match the leading bytes to a known signature."
+            );
+    } else {
+        classification =
+            QStringLiteral("No structured result available");
+        status =
+            QStringLiteral("Review the raw output for details.");
+    }
+
+    QString report;
+
+    report += QStringLiteral("MAGIC Analysis Findings\n");
+    report += QStringLiteral("=======================\n\n");
+
+    report += QStringLiteral("Target: ") + target + QStringLiteral("\n");
+    report += QStringLiteral("Mode: ") +
+        (recoveryEnabled
+            ? QStringLiteral("Inspect and recover ASCII bitstream")
+            : QStringLiteral("Inspect only")) +
+        QStringLiteral("\n");
+
+    report += QStringLiteral("Classification: ") +
+        classification +
+        QStringLiteral("\n");
+
+    report += QStringLiteral("Status: ") +
+        status +
+        QStringLiteral("\n");
+
+    if (!detectedFormat.isEmpty()) {
+        report += QStringLiteral("Detected format: ") +
+            detectedFormat +
+            QStringLiteral("\n");
+    }
+
+    if (!rawFormat.isEmpty()) {
+        report += QStringLiteral("Raw format: ") +
+            rawFormat +
+            QStringLiteral("\n");
+    }
+
+    if (!decodedFormat.isEmpty()) {
+        report += QStringLiteral("Decoded format: ") +
+            decodedFormat +
+            QStringLiteral("\n");
+    }
+
+    if (!bitstreamLength.isEmpty()) {
+        report += QStringLiteral("Bitstream length: ") +
+            bitstreamLength +
+            QStringLiteral("\n");
+    }
+
+    if (!byteAligned.isEmpty()) {
+        report += QStringLiteral("Byte aligned: ") +
+            byteAligned +
+            QStringLiteral("\n");
+    }
+
+    if (!decodedBytes.isEmpty()) {
+        report += QStringLiteral("Decoded first bytes: ") +
+            decodedBytes +
+            QStringLiteral("\n");
+    }
+
+    if (recoveryEnabled) {
+        report += QStringLiteral("Requested recovery path: ") +
+            recoveryPath +
+            QStringLiteral("\n");
+    }
+
+    if (!recoveredPath.isEmpty()) {
+        report += QStringLiteral("Recovered output: ") +
+            recoveredPath +
+            QStringLiteral("\n");
+    }
+
+    if (!recoveredBytes.isEmpty()) {
+        report += QStringLiteral("Recovered bytes: ") +
+            recoveredBytes +
+            QStringLiteral("\n");
+    }
+
+    report += QStringLiteral("Process exit code: %1").arg(exitCode);
+
+    return report;
+}
+
+
 static QString magicFriendlySummary(
     const QString &output,
     int exitCode,
@@ -1262,7 +1468,21 @@ void MainWindow::buildMagicTab()
     buttonLayout->addWidget(clearButton);
     mainLayout->addLayout(buttonLayout);
 
-    magicOutputLog = new QTextEdit(magicTab);
+    magicDetailsTabs = new QTabWidget(magicTab);
+
+    magicFindingsLog = new QTextEdit(magicDetailsTabs);
+    magicFindingsLog->setReadOnly(true);
+    magicFindingsLog->append(
+        QStringLiteral(
+            "[GUI] Structured MAGIC findings will appear here."
+        )
+    );
+    magicDetailsTabs->addTab(
+        magicFindingsLog,
+        QStringLiteral("Findings")
+    );
+
+    magicOutputLog = new QTextEdit(magicDetailsTabs);
     magicOutputLog->setReadOnly(true);
     magicOutputLog->append(
         QStringLiteral("[GUI] MAGIC panel ready.")
@@ -1272,7 +1492,12 @@ void MainWindow::buildMagicTab()
             "[GUI] Select a file and choose inspection or recovery mode."
         )
     );
-    mainLayout->addWidget(magicOutputLog);
+    magicDetailsTabs->addTab(
+        magicOutputLog,
+        QStringLiteral("Raw Output")
+    );
+
+    mainLayout->addWidget(magicDetailsTabs, 1);
 
     auto updateRecoveryControls = [this]() {
         const bool enabled = magicModeCombo->currentIndex() == 1;
@@ -1342,7 +1567,17 @@ void MainWindow::buildMagicTab()
     );
 
     connect(clearButton, &QPushButton::clicked, this, [this]() {
+        magicDetailsTabs->setCurrentIndex(0);
+
+        magicFindingsLog->clear();
         magicOutputLog->clear();
+
+        magicFindingsLog->append(
+            QStringLiteral(
+                "[GUI] Structured MAGIC findings will appear here."
+            )
+        );
+
         magicOutputLog->append(
             QStringLiteral("[GUI] MAGIC panel ready.")
         );
@@ -1803,28 +2038,145 @@ void MainWindow::buildPcapTab()
             );
         };
 
+    const auto saveMagicText =
+        [this](
+            const QString &textToSave,
+            const QString &dialogTitle,
+            const QString &suggestedPath
+        ) {
+            if (textToSave.trimmed().isEmpty()) {
+                QMessageBox::warning(
+                    this,
+                    QStringLiteral("K1Wi MAGIC"),
+                    QStringLiteral(
+                        "There is no MAGIC report content to save."
+                    )
+                );
+                return;
+            }
+
+            const QString destination =
+                QFileDialog::getSaveFileName(
+                    this,
+                    dialogTitle,
+                    suggestedPath,
+                    QStringLiteral(
+                        "Text reports (*.txt);;All files (*)"
+                    )
+                );
+
+            if (destination.isEmpty()) {
+                return;
+            }
+
+            QSaveFile outputFile(destination);
+
+            if (!outputFile.open(
+                    QIODevice::WriteOnly |
+                    QIODevice::Text
+                )) {
+                QMessageBox::critical(
+                    this,
+                    QStringLiteral("K1Wi MAGIC"),
+                    QStringLiteral(
+                        "Unable to open the selected report file.\n\n%1"
+                    ).arg(outputFile.errorString())
+                );
+                return;
+            }
+
+            QTextStream stream(&outputFile);
+            stream << textToSave;
+
+            if (!textToSave.endsWith(QChar('\n'))) {
+                stream << QChar('\n');
+            }
+
+            if (
+                stream.status() != QTextStream::Ok ||
+                !outputFile.commit()
+            ) {
+                QMessageBox::critical(
+                    this,
+                    QStringLiteral("K1Wi MAGIC"),
+                    QStringLiteral(
+                        "The MAGIC report could not be saved completely.\n\n%1"
+                    ).arg(outputFile.errorString())
+                );
+                return;
+            }
+
+            QMessageBox::information(
+                this,
+                QStringLiteral("K1Wi MAGIC"),
+                QStringLiteral(
+                    "MAGIC report saved successfully.\n\n%1"
+                ).arg(destination)
+            );
+        };
+
+    const auto suggestedMagicExportPath =
+        [this](const QString &suffix) {
+            const QFileInfo sourceInfo(
+                magicTargetPath->text().trimmed()
+            );
+
+            QString baseName = sourceInfo.completeBaseName();
+
+            if (baseName.isEmpty()) {
+                baseName = QStringLiteral("k1wi_magic");
+            }
+
+            QString directory = QDir::currentPath();
+
+            if (
+                !sourceInfo.absolutePath().isEmpty() &&
+                sourceInfo.absoluteDir().exists()
+            ) {
+                directory = sourceInfo.absolutePath();
+            }
+
+            const QString modeName =
+                magicModeCombo->currentIndex() == 1
+                    ? QStringLiteral("recover")
+                    : QStringLiteral("inspect");
+
+            return QDir(directory).absoluteFilePath(
+                QStringLiteral("%1_%2_%3.txt")
+                    .arg(baseName, modeName, suffix)
+            );
+        };
+
     connect(
         copyViewAction,
         &QAction::triggered,
         this,
         [this]() {
-            const bool stringSelected =
-                tabs->currentWidget() == stringTab;
+            const QWidget *selectedModule =
+                tabs->currentWidget();
 
-            QTabWidget *detailsTabs =
-                stringSelected
-                    ? stringDetailsTabs
-                    : pcapDetailsTabs;
+            QTabWidget *detailsTabs = nullptr;
+            QString moduleName;
+
+            if (selectedModule == stringTab) {
+                detailsTabs = stringDetailsTabs;
+                moduleName = QStringLiteral("STRING");
+            } else if (selectedModule == magicTab) {
+                detailsTabs = magicDetailsTabs;
+                moduleName = QStringLiteral("MAGIC");
+            } else if (selectedModule == pcapTab) {
+                detailsTabs = pcapDetailsTabs;
+                moduleName = QStringLiteral("PCAP");
+            }
+
+            if (detailsTabs == nullptr) {
+                return;
+            }
 
             QTextEdit *currentLog =
                 qobject_cast<QTextEdit *>(
                     detailsTabs->currentWidget()
                 );
-
-            const QString moduleName =
-                stringSelected
-                    ? QStringLiteral("STRING")
-                    : QStringLiteral("PCAP");
 
             if (
                 currentLog == nullptr ||
@@ -1863,15 +2215,30 @@ void MainWindow::buildPcapTab()
             savePcapText,
             suggestedPcapExportPath,
             saveStringText,
-            suggestedStringExportPath
+            suggestedStringExportPath,
+            saveMagicText,
+            suggestedMagicExportPath
         ]() {
-            const bool stringSelected =
-                tabs->currentWidget() == stringTab;
+            const QWidget *selectedModule =
+                tabs->currentWidget();
 
-            QTabWidget *detailsTabs =
-                stringSelected
-                    ? stringDetailsTabs
-                    : pcapDetailsTabs;
+            QTabWidget *detailsTabs = nullptr;
+            QString moduleName;
+
+            if (selectedModule == stringTab) {
+                detailsTabs = stringDetailsTabs;
+                moduleName = QStringLiteral("STRING");
+            } else if (selectedModule == magicTab) {
+                detailsTabs = magicDetailsTabs;
+                moduleName = QStringLiteral("MAGIC");
+            } else if (selectedModule == pcapTab) {
+                detailsTabs = pcapDetailsTabs;
+                moduleName = QStringLiteral("PCAP");
+            }
+
+            if (detailsTabs == nullptr) {
+                return;
+            }
 
             QTextEdit *currentLog =
                 qobject_cast<QTextEdit *>(
@@ -1881,9 +2248,7 @@ void MainWindow::buildPcapTab()
             if (currentLog == nullptr) {
                 QMessageBox::warning(
                     this,
-                    stringSelected
-                        ? QStringLiteral("K1Wi STRING")
-                        : QStringLiteral("K1Wi PCAP"),
+                    QStringLiteral("K1Wi %1").arg(moduleName),
                     QStringLiteral(
                         "The current results tab cannot be exported."
                     )
@@ -1898,11 +2263,17 @@ void MainWindow::buildPcapTab()
 
             tabName.replace(QChar(' '), QChar('_'));
 
-            if (stringSelected) {
+            if (selectedModule == stringTab) {
                 saveStringText(
                     currentLog->toPlainText(),
                     QStringLiteral("Save Current STRING View"),
                     suggestedStringExportPath(tabName)
+                );
+            } else if (selectedModule == magicTab) {
+                saveMagicText(
+                    currentLog->toPlainText(),
+                    QStringLiteral("Save Current MAGIC View"),
+                    suggestedMagicExportPath(tabName)
                 );
             } else {
                 savePcapText(
@@ -1923,12 +2294,14 @@ void MainWindow::buildPcapTab()
             savePcapText,
             suggestedPcapExportPath,
             saveStringText,
-            suggestedStringExportPath
+            suggestedStringExportPath,
+            saveMagicText,
+            suggestedMagicExportPath
         ]() {
-            const bool stringSelected =
-                tabs->currentWidget() == stringTab;
+            const QWidget *selectedModule =
+                tabs->currentWidget();
 
-            if (stringSelected) {
+            if (selectedModule == stringTab) {
                 saveStringText(
                     stringOutputLog->toPlainText(),
                     QStringLiteral("Save Complete STRING Raw Report"),
@@ -1936,7 +2309,15 @@ void MainWindow::buildPcapTab()
                         QStringLiteral("raw_report")
                     )
                 );
-            } else {
+            } else if (selectedModule == magicTab) {
+                saveMagicText(
+                    magicOutputLog->toPlainText(),
+                    QStringLiteral("Save Complete MAGIC Raw Report"),
+                    suggestedMagicExportPath(
+                        QStringLiteral("raw_report")
+                    )
+                );
+            } else if (selectedModule == pcapTab) {
                 savePcapText(
                     pcapOutputLog->toPlainText(),
                     QStringLiteral("Save Complete PCAP Raw Report"),
@@ -1956,7 +2337,8 @@ void MainWindow::buildPcapTab()
 
             const bool reportTabSelected =
                 selectedTab == pcapTab ||
-                selectedTab == stringTab;
+                selectedTab == stringTab ||
+                selectedTab == magicTab;
 
             copyViewAction->setEnabled(reportTabSelected);
             saveViewAction->setEnabled(reportTabSelected);
@@ -1968,7 +2350,7 @@ void MainWindow::buildPcapTab()
                         "Copy the currently selected results view"
                     )
                     : QStringLiteral(
-                        "Available in STRING and PCAP"
+                        "Available in STRING, MAGIC, and PCAP"
                     )
             );
 
@@ -1978,7 +2360,7 @@ void MainWindow::buildPcapTab()
                         "Save the currently selected results view"
                     )
                     : QStringLiteral(
-                        "Available in STRING and PCAP"
+                        "Available in STRING, MAGIC, and PCAP"
                     )
             );
 
@@ -1988,7 +2370,7 @@ void MainWindow::buildPcapTab()
                         "Save the complete raw analysis report"
                     )
                     : QStringLiteral(
-                        "Available in STRING and PCAP"
+                        "Available in STRING, MAGIC, and PCAP"
                     )
             );
         };
@@ -3209,7 +3591,13 @@ void MainWindow::runStringCommand()
 
 void MainWindow::runMagicCommand()
 {
+    magicDetailsTabs->setCurrentIndex(1);
+    magicFindingsLog->clear();
     magicOutputLog->clear();
+
+    magicFindingsLog->append(
+        QStringLiteral("[GUI] MAGIC analysis in progress...")
+    );
 
     const QString target = magicTargetPath->text().trimmed();
 
@@ -3403,10 +3791,52 @@ void MainWindow::runMagicCommand()
         process,
         QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
         this,
-        [this, process, combinedOutput, target](int exitCode, QProcess::ExitStatus exitStatus) {
+        [
+            this,
+            process,
+            combinedOutput,
+            target,
+            recoveryEnabled,
+            recoveryPath
+        ](int exitCode, QProcess::ExitStatus exitStatus) {
             magicOutputLog->append("");
 
             if (exitStatus == QProcess::NormalExit) {
+                const QString findings = magicFindingsReport(
+                    *combinedOutput,
+                    target,
+                    recoveryEnabled,
+                    recoveryPath,
+                    exitCode
+                );
+
+                magicFindingsLog->clear();
+
+                const QString findingsColor =
+                    exitCode != 0
+                        ? QStringLiteral("#b00020")
+                        : (
+                            findings.contains(
+                                QStringLiteral("Unknown file signature"),
+                                Qt::CaseInsensitive
+                            ) ||
+                            findings.contains(
+                                QStringLiteral("Non-byte-aligned"),
+                                Qt::CaseInsensitive
+                            )
+                                ? QStringLiteral("#b26a00")
+                                : QStringLiteral("#0b7a0b")
+                        );
+
+                appendStyledBlock(
+                    magicFindingsLog,
+                    findings,
+                    findingsColor,
+                    false
+                );
+
+                magicDetailsTabs->setCurrentIndex(0);
+
                 const QString summary = magicFriendlySummary(
                     *combinedOutput,
                     exitCode,
@@ -3429,6 +3859,45 @@ void MainWindow::runMagicCommand()
                     QString("Process finished with exit code %1").arg(exitCode)
                 );
             } else {
+                magicFindingsLog->clear();
+
+                appendStyledLine(
+                    magicFindingsLog,
+                    "MAGIC Analysis Findings",
+                    "#b00020",
+                    true
+                );
+
+                appendStyledLine(
+                    magicFindingsLog,
+                    "=======================",
+                    "#b00020",
+                    true
+                );
+
+                appendStyledLine(
+                    magicFindingsLog,
+                    QStringLiteral("Target: ") + target,
+                    "#b00020"
+                );
+
+                appendStyledLine(
+                    magicFindingsLog,
+                    QStringLiteral(
+                        "Classification: Process or recovery error"
+                    ),
+                    "#b00020",
+                    true
+                );
+
+                appendStyledLine(
+                    magicFindingsLog,
+                    QStringLiteral(
+                        "Status: MAGIC crashed or was terminated."
+                    ),
+                    "#b00020"
+                );
+
                 appendStyledLine(
                     magicOutputLog,
                     "[RESULT] MAGIC process crashed or was terminated.",

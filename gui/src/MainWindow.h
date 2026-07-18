@@ -63,10 +63,12 @@ private:
     QTextEdit *stringOutputLog;
     
     QWidget *magicTab;
+    QTabWidget *magicDetailsTabs;
     QComboBox *magicModeCombo;
     QLineEdit *magicTargetPath;
     QLineEdit *magicRecoveryPath;
     QPushButton *magicRecoveryBrowseButton;
+    QTextEdit *magicFindingsLog;
     QTextEdit *magicOutputLog;
     
     QWidget *entropyTab;
