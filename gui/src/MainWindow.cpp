@@ -1197,27 +1197,65 @@ void MainWindow::buildMagicTab()
     magicTab = new QWidget(this);
     QVBoxLayout *mainLayout = new QVBoxLayout(magicTab);
 
-    QLabel *title = new QLabel("K1Wi Framework - MAGIC Detector", magicTab);
+    QLabel *title = new QLabel(
+        QStringLiteral("K1Wi Framework - MAGIC Detector"),
+        magicTab
+    );
     mainLayout->addWidget(title);
 
     QLabel *description = new QLabel(
-        "MAGIC identifies file types by checking file signatures and magic bytes.",
+        QStringLiteral(
+            "MAGIC identifies file types by checking file signatures and "
+            "magic bytes. It can also recover byte-aligned ASCII binary "
+            "digit streams."
+        ),
         magicTab
     );
     description->setWordWrap(true);
     mainLayout->addWidget(description);
 
+    QHBoxLayout *modeLayout = new QHBoxLayout();
+    magicModeCombo = new QComboBox(magicTab);
+    magicModeCombo->addItem(QStringLiteral("Inspect only"));
+    magicModeCombo->addItem(
+        QStringLiteral("Inspect and recover ASCII bitstream")
+    );
+
+    modeLayout->addWidget(
+        new QLabel(QStringLiteral("MAGIC mode:"), magicTab)
+    );
+    modeLayout->addWidget(magicModeCombo);
+    modeLayout->addStretch();
+    mainLayout->addLayout(modeLayout);
+
     QHBoxLayout *targetLayout = new QHBoxLayout();
     magicTargetPath = new QLineEdit(magicTab);
-    QPushButton *browseButton = new QPushButton("Browse Target", magicTab);
+    QPushButton *browseButton =
+        new QPushButton(QStringLiteral("Browse Target"), magicTab);
 
-    targetLayout->addWidget(new QLabel("Target file:", magicTab));
+    targetLayout->addWidget(
+        new QLabel(QStringLiteral("Target file:"), magicTab)
+    );
     targetLayout->addWidget(magicTargetPath);
     targetLayout->addWidget(browseButton);
     mainLayout->addLayout(targetLayout);
 
-    QPushButton *runButton = new QPushButton("Run MAGIC", magicTab);
-    QPushButton *clearButton = new QPushButton("Clear Output", magicTab);
+    QHBoxLayout *recoveryLayout = new QHBoxLayout();
+    magicRecoveryPath = new QLineEdit(magicTab);
+    magicRecoveryBrowseButton =
+        new QPushButton(QStringLiteral("Browse Output"), magicTab);
+
+    recoveryLayout->addWidget(
+        new QLabel(QStringLiteral("Recovery output:"), magicTab)
+    );
+    recoveryLayout->addWidget(magicRecoveryPath);
+    recoveryLayout->addWidget(magicRecoveryBrowseButton);
+    mainLayout->addLayout(recoveryLayout);
+
+    QPushButton *runButton =
+        new QPushButton(QStringLiteral("Run MAGIC"), magicTab);
+    QPushButton *clearButton =
+        new QPushButton(QStringLiteral("Clear Output"), magicTab);
 
     QHBoxLayout *buttonLayout = new QHBoxLayout();
     buttonLayout->addWidget(runButton);
@@ -1226,19 +1264,96 @@ void MainWindow::buildMagicTab()
 
     magicOutputLog = new QTextEdit(magicTab);
     magicOutputLog->setReadOnly(true);
-    magicOutputLog->append("[GUI] MAGIC panel ready.");
-    magicOutputLog->append("[GUI] Select a file to inspect its signature / magic bytes.");
+    magicOutputLog->append(
+        QStringLiteral("[GUI] MAGIC panel ready.")
+    );
+    magicOutputLog->append(
+        QStringLiteral(
+            "[GUI] Select a file and choose inspection or recovery mode."
+        )
+    );
     mainLayout->addWidget(magicOutputLog);
 
+    auto updateRecoveryControls = [this]() {
+        const bool enabled = magicModeCombo->currentIndex() == 1;
+
+        magicRecoveryPath->setEnabled(enabled);
+        magicRecoveryBrowseButton->setEnabled(enabled);
+
+        if (!enabled) {
+            magicRecoveryPath->clear();
+        }
+    };
+
+    connect(
+        magicModeCombo,
+        QOverload<int>::of(&QComboBox::currentIndexChanged),
+        this,
+        [updateRecoveryControls](int) {
+            updateRecoveryControls();
+        }
+    );
+
     connect(browseButton, &QPushButton::clicked, this, [this]() {
-        QString path = QFileDialog::getOpenFileName(this, "Select MAGIC Target");
+        const QString path = QFileDialog::getOpenFileName(
+            this,
+            QStringLiteral("Select MAGIC Target")
+        );
+
         if (!path.isEmpty()) {
             magicTargetPath->setText(path);
         }
     });
 
-    connect(runButton, &QPushButton::clicked, this, &MainWindow::runMagicCommand);
-    connect(clearButton, &QPushButton::clicked, magicOutputLog, &QTextEdit::clear);
+    connect(
+        magicRecoveryBrowseButton,
+        &QPushButton::clicked,
+        this,
+        [this]() {
+            QString suggestedName = QStringLiteral("recovered.bin");
+
+            const QString target =
+                magicTargetPath->text().trimmed();
+
+            if (!target.isEmpty()) {
+                suggestedName =
+                    QFileInfo(target).completeBaseName() +
+                    QStringLiteral("_recovered.bin");
+            }
+
+            const QString path = QFileDialog::getSaveFileName(
+                this,
+                QStringLiteral("Select MAGIC Recovery Output"),
+                QDir::current().absoluteFilePath(suggestedName),
+                QStringLiteral("All files (*)")
+            );
+
+            if (!path.isEmpty()) {
+                magicRecoveryPath->setText(path);
+            }
+        }
+    );
+
+    connect(
+        runButton,
+        &QPushButton::clicked,
+        this,
+        &MainWindow::runMagicCommand
+    );
+
+    connect(clearButton, &QPushButton::clicked, this, [this]() {
+        magicOutputLog->clear();
+        magicOutputLog->append(
+            QStringLiteral("[GUI] MAGIC panel ready.")
+        );
+        magicOutputLog->append(
+            QStringLiteral(
+                "[GUI] Select a file and choose inspection or recovery mode."
+            )
+        );
+    });
+
+    updateRecoveryControls();
 }
 
 void MainWindow::buildEntropyTab()
@@ -3148,15 +3263,110 @@ void MainWindow::runMagicCommand()
         return;
     }
 
+    const bool recoveryEnabled =
+        magicModeCombo->currentIndex() == 1;
+    const QString recoveryPath =
+        magicRecoveryPath->text().trimmed();
+
+    if (recoveryEnabled && recoveryPath.isEmpty()) {
+        QMessageBox::warning(
+            this,
+            QStringLiteral("K1Wi MAGIC"),
+            QStringLiteral(
+                "Select a recovery output path before running recovery mode."
+            )
+        );
+
+        magicOutputLog->append(
+            QStringLiteral(
+                "[GUI] MAGIC cancelled: no recovery output path selected."
+            )
+        );
+        return;
+    }
+
+    if (recoveryEnabled) {
+        const QFileInfo recoveryInfo(recoveryPath);
+
+        if (!recoveryInfo.absoluteDir().exists()) {
+            QMessageBox::warning(
+                this,
+                QStringLiteral("K1Wi MAGIC"),
+                QStringLiteral(
+                    "The recovery output directory does not exist.\n\n"
+                    "Please select a valid output location."
+                )
+            );
+
+            magicOutputLog->append(
+                QStringLiteral(
+                    "[GUI] MAGIC cancelled: recovery output directory "
+                    "does not exist."
+                )
+            );
+            return;
+        }
+
+        if (QFileInfo::exists(recoveryPath)) {
+            const QMessageBox::StandardButton response =
+                QMessageBox::question(
+                    this,
+                    QStringLiteral("K1Wi MAGIC"),
+                    QStringLiteral(
+                        "The selected recovery output already exists.\n\n"
+                        "Overwrite it?"
+                    ),
+                    QMessageBox::Yes | QMessageBox::No,
+                    QMessageBox::No
+                );
+
+            if (response != QMessageBox::Yes) {
+                magicOutputLog->append(
+                    QStringLiteral(
+                        "[GUI] MAGIC cancelled: recovery overwrite declined."
+                    )
+                );
+                return;
+            }
+        }
+    }
+
     QStringList args;
-    args << "MAGIC";
+    args << QStringLiteral("MAGIC");
     args << target;
 
-    magicOutputLog->append("[GUI] MAGIC run summary");
-    magicOutputLog->append("[GUI] Target: " + target);
-    magicOutputLog->append("");
-    magicOutputLog->append("Running: " + cliInfo.absoluteFilePath() + " " + args.join(" "));
-    magicOutputLog->append("");
+    if (recoveryEnabled) {
+        args << QStringLiteral("--recover");
+        args << recoveryPath;
+    }
+
+    magicOutputLog->append(
+        QStringLiteral("[GUI] MAGIC run summary")
+    );
+    magicOutputLog->append(
+        QStringLiteral("[GUI] Mode: ") +
+        (recoveryEnabled
+             ? QStringLiteral("Inspect and recover ASCII bitstream")
+             : QStringLiteral("Inspect only"))
+    );
+    magicOutputLog->append(
+        QStringLiteral("[GUI] Target: ") + target
+    );
+
+    if (recoveryEnabled) {
+        magicOutputLog->append(
+            QStringLiteral("[GUI] Recovery output: ") + recoveryPath
+        );
+    }
+
+    magicOutputLog->append(QString());
+    magicOutputLog->append(
+        QStringLiteral("Running: ") +
+        cliInfo.absoluteFilePath() +
+        QStringLiteral(" ") +
+        args.join(QStringLiteral(" "))
+    );
+    magicOutputLog->append(QString());
 
     QProcess *process = new QProcess(this);
     QString *combinedOutput = new QString();
