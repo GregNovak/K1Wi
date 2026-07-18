@@ -1025,45 +1025,226 @@ static QString magicFriendlySummary(
     ) + target;
 }
 
-static QString entropyFriendlySummary(
+static QString entropyFindingsReport(
     const QString &output,
     int exitCode,
     const QString &target,
     const QString &modeLabel
 )
 {
-    if (output.contains(QStringLiteral("failed"), Qt::CaseInsensitive) ||
-        output.contains(QStringLiteral("fatal"), Qt::CaseInsensitive) ||
-        output.contains(QStringLiteral("error:"), Qt::CaseInsensitive) ||
-        output.contains(QStringLiteral("[ERROR]"), Qt::CaseInsensitive)) {
-        return QStringLiteral(
-            "[RESULT] ENTROPY analysis did not complete successfully.\n"
-            "[RESULT] K1Wi reported an error or failure. Check the detailed output above."
-        );
+    QString report;
+
+    report += QStringLiteral(
+        "ENTROPY Analysis Findings\n"
+        "=========================\n\n"
+    );
+
+    report += QStringLiteral("Target: %1\n").arg(target);
+    report += QStringLiteral("Analysis mode: %1\n").arg(modeLabel);
+
+    const QFileInfo targetInfo(target);
+
+    if (targetInfo.exists() && targetInfo.isFile()) {
+        report += QStringLiteral("File size: %1 bytes\n")
+                      .arg(targetInfo.size());
     }
 
     if (exitCode != 0) {
-        return QStringLiteral(
-            "[RESULT] ENTROPY finished with a non-zero exit code.\n"
-            "[RESULT] Check the detailed K1Wi output above before trusting the entropy result."
+        report += QStringLiteral(
+            "Status: Analysis did not complete successfully.\n"
+        );
+        report += QStringLiteral(
+            "Interpretation: Review Raw Output before trusting the result.\n"
+        );
+        report += QStringLiteral("Process exit code: %1\n")
+                      .arg(exitCode);
+
+        return report;
+    }
+
+    report += QStringLiteral(
+        "Status: Analysis completed successfully.\n"
+    );
+
+    const QRegularExpression globalExpression(
+        QStringLiteral(
+            R"(Global entropy:\s*([0-9]+(?:\.[0-9]+)?)\s*bits/byte)"
+        ),
+        QRegularExpression::CaseInsensitiveOption
+    );
+
+    const QRegularExpressionMatch globalMatch =
+        globalExpression.match(output);
+
+    bool globalOk = false;
+    double globalEntropy = 0.0;
+
+    if (globalMatch.hasMatch()) {
+        globalEntropy =
+            globalMatch.captured(1).toDouble(&globalOk);
+
+        if (globalOk) {
+            report += QStringLiteral(
+                "Global entropy: %1 bits/byte\n"
+            ).arg(globalEntropy, 0, 'f', 6);
+        }
+    }
+
+    const QRegularExpression blockSizeExpression(
+        QStringLiteral(
+            R"(block size\s+([0-9]+)\s+bytes)"
+        ),
+        QRegularExpression::CaseInsensitiveOption
+    );
+
+    const QRegularExpressionMatch blockSizeMatch =
+        blockSizeExpression.match(output);
+
+    if (blockSizeMatch.hasMatch()) {
+        report += QStringLiteral(
+            "Window size: %1 bytes\n"
+        ).arg(blockSizeMatch.captured(1));
+    }
+
+    const QRegularExpression blockExpression(
+        QStringLiteral(
+            R"(\bblock\s+[0-9]+:\s*([0-9]+(?:\.[0-9]+)?)\s*bits/byte)"
+        ),
+        QRegularExpression::CaseInsensitiveOption
+    );
+
+    QRegularExpressionMatchIterator iterator =
+        blockExpression.globalMatch(output);
+
+    int blockCount = 0;
+    double minimumEntropy = 0.0;
+    double maximumEntropy = 0.0;
+    double entropyTotal = 0.0;
+
+    while (iterator.hasNext()) {
+        const QRegularExpressionMatch match =
+            iterator.next();
+
+        bool valueOk = false;
+        const double value =
+            match.captured(1).toDouble(&valueOk);
+
+        if (!valueOk) {
+            continue;
+        }
+
+        if (blockCount == 0) {
+            minimumEntropy = value;
+            maximumEntropy = value;
+        } else {
+            minimumEntropy =
+                qMin(minimumEntropy, value);
+
+            maximumEntropy =
+                qMax(maximumEntropy, value);
+        }
+
+        entropyTotal += value;
+        ++blockCount;
+    }
+
+    double averageEntropy = 0.0;
+
+    if (blockCount > 0) {
+        averageEntropy =
+            entropyTotal /
+            static_cast<double>(blockCount);
+
+        report += QStringLiteral(
+            "Blocks analyzed: %1\n"
+        ).arg(blockCount);
+
+        report += QStringLiteral(
+            "Minimum entropy: %1 bits/byte\n"
+        ).arg(minimumEntropy, 0, 'f', 6);
+
+        report += QStringLiteral(
+            "Maximum entropy: %1 bits/byte\n"
+        ).arg(maximumEntropy, 0, 'f', 6);
+
+        report += QStringLiteral(
+            "Average entropy: %1 bits/byte\n"
+        ).arg(averageEntropy, 0, 'f', 6);
+    }
+
+    QString interpretation;
+
+    if (blockCount > 0) {
+        const double spread =
+            maximumEntropy - minimumEntropy;
+
+        if (
+            maximumEntropy >= 7.50 &&
+            minimumEntropy < 5.00 &&
+            spread >= 2.00
+        ) {
+            interpretation = QStringLiteral(
+                "Mixed-content file with high-entropy regions detected. "
+                "Review elevated blocks for compressed, encrypted, packed, "
+                "or embedded data."
+            );
+        } else if (averageEntropy >= 7.50) {
+            interpretation = QStringLiteral(
+                "Consistently high entropy. The content may be compressed, "
+                "encrypted, packed, or strongly randomized."
+            );
+        } else if (maximumEntropy >= 7.50) {
+            interpretation = QStringLiteral(
+                "One or more high-entropy regions were detected."
+            );
+        } else if (averageEntropy < 3.50) {
+            interpretation = QStringLiteral(
+                "Low average entropy. The file likely contains repetitive, "
+                "sparse, or highly structured data."
+            );
+        } else {
+            interpretation = QStringLiteral(
+                "Moderate or mixed entropy. No consistently extreme entropy "
+                "pattern was detected."
+            );
+        }
+    } else if (globalOk) {
+        if (globalEntropy >= 7.50) {
+            interpretation = QStringLiteral(
+                "High global entropy. The file may be compressed, encrypted, "
+                "packed, or strongly randomized."
+            );
+        } else if (globalEntropy >= 6.00) {
+            interpretation = QStringLiteral(
+                "Moderately high global entropy. The file may contain dense "
+                "binary or partially compressed data."
+            );
+        } else if (globalEntropy < 3.50) {
+            interpretation = QStringLiteral(
+                "Low global entropy. The file likely contains repetitive, "
+                "sparse, or highly structured data."
+            );
+        } else {
+            interpretation = QStringLiteral(
+                "Moderate global entropy. The file does not appear uniformly "
+                "random from this measurement alone."
+            );
+        }
+    } else {
+        interpretation = QStringLiteral(
+            "No numeric entropy value could be parsed. Review Raw Output."
         );
     }
 
-    QString summary;
+    report += QStringLiteral(
+        "Interpretation: %1\n"
+    ).arg(interpretation);
 
-    summary += QStringLiteral("[RESULT] ENTROPY analysis completed successfully.\n");
-    summary += QStringLiteral("[RESULT] Mode: ") + modeLabel + QStringLiteral("\n");
-    summary += QStringLiteral("[RESULT] Target analyzed: ") + target;
+    report += QStringLiteral(
+        "Process exit code: %1\n"
+    ).arg(exitCode);
 
-    if (output.contains(QStringLiteral("high"), Qt::CaseInsensitive) ||
-        output.contains(QStringLiteral("encrypted"), Qt::CaseInsensitive) ||
-        output.contains(QStringLiteral("compressed"), Qt::CaseInsensitive)) {
-        summary += QStringLiteral(
-            "\n[RESULT] Review high-entropy regions carefully; they may indicate compressed, encrypted, or packed content."
-        );
-    }
-
-    return summary;
+    return report;
 }
 
 
@@ -1596,61 +1777,186 @@ void MainWindow::buildEntropyTab()
     entropyTab = new QWidget(this);
     QVBoxLayout *mainLayout = new QVBoxLayout(entropyTab);
 
-    QLabel *title = new QLabel("K1Wi Framework - ENTROPY Analyzer", entropyTab);
+    QLabel *title = new QLabel(
+        QStringLiteral("K1Wi Framework - ENTROPY Analyzer"),
+        entropyTab
+    );
     mainLayout->addWidget(title);
 
     QLabel *description = new QLabel(
-        "ENTROPY computes Shannon entropy for files and binary regions. "
-        "It supports default file entropy, global entropy, sliding-window analysis, and heatmap output.",
+        QStringLiteral(
+            "ENTROPY computes Shannon entropy for files and binary regions. "
+            "Use global analysis for one overall measurement, sliding-window "
+            "analysis for block statistics, or heatmap analysis to locate "
+            "changing and anomalous entropy regions."
+        ),
         entropyTab
     );
     description->setWordWrap(true);
     mainLayout->addWidget(description);
 
     QHBoxLayout *modeLayout = new QHBoxLayout();
-    entropyModeCombo = new QComboBox(entropyTab);
-    entropyModeCombo->addItem("Default file entropy", "default");
-    entropyModeCombo->addItem("Global entropy", "--global");
-    entropyModeCombo->addItem("Sliding-window entropy", "--window");
-    entropyModeCombo->addItem("Heatmap entropy", "--heatmap");
 
-    modeLayout->addWidget(new QLabel("ENTROPY mode:", entropyTab));
+    entropyModeCombo = new QComboBox(entropyTab);
+    entropyModeCombo->addItem(
+        QStringLiteral("Default file entropy"),
+        QStringLiteral("default")
+    );
+    entropyModeCombo->addItem(
+        QStringLiteral("Global entropy"),
+        QStringLiteral("--global")
+    );
+    entropyModeCombo->addItem(
+        QStringLiteral("Sliding-window entropy"),
+        QStringLiteral("--window")
+    );
+    entropyModeCombo->addItem(
+        QStringLiteral("Heatmap entropy"),
+        QStringLiteral("--heatmap")
+    );
+
+    modeLayout->addWidget(
+        new QLabel(
+            QStringLiteral("ENTROPY mode:"),
+            entropyTab
+        )
+    );
     modeLayout->addWidget(entropyModeCombo);
+    modeLayout->addStretch();
     mainLayout->addLayout(modeLayout);
 
     QHBoxLayout *targetLayout = new QHBoxLayout();
-    entropyTargetPath = new QLineEdit(entropyTab);
-    QPushButton *browseButton = new QPushButton("Browse Target", entropyTab);
 
-    targetLayout->addWidget(new QLabel("Target file:", entropyTab));
+    entropyTargetPath = new QLineEdit(entropyTab);
+
+    QPushButton *browseButton =
+        new QPushButton(
+            QStringLiteral("Browse Target"),
+            entropyTab
+        );
+
+    targetLayout->addWidget(
+        new QLabel(
+            QStringLiteral("Target file:"),
+            entropyTab
+        )
+    );
     targetLayout->addWidget(entropyTargetPath);
     targetLayout->addWidget(browseButton);
     mainLayout->addLayout(targetLayout);
 
-    QPushButton *runButton = new QPushButton("Run ENTROPY", entropyTab);
-    QPushButton *clearButton = new QPushButton("Clear Output", entropyTab);
+    QPushButton *runButton =
+        new QPushButton(
+            QStringLiteral("Run ENTROPY"),
+            entropyTab
+        );
+
+    QPushButton *clearButton =
+        new QPushButton(
+            QStringLiteral("Clear Output"),
+            entropyTab
+        );
 
     QHBoxLayout *buttonLayout = new QHBoxLayout();
     buttonLayout->addWidget(runButton);
     buttonLayout->addWidget(clearButton);
+    buttonLayout->addStretch();
     mainLayout->addLayout(buttonLayout);
 
-    entropyOutputLog = new QTextEdit(entropyTab);
+    entropyDetailsTabs = new QTabWidget(entropyTab);
+
+    entropyFindingsLog =
+        new QTextEdit(entropyDetailsTabs);
+    entropyFindingsLog->setReadOnly(true);
+    entropyFindingsLog->append(
+        QStringLiteral(
+            "[GUI] Structured ENTROPY findings will appear here."
+        )
+    );
+
+    entropyDetailsTabs->addTab(
+        entropyFindingsLog,
+        QStringLiteral("Findings")
+    );
+
+    entropyOutputLog =
+        new QTextEdit(entropyDetailsTabs);
     entropyOutputLog->setReadOnly(true);
-    entropyOutputLog->append("[GUI] ENTROPY panel ready.");
-    entropyOutputLog->append("[GUI] Select a file and entropy mode to analyze.");
-    mainLayout->addWidget(entropyOutputLog);
+    entropyOutputLog->append(
+        QStringLiteral("[GUI] ENTROPY panel ready.")
+    );
+    entropyOutputLog->append(
+        QStringLiteral(
+            "[GUI] Select a file and entropy mode to analyze."
+        )
+    );
 
-    connect(browseButton, &QPushButton::clicked, this, [this]() {
-        QString path = QFileDialog::getOpenFileName(this, "Select ENTROPY Target");
-        if (!path.isEmpty()) {
-            entropyTargetPath->setText(path);
+    entropyDetailsTabs->addTab(
+        entropyOutputLog,
+        QStringLiteral("Raw Output")
+    );
+
+    mainLayout->addWidget(entropyDetailsTabs);
+
+    connect(
+        browseButton,
+        &QPushButton::clicked,
+        this,
+        [this]() {
+            const QString selectedPath =
+                QFileDialog::getOpenFileName(
+                    this,
+                    QStringLiteral("Select ENTROPY Target")
+                );
+
+            if (!selectedPath.isEmpty()) {
+                entropyTargetPath->setText(selectedPath);
+            }
         }
-    });
+    );
 
-    connect(runButton, &QPushButton::clicked, this, &MainWindow::runEntropyCommand);
-    connect(clearButton, &QPushButton::clicked, entropyOutputLog, &QTextEdit::clear);
+    connect(
+        entropyTargetPath,
+        &QLineEdit::returnPressed,
+        this,
+        &MainWindow::runEntropyCommand
+    );
+
+    connect(
+        runButton,
+        &QPushButton::clicked,
+        this,
+        &MainWindow::runEntropyCommand
+    );
+
+    connect(
+        clearButton,
+        &QPushButton::clicked,
+        this,
+        [this]() {
+            entropyDetailsTabs->setCurrentIndex(0);
+
+            entropyFindingsLog->clear();
+            entropyOutputLog->clear();
+
+            entropyFindingsLog->append(
+                QStringLiteral(
+                    "[GUI] Structured ENTROPY findings will appear here."
+                )
+            );
+
+            entropyOutputLog->append(
+                QStringLiteral("[GUI] ENTROPY panel ready.")
+            );
+            entropyOutputLog->append(
+                QStringLiteral(
+                    "[GUI] Select a file and entropy mode to analyze."
+                )
+            );
+        }
+    );
 }
+
 
 void MainWindow::buildPcapTab()
 {
@@ -2038,6 +2344,116 @@ void MainWindow::buildPcapTab()
             );
         };
 
+    const auto saveEntropyText =
+        [this](
+            const QString &textToSave,
+            const QString &dialogTitle,
+            const QString &suggestedPath
+        ) {
+            if (textToSave.trimmed().isEmpty()) {
+                QMessageBox::warning(
+                    this,
+                    QStringLiteral("K1Wi ENTROPY"),
+                    QStringLiteral(
+                        "There is no ENTROPY report content to save."
+                    )
+                );
+                return;
+            }
+
+            const QString destination =
+                QFileDialog::getSaveFileName(
+                    this,
+                    dialogTitle,
+                    suggestedPath,
+                    QStringLiteral(
+                        "Text reports (*.txt);;All files (*)"
+                    )
+                );
+
+            if (destination.isEmpty()) {
+                return;
+            }
+
+            QSaveFile outputFile(destination);
+
+            if (!outputFile.open(
+                    QIODevice::WriteOnly |
+                    QIODevice::Text
+                )) {
+                QMessageBox::critical(
+                    this,
+                    QStringLiteral("K1Wi ENTROPY"),
+                    QStringLiteral(
+                        "Unable to open the selected report file.\n\n%1"
+                    ).arg(outputFile.errorString())
+                );
+                return;
+            }
+
+            QTextStream stream(&outputFile);
+            stream << textToSave;
+
+            if (!textToSave.endsWith(QChar('\n'))) {
+                stream << QChar('\n');
+            }
+
+            if (
+                stream.status() != QTextStream::Ok ||
+                !outputFile.commit()
+            ) {
+                QMessageBox::critical(
+                    this,
+                    QStringLiteral("K1Wi ENTROPY"),
+                    QStringLiteral(
+                        "The ENTROPY report could not be saved completely.\n\n%1"
+                    ).arg(outputFile.errorString())
+                );
+                return;
+            }
+
+            QMessageBox::information(
+                this,
+                QStringLiteral("K1Wi ENTROPY"),
+                QStringLiteral(
+                    "ENTROPY report saved successfully.\n\n%1"
+                ).arg(destination)
+            );
+        };
+
+    const auto suggestedEntropyExportPath =
+        [this](const QString &suffix) {
+            const QFileInfo sourceInfo(
+                entropyTargetPath->text().trimmed()
+            );
+
+            QString baseName = sourceInfo.completeBaseName();
+
+            if (baseName.isEmpty()) {
+                baseName = QStringLiteral("k1wi_entropy");
+            }
+
+            QString directory = QDir::currentPath();
+
+            if (
+                !sourceInfo.absolutePath().isEmpty() &&
+                sourceInfo.absoluteDir().exists()
+            ) {
+                directory = sourceInfo.absolutePath();
+            }
+
+            QString modeName =
+                entropyModeCombo->currentText().toLower();
+
+            modeName.replace(QChar(' '), QChar('_'));
+            modeName.remove(QChar('-'));
+
+            return QDir(directory).absoluteFilePath(
+                QStringLiteral("%1_%2_%3.txt")
+                    .arg(baseName, modeName, suffix)
+            );
+        };
+
     const auto saveMagicText =
         [this](
             const QString &textToSave,
@@ -2164,6 +2580,9 @@ void MainWindow::buildPcapTab()
             } else if (selectedModule == magicTab) {
                 detailsTabs = magicDetailsTabs;
                 moduleName = QStringLiteral("MAGIC");
+            } else if (selectedModule == entropyTab) {
+                detailsTabs = entropyDetailsTabs;
+                moduleName = QStringLiteral("ENTROPY");
             } else if (selectedModule == pcapTab) {
                 detailsTabs = pcapDetailsTabs;
                 moduleName = QStringLiteral("PCAP");
@@ -2217,7 +2636,9 @@ void MainWindow::buildPcapTab()
             saveStringText,
             suggestedStringExportPath,
             saveMagicText,
-            suggestedMagicExportPath
+            suggestedMagicExportPath,
+            saveEntropyText,
+            suggestedEntropyExportPath
         ]() {
             const QWidget *selectedModule =
                 tabs->currentWidget();
@@ -2231,6 +2652,9 @@ void MainWindow::buildPcapTab()
             } else if (selectedModule == magicTab) {
                 detailsTabs = magicDetailsTabs;
                 moduleName = QStringLiteral("MAGIC");
+            } else if (selectedModule == entropyTab) {
+                detailsTabs = entropyDetailsTabs;
+                moduleName = QStringLiteral("ENTROPY");
             } else if (selectedModule == pcapTab) {
                 detailsTabs = pcapDetailsTabs;
                 moduleName = QStringLiteral("PCAP");
@@ -2275,6 +2699,12 @@ void MainWindow::buildPcapTab()
                     QStringLiteral("Save Current MAGIC View"),
                     suggestedMagicExportPath(tabName)
                 );
+            } else if (selectedModule == entropyTab) {
+                saveEntropyText(
+                    currentLog->toPlainText(),
+                    QStringLiteral("Save Current ENTROPY View"),
+                    suggestedEntropyExportPath(tabName)
+                );
             } else {
                 savePcapText(
                     currentLog->toPlainText(),
@@ -2296,7 +2726,9 @@ void MainWindow::buildPcapTab()
             saveStringText,
             suggestedStringExportPath,
             saveMagicText,
-            suggestedMagicExportPath
+            suggestedMagicExportPath,
+            saveEntropyText,
+            suggestedEntropyExportPath
         ]() {
             const QWidget *selectedModule =
                 tabs->currentWidget();
@@ -2314,6 +2746,14 @@ void MainWindow::buildPcapTab()
                     magicOutputLog->toPlainText(),
                     QStringLiteral("Save Complete MAGIC Raw Report"),
                     suggestedMagicExportPath(
+                        QStringLiteral("raw_report")
+                    )
+                );
+            } else if (selectedModule == entropyTab) {
+                saveEntropyText(
+                    entropyOutputLog->toPlainText(),
+                    QStringLiteral("Save Complete ENTROPY Raw Report"),
+                    suggestedEntropyExportPath(
                         QStringLiteral("raw_report")
                     )
                 );
@@ -2338,7 +2778,8 @@ void MainWindow::buildPcapTab()
             const bool reportTabSelected =
                 selectedTab == pcapTab ||
                 selectedTab == stringTab ||
-                selectedTab == magicTab;
+                selectedTab == magicTab ||
+                selectedTab == entropyTab;
 
             copyViewAction->setEnabled(reportTabSelected);
             saveViewAction->setEnabled(reportTabSelected);
@@ -2350,7 +2791,7 @@ void MainWindow::buildPcapTab()
                         "Copy the currently selected results view"
                     )
                     : QStringLiteral(
-                        "Available in STRING, MAGIC, and PCAP"
+                        "Available in STRING, MAGIC, ENTROPY, and PCAP"
                     )
             );
 
@@ -2360,7 +2801,7 @@ void MainWindow::buildPcapTab()
                         "Save the currently selected results view"
                     )
                     : QStringLiteral(
-                        "Available in STRING, MAGIC, and PCAP"
+                        "Available in STRING, MAGIC, ENTROPY, and PCAP"
                     )
             );
 
@@ -2370,7 +2811,7 @@ void MainWindow::buildPcapTab()
                         "Save the complete raw analysis report"
                     )
                     : QStringLiteral(
-                        "Available in STRING, MAGIC, and PCAP"
+                        "Available in STRING, MAGIC, ENTROPY, and PCAP"
                     )
             );
         };
@@ -3928,7 +4369,14 @@ void MainWindow::runMagicCommand()
 
 void MainWindow::runEntropyCommand()
 {
+    entropyDetailsTabs->setCurrentIndex(1);
+
+    entropyFindingsLog->clear();
     entropyOutputLog->clear();
+
+    entropyFindingsLog->append(
+        QStringLiteral("[GUI] ENTROPY analysis in progress...")
+    );
 
     const QString target = entropyTargetPath->text().trimmed();
     const QString entropyMode = entropyModeCombo->currentData().toString();
@@ -4041,35 +4489,54 @@ void MainWindow::runEntropyCommand()
             entropyOutputLog->append("");
 
             if (exitStatus == QProcess::NormalExit) {
-                const QString summary = entropyFriendlySummary(
-                    *combinedOutput,
-                    exitCode,
-                    target,
-                    modeLabel
-                );
-
-                if (!summary.isEmpty()) {
-                    appendStyledLine(entropyOutputLog, "Summary", "#0057b8", true);
-                    appendStyledLine(entropyOutputLog, "-------", "#0057b8", true);
-                    appendStyledBlock(
-                        entropyOutputLog,
-                        summary,
-                        resultColorForSummary(summary, exitCode),
-                        true
+                const QString findings =
+                    entropyFindingsReport(
+                        *combinedOutput,
+                        exitCode,
+                        target,
+                        modeLabel
                     );
-                    entropyOutputLog->append("");
-                }
+
+                entropyFindingsLog->clear();
+
+                appendStyledBlock(
+                    entropyFindingsLog,
+                    findings,
+                    exitCode == 0
+                        ? QStringLiteral("#0b7a0b")
+                        : QStringLiteral("#b00020"),
+                    false
+                );
 
                 entropyOutputLog->append(
-                    QString("Process finished with exit code %1").arg(exitCode)
+                    QStringLiteral(
+                        "Process finished with exit code %1"
+                    ).arg(exitCode)
                 );
+
+                entropyDetailsTabs->setCurrentIndex(0);
             } else {
+                entropyFindingsLog->clear();
+
                 appendStyledLine(
-                    entropyOutputLog,
-                    "[RESULT] ENTROPY process crashed or was terminated.",
-                    "#b00020",
+                    entropyFindingsLog,
+                    QStringLiteral(
+                        "[RESULT] ENTROPY process crashed or was terminated."
+                    ),
+                    QStringLiteral("#b00020"),
                     true
                 );
+
+                appendStyledLine(
+                    entropyOutputLog,
+                    QStringLiteral(
+                        "[RESULT] ENTROPY process crashed or was terminated."
+                    ),
+                    QStringLiteral("#b00020"),
+                    true
+                );
+
+                entropyDetailsTabs->setCurrentIndex(0);
             }
 
             delete combinedOutput;

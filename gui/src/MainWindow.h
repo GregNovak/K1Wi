@@ -72,8 +72,10 @@ private:
     QTextEdit *magicOutputLog;
     
     QWidget *entropyTab;
+    QTabWidget *entropyDetailsTabs;
     QComboBox *entropyModeCombo;
     QLineEdit *entropyTargetPath;
+    QTextEdit *entropyFindingsLog;
     QTextEdit *entropyOutputLog;
     
     QWidget *pcapTab;
