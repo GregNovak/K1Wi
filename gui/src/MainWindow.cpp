@@ -810,6 +810,12 @@ static QString lyzerStructuredFindings(
         bytesAnalyzed =
             QString::number(targetInfo.size()) +
             QStringLiteral(" bytes");
+    } else if (
+        QRegularExpression(
+            QStringLiteral(R"(^\d+$)")
+        ).match(bytesAnalyzed).hasMatch()
+    ) {
+        bytesAnalyzed += QStringLiteral(" bytes");
     }
 
     QString report;
@@ -2694,6 +2700,110 @@ void MainWindow::buildPcapTab()
             );
         };
 
+    const auto suggestedLyzerExportPath =
+        [this](const QString &suffix) {
+            const QFileInfo sourceInfo(
+                lyzerTargetPath->text().trimmed()
+            );
+
+            QString baseName = sourceInfo.completeBaseName();
+
+            if (baseName.isEmpty()) {
+                baseName = QStringLiteral("k1wi_lyzer");
+            }
+
+            QString directory = QDir::currentPath();
+
+            if (
+                !sourceInfo.absolutePath().isEmpty() &&
+                sourceInfo.absoluteDir().exists()
+            ) {
+                directory = sourceInfo.absolutePath();
+            }
+
+            return QDir(directory).absoluteFilePath(
+                QStringLiteral("%1_lyzer_%2.txt")
+                    .arg(baseName, suffix)
+            );
+        };
+
+    const auto saveLyzerText =
+        [this](
+            const QString &textToSave,
+            const QString &dialogTitle,
+            const QString &suggestedPath
+        ) {
+            if (textToSave.trimmed().isEmpty()) {
+                QMessageBox::warning(
+                    this,
+                    QStringLiteral("K1Wi LYZER"),
+                    QStringLiteral(
+                        "There is no LYZER report content to save."
+                    )
+                );
+                return;
+            }
+
+            const QString destination =
+                QFileDialog::getSaveFileName(
+                    this,
+                    dialogTitle,
+                    suggestedPath,
+                    QStringLiteral(
+                        "Text reports (*.txt);;All files (*)"
+                    )
+                );
+
+            if (destination.isEmpty()) {
+                return;
+            }
+
+            QSaveFile outputFile(destination);
+
+            if (!outputFile.open(
+                    QIODevice::WriteOnly |
+                    QIODevice::Text
+                )) {
+                QMessageBox::critical(
+                    this,
+                    QStringLiteral("K1Wi LYZER"),
+                    QStringLiteral(
+                        "Unable to open the selected report file.\n\n%1"
+                    ).arg(outputFile.errorString())
+                );
+                return;
+            }
+
+            QTextStream stream(&outputFile);
+            stream << textToSave;
+
+            if (!textToSave.endsWith(QChar('\n'))) {
+                stream << QChar('\n');
+            }
+
+            if (
+                stream.status() != QTextStream::Ok ||
+                !outputFile.commit()
+            ) {
+                QMessageBox::critical(
+                    this,
+                    QStringLiteral("K1Wi LYZER"),
+                    QStringLiteral(
+                        "The LYZER report could not be saved completely.\n\n%1"
+                    ).arg(outputFile.errorString())
+                );
+                return;
+            }
+
+            QMessageBox::information(
+                this,
+                QStringLiteral("K1Wi LYZER"),
+                QStringLiteral(
+                    "LYZER report saved successfully.\n\n%1"
+                ).arg(destination)
+            );
+        };
+
     const auto suggestedHashExportPath =
         [this](const QString &suffix) {
             const QFileInfo sourceInfo(
@@ -2823,7 +2933,10 @@ void MainWindow::buildPcapTab()
             QTabWidget *detailsTabs = nullptr;
             QString moduleName;
 
-            if (selectedModule == hashTab) {
+            if (selectedModule == lyzerTab) {
+                detailsTabs = lyzerDetailsTabs;
+                moduleName = QStringLiteral("LYZER");
+            } else if (selectedModule == hashTab) {
                 detailsTabs = hashDetailsTabs;
                 moduleName = QStringLiteral("HASH");
             } else if (selectedModule == stringTab) {
@@ -2892,7 +3005,9 @@ void MainWindow::buildPcapTab()
             saveEntropyText,
             suggestedEntropyExportPath,
             saveHashText,
-            suggestedHashExportPath
+            suggestedHashExportPath,
+            saveLyzerText,
+            suggestedLyzerExportPath
         ]() {
             const QWidget *selectedModule =
                 tabs->currentWidget();
@@ -2900,7 +3015,10 @@ void MainWindow::buildPcapTab()
             QTabWidget *detailsTabs = nullptr;
             QString moduleName;
 
-            if (selectedModule == hashTab) {
+            if (selectedModule == lyzerTab) {
+                detailsTabs = lyzerDetailsTabs;
+                moduleName = QStringLiteral("LYZER");
+            } else if (selectedModule == hashTab) {
                 detailsTabs = hashDetailsTabs;
                 moduleName = QStringLiteral("HASH");
             } else if (selectedModule == stringTab) {
@@ -2944,7 +3062,13 @@ void MainWindow::buildPcapTab()
 
             tabName.replace(QChar(' '), QChar('_'));
 
-            if (selectedModule == hashTab) {
+            if (selectedModule == lyzerTab) {
+                saveLyzerText(
+                    currentLog->toPlainText(),
+                    QStringLiteral("Save Current LYZER View"),
+                    suggestedLyzerExportPath(tabName)
+                );
+            } else if (selectedModule == hashTab) {
                 saveHashText(
                     currentLog->toPlainText(),
                     QStringLiteral("Save Current HASH View"),
@@ -2993,12 +3117,22 @@ void MainWindow::buildPcapTab()
             saveEntropyText,
             suggestedEntropyExportPath,
             saveHashText,
-            suggestedHashExportPath
+            suggestedHashExportPath,
+            saveLyzerText,
+            suggestedLyzerExportPath
         ]() {
             const QWidget *selectedModule =
                 tabs->currentWidget();
 
-            if (selectedModule == hashTab) {
+            if (selectedModule == lyzerTab) {
+                saveLyzerText(
+                    lyzerOutputLog->toPlainText(),
+                    QStringLiteral("Save Complete LYZER Raw Report"),
+                    suggestedLyzerExportPath(
+                        QStringLiteral("raw_report")
+                    )
+                );
+            } else if (selectedModule == hashTab) {
                 saveHashText(
                     hashOutputLog->toPlainText(),
                     QStringLiteral("Save Complete HASH Raw Report"),
@@ -3050,6 +3184,7 @@ void MainWindow::buildPcapTab()
 
             const bool reportTabSelected =
                 selectedTab == pcapTab ||
+                selectedTab == lyzerTab ||
                 selectedTab == hashTab ||
                 selectedTab == stringTab ||
                 selectedTab == magicTab ||
@@ -3065,7 +3200,7 @@ void MainWindow::buildPcapTab()
                         "Copy the currently selected results view"
                     )
                     : QStringLiteral(
-                        "Available in HASH, STRING, MAGIC, ENTROPY, and PCAP"
+                        "Available in LYZER, HASH, STRING, MAGIC, ENTROPY, and PCAP"
                     )
             );
 
@@ -3075,7 +3210,7 @@ void MainWindow::buildPcapTab()
                         "Save the currently selected results view"
                     )
                     : QStringLiteral(
-                        "Available in HASH, STRING, MAGIC, ENTROPY, and PCAP"
+                        "Available in LYZER, HASH, STRING, MAGIC, ENTROPY, and PCAP"
                     )
             );
 
@@ -3085,7 +3220,7 @@ void MainWindow::buildPcapTab()
                         "Save the complete raw analysis report"
                     )
                     : QStringLiteral(
-                        "Available in HASH, STRING, MAGIC, ENTROPY, and PCAP"
+                        "Available in LYZER, HASH, STRING, MAGIC, ENTROPY, and PCAP"
                     )
             );
         };
