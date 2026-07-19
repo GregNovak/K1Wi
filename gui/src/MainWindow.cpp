@@ -742,6 +742,137 @@ static QString lyzerColorForSummary(const QString &summary, int exitCode)
     return QStringLiteral("#0b7a0b");
 }
 
+static QString lyzerReportValue(
+    const QString &output,
+    const QString &label
+)
+{
+    const QRegularExpression pattern(
+        QStringLiteral(R"((?:^|\n)\s*)") +
+        QRegularExpression::escape(label) +
+        QStringLiteral(R"(\s*([^\r\n]+))"),
+        QRegularExpression::CaseInsensitiveOption
+    );
+
+    const QRegularExpressionMatch match = pattern.match(output);
+
+    if (!match.hasMatch()) {
+        return QString();
+    }
+
+    return match.captured(1).trimmed();
+}
+
+static QString lyzerStructuredFindings(
+    const QString &output,
+    int exitCode,
+    const QString &target,
+    const QString &modeLabel
+)
+{
+    const QFileInfo targetInfo(target);
+
+    const QString format =
+        lyzerReportValue(output, QStringLiteral("Detected format:"));
+
+    QString bytesAnalyzed =
+        lyzerReportValue(output, QStringLiteral("Bytes analyzed:"));
+
+    const QString entropy =
+        lyzerReportValue(output, QStringLiteral("Entropy:"));
+
+    const QString chiSquare =
+        lyzerReportValue(output, QStringLiteral("Chi-square:"));
+
+    const QString assessment =
+        lyzerReportValue(output, QStringLiteral("Assessment:"));
+
+    QString nextStep =
+        lyzerReportValue(output, QStringLiteral("Next step:"));
+
+    if (nextStep.isEmpty()) {
+        const QRegularExpression nextStepsPattern(
+            QStringLiteral(R"(Next steps:\s*\n\s*([^\r\n]+))"),
+            QRegularExpression::CaseInsensitiveOption
+        );
+
+        const QRegularExpressionMatch match =
+            nextStepsPattern.match(output);
+
+        if (match.hasMatch()) {
+            nextStep = match.captured(1).trimmed();
+        }
+    }
+
+    if (bytesAnalyzed.isEmpty() &&
+        targetInfo.exists() &&
+        targetInfo.isFile()) {
+        bytesAnalyzed =
+            QString::number(targetInfo.size()) +
+            QStringLiteral(" bytes");
+    }
+
+    QString report;
+
+    report += QStringLiteral("LYZER Analysis Findings\n");
+    report += QStringLiteral("Target: ") + target + QStringLiteral("\n");
+    report += QStringLiteral("Mode: ") + modeLabel + QStringLiteral("\n");
+
+    if (!format.isEmpty()) {
+        report +=
+            QStringLiteral("Detected format: ") +
+            format +
+            QStringLiteral("\n");
+    }
+
+    if (!bytesAnalyzed.isEmpty()) {
+        report +=
+            QStringLiteral("Bytes analyzed: ") +
+            bytesAnalyzed +
+            QStringLiteral("\n");
+    }
+
+    if (!entropy.isEmpty()) {
+        report +=
+            QStringLiteral("Entropy: ") +
+            entropy +
+            QStringLiteral("\n");
+    }
+
+    if (!chiSquare.isEmpty()) {
+        report +=
+            QStringLiteral("Chi-square: ") +
+            chiSquare +
+            QStringLiteral("\n");
+    }
+
+    report += QStringLiteral("\nAssessment\n");
+
+    if (!assessment.isEmpty()) {
+        report += assessment + QStringLiteral("\n");
+    } else if (exitCode == 0) {
+        report += QStringLiteral(
+            "LYZER completed successfully. Review the raw output "
+            "for detailed findings.\n"
+        );
+    } else {
+        report += QStringLiteral(
+            "LYZER finished with a non-zero exit code.\n"
+        );
+    }
+
+    if (!nextStep.isEmpty()) {
+        report += QStringLiteral("\nRecommended next step\n");
+        report += nextStep + QStringLiteral("\n");
+    }
+
+    report += QStringLiteral("\nResult\n");
+    report += QStringLiteral("Exit code: ") +
+              QString::number(exitCode);
+
+    return report;
+}
+
 static QString stringFriendlySummary(
     const QString &output,
     int exitCode,
@@ -3022,7 +3153,7 @@ void MainWindow::buildLyzerTab()
     lyzerTab = new QWidget(this);
     QVBoxLayout *mainLayout = new QVBoxLayout(lyzerTab);
 
-    QLabel *title = new QLabel("K1Wi Framework - LYZER Prototype", lyzerTab);
+    QLabel *title = new QLabel("K1Wi Framework - LYZER", lyzerTab);
     mainLayout->addWidget(title);
 
     QHBoxLayout *targetLayout = new QHBoxLayout();
@@ -3054,10 +3185,30 @@ void MainWindow::buildLyzerTab()
     buttonLayout->addWidget(clearButton);
     mainLayout->addLayout(buttonLayout);
 
-    lyzerOutputLog = new QTextEdit(lyzerTab);
+    lyzerDetailsTabs = new QTabWidget(lyzerTab);
+
+    lyzerFindingsLog = new QTextEdit(lyzerDetailsTabs);
+    lyzerFindingsLog->setReadOnly(true);
+    lyzerFindingsLog->append(
+        QStringLiteral("[GUI] LYZER findings will appear here.")
+    );
+
+    lyzerOutputLog = new QTextEdit(lyzerDetailsTabs);
     lyzerOutputLog->setReadOnly(true);
-    lyzerOutputLog->append("[GUI] LYZER panel ready.");
-    mainLayout->addWidget(lyzerOutputLog);
+    lyzerOutputLog->append(
+        QStringLiteral("[GUI] LYZER panel ready.")
+    );
+
+    lyzerDetailsTabs->addTab(
+        lyzerFindingsLog,
+        QStringLiteral("Findings")
+    );
+    lyzerDetailsTabs->addTab(
+        lyzerOutputLog,
+        QStringLiteral("Raw Output")
+    );
+
+    mainLayout->addWidget(lyzerDetailsTabs);
 
     connect(targetBrowse, &QPushButton::clicked, this, [this]() {
         QString path = QFileDialog::getOpenFileName(this, "Select LYZER Target");
@@ -3066,8 +3217,17 @@ void MainWindow::buildLyzerTab()
         }
     });
 
-    connect(runButton, &QPushButton::clicked, this, &MainWindow::runLyzerCommand);
-    connect(clearButton, &QPushButton::clicked, lyzerOutputLog, &QTextEdit::clear);
+    connect(
+        runButton,
+        &QPushButton::clicked,
+        this,
+        &MainWindow::runLyzerCommand
+    );
+
+    connect(clearButton, &QPushButton::clicked, this, [this]() {
+        lyzerFindingsLog->clear();
+        lyzerOutputLog->clear();
+    });
 
 }
 
@@ -6562,6 +6722,7 @@ void MainWindow::runCopyCommand()
 
 void MainWindow::runLyzerCommand()
 {
+    lyzerFindingsLog->clear();
     lyzerOutputLog->clear();
 
     const QString target = lyzerTargetPath->text().trimmed();
@@ -6676,6 +6837,19 @@ void MainWindow::runLyzerCommand()
             lyzerOutputLog->append("");
 
             if (exitStatus == QProcess::NormalExit) {
+                lyzerFindingsLog->setPlainText(
+                    lyzerStructuredFindings(
+                        *combinedOutput,
+                        exitCode,
+                        target,
+                        modeLabel
+                    )
+                );
+
+                lyzerDetailsTabs->setCurrentWidget(
+                    lyzerFindingsLog
+                );
+
                 const QString summary = lyzerFriendlySummary(
                     *combinedOutput,
                     exitCode,

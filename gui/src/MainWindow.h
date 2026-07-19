@@ -29,8 +29,10 @@ private:
     QTextEdit *outputLog;
 
     QWidget *lyzerTab;
+    QTabWidget *lyzerDetailsTabs;
     QLineEdit *lyzerTargetPath;
     QComboBox *lyzerModeCombo;
+    QTextEdit *lyzerFindingsLog;
     QTextEdit *lyzerOutputLog;
 
     QWidget *extractTab;
