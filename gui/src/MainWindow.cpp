@@ -2563,6 +2563,124 @@ void MainWindow::buildPcapTab()
             );
         };
 
+    const auto suggestedHashExportPath =
+        [this](const QString &suffix) {
+            const QFileInfo sourceInfo(
+                hashFilePath->text().trimmed()
+            );
+
+            QString baseName = sourceInfo.completeBaseName();
+
+            if (baseName.isEmpty()) {
+                baseName = QStringLiteral("k1wi_hash");
+            }
+
+            QString directory = QDir::currentPath();
+
+            if (
+                !sourceInfo.absolutePath().isEmpty() &&
+                sourceInfo.absoluteDir().exists()
+            ) {
+                directory = sourceInfo.absolutePath();
+            }
+
+            const QString algorithmName =
+                hashAlgorithmCombo
+                    ->currentText()
+                    .toLower()
+                    .replace(QChar('-'), QChar('_'));
+
+            const QString modeName =
+                hashModeCombo->currentData().toString();
+
+            return QDir(directory).absoluteFilePath(
+                QStringLiteral("%1_%2_%3_%4.txt")
+                    .arg(
+                        baseName,
+                        algorithmName,
+                        modeName,
+                        suffix
+                    )
+            );
+        };
+
+    const auto saveHashText =
+        [this](
+            const QString &textToSave,
+            const QString &dialogTitle,
+            const QString &suggestedPath
+        ) {
+            if (textToSave.trimmed().isEmpty()) {
+                QMessageBox::warning(
+                    this,
+                    QStringLiteral("K1Wi HASH"),
+                    QStringLiteral(
+                        "There is no HASH report content to save."
+                    )
+                );
+                return;
+            }
+
+            const QString destination =
+                QFileDialog::getSaveFileName(
+                    this,
+                    dialogTitle,
+                    suggestedPath,
+                    QStringLiteral(
+                        "Text reports (*.txt);;All files (*)"
+                    )
+                );
+
+            if (destination.isEmpty()) {
+                return;
+            }
+
+            QSaveFile outputFile(destination);
+
+            if (!outputFile.open(
+                    QIODevice::WriteOnly |
+                    QIODevice::Text
+                )) {
+                QMessageBox::critical(
+                    this,
+                    QStringLiteral("K1Wi HASH"),
+                    QStringLiteral(
+                        "Unable to open the selected report file.\n\n%1"
+                    ).arg(outputFile.errorString())
+                );
+                return;
+            }
+
+            QTextStream stream(&outputFile);
+            stream << textToSave;
+
+            if (!textToSave.endsWith(QChar('\n'))) {
+                stream << QChar('\n');
+            }
+
+            if (
+                stream.status() != QTextStream::Ok ||
+                !outputFile.commit()
+            ) {
+                QMessageBox::critical(
+                    this,
+                    QStringLiteral("K1Wi HASH"),
+                    QStringLiteral(
+                        "The HASH report could not be saved completely.\n\n%1"
+                    ).arg(outputFile.errorString())
+                );
+                return;
+            }
+
+            QMessageBox::information(
+                this,
+                QStringLiteral("K1Wi HASH"),
+                QStringLiteral(
+                    "HASH report saved successfully.\n\n%1"
+                ).arg(destination)
+            );
+        };
+
     connect(
         copyViewAction,
         &QAction::triggered,
@@ -2574,7 +2692,10 @@ void MainWindow::buildPcapTab()
             QTabWidget *detailsTabs = nullptr;
             QString moduleName;
 
-            if (selectedModule == stringTab) {
+            if (selectedModule == hashTab) {
+                detailsTabs = hashDetailsTabs;
+                moduleName = QStringLiteral("HASH");
+            } else if (selectedModule == stringTab) {
                 detailsTabs = stringDetailsTabs;
                 moduleName = QStringLiteral("STRING");
             } else if (selectedModule == magicTab) {
@@ -2638,7 +2759,9 @@ void MainWindow::buildPcapTab()
             saveMagicText,
             suggestedMagicExportPath,
             saveEntropyText,
-            suggestedEntropyExportPath
+            suggestedEntropyExportPath,
+            saveHashText,
+            suggestedHashExportPath
         ]() {
             const QWidget *selectedModule =
                 tabs->currentWidget();
@@ -2646,7 +2769,10 @@ void MainWindow::buildPcapTab()
             QTabWidget *detailsTabs = nullptr;
             QString moduleName;
 
-            if (selectedModule == stringTab) {
+            if (selectedModule == hashTab) {
+                detailsTabs = hashDetailsTabs;
+                moduleName = QStringLiteral("HASH");
+            } else if (selectedModule == stringTab) {
                 detailsTabs = stringDetailsTabs;
                 moduleName = QStringLiteral("STRING");
             } else if (selectedModule == magicTab) {
@@ -2687,7 +2813,13 @@ void MainWindow::buildPcapTab()
 
             tabName.replace(QChar(' '), QChar('_'));
 
-            if (selectedModule == stringTab) {
+            if (selectedModule == hashTab) {
+                saveHashText(
+                    currentLog->toPlainText(),
+                    QStringLiteral("Save Current HASH View"),
+                    suggestedHashExportPath(tabName)
+                );
+            } else if (selectedModule == stringTab) {
                 saveStringText(
                     currentLog->toPlainText(),
                     QStringLiteral("Save Current STRING View"),
@@ -2728,12 +2860,22 @@ void MainWindow::buildPcapTab()
             saveMagicText,
             suggestedMagicExportPath,
             saveEntropyText,
-            suggestedEntropyExportPath
+            suggestedEntropyExportPath,
+            saveHashText,
+            suggestedHashExportPath
         ]() {
             const QWidget *selectedModule =
                 tabs->currentWidget();
 
-            if (selectedModule == stringTab) {
+            if (selectedModule == hashTab) {
+                saveHashText(
+                    hashOutputLog->toPlainText(),
+                    QStringLiteral("Save Complete HASH Raw Report"),
+                    suggestedHashExportPath(
+                        QStringLiteral("raw_report")
+                    )
+                );
+            } else if (selectedModule == stringTab) {
                 saveStringText(
                     stringOutputLog->toPlainText(),
                     QStringLiteral("Save Complete STRING Raw Report"),
@@ -2777,6 +2919,7 @@ void MainWindow::buildPcapTab()
 
             const bool reportTabSelected =
                 selectedTab == pcapTab ||
+                selectedTab == hashTab ||
                 selectedTab == stringTab ||
                 selectedTab == magicTab ||
                 selectedTab == entropyTab;
@@ -2791,7 +2934,7 @@ void MainWindow::buildPcapTab()
                         "Copy the currently selected results view"
                     )
                     : QStringLiteral(
-                        "Available in STRING, MAGIC, ENTROPY, and PCAP"
+                        "Available in HASH, STRING, MAGIC, ENTROPY, and PCAP"
                     )
             );
 
@@ -2801,7 +2944,7 @@ void MainWindow::buildPcapTab()
                         "Save the currently selected results view"
                     )
                     : QStringLiteral(
-                        "Available in STRING, MAGIC, ENTROPY, and PCAP"
+                        "Available in HASH, STRING, MAGIC, ENTROPY, and PCAP"
                     )
             );
 
@@ -2811,7 +2954,7 @@ void MainWindow::buildPcapTab()
                         "Save the complete raw analysis report"
                     )
                     : QStringLiteral(
-                        "Available in STRING, MAGIC, ENTROPY, and PCAP"
+                        "Available in HASH, STRING, MAGIC, ENTROPY, and PCAP"
                     )
             );
         };
