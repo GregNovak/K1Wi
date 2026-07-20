@@ -1433,7 +1433,24 @@ void MainWindow::buildCopyTab()
     mainLayout->addWidget(outputLog);
 
     connect(sourceBrowse, &QPushButton::clicked, this, [this]() {
-        QString path = QFileDialog::getExistingDirectory(this, "Select Source");
+        QString path;
+
+        const bool recursiveMode =
+            copyModeCombo->currentData().toString() ==
+            QStringLiteral("recursive");
+
+        if (recursiveMode) {
+            path = QFileDialog::getExistingDirectory(
+                this,
+                QStringLiteral("Select Source Directory")
+            );
+        } else {
+            path = QFileDialog::getOpenFileName(
+                this,
+                QStringLiteral("Select Source File")
+            );
+        }
+
         if (!path.isEmpty()) {
             sourcePath->setText(path);
         }
