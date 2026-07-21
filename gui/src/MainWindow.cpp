@@ -5889,6 +5889,56 @@ void MainWindow::runPcapCommand()
                         )
                     );
 
+                    if (linkType.contains(
+                            QStringLiteral("Ethernet"),
+                            Qt::CaseInsensitive
+                        )) {
+                        appendStyledLine(
+                            pcapFindingsLog,
+                            QStringLiteral(
+                                "[RESULT] Ethernet frame summary"
+                            ),
+                            QStringLiteral("#0057b8"),
+                            true
+                        );
+
+                        appendPcapFinding(
+                            pcapFindingsLog,
+                            QStringLiteral("IPv4 frames"),
+                            pcapReportCount(
+                                *combinedOutput,
+                                QStringLiteral("IPv4 frames:")
+                            )
+                        );
+
+                        appendPcapFinding(
+                            pcapFindingsLog,
+                            QStringLiteral("ARP frames"),
+                            pcapReportCount(
+                                *combinedOutput,
+                                QStringLiteral("ARP frames:")
+                            )
+                        );
+
+                        appendPcapFinding(
+                            pcapFindingsLog,
+                            QStringLiteral("IPv6 frames"),
+                            pcapReportCount(
+                                *combinedOutput,
+                                QStringLiteral("IPv6 frames:")
+                            )
+                        );
+
+                        appendPcapFinding(
+                            pcapFindingsLog,
+                            QStringLiteral("Other EtherTypes"),
+                            pcapReportCount(
+                                *combinedOutput,
+                                QStringLiteral("Other EtherTypes:")
+                            )
+                        );
+                    }
+
                     const bool hasNotableActivity =
                         pcapReportCount(
                             *combinedOutput,
