@@ -662,6 +662,117 @@ static QString extractFriendlySummary(
     );
 }
 
+static QString extractReportValue(
+    const QString &output,
+    const QString &label
+)
+{
+    const QRegularExpression pattern(
+        QStringLiteral(R"((?:^|\n)\s*)") +
+        QRegularExpression::escape(label) +
+        QStringLiteral(R"(\s*([^\r\n]+))"),
+        QRegularExpression::CaseInsensitiveOption
+    );
+
+    const QRegularExpressionMatch match = pattern.match(output);
+
+    if (!match.hasMatch()) {
+        return QString();
+    }
+
+    return match.captured(1).trimmed();
+}
+
+static QString extractStructuredFindings(
+    const QString &output,
+    int exitCode,
+    const QString &target,
+    bool recursiveMode
+)
+{
+    const QString outputDirectory =
+        extractReportValue(output, QStringLiteral("Output :"));
+
+    const QString recoveredFiles =
+        extractReportValue(output, QStringLiteral("Files  :"));
+
+    const QString started =
+        extractReportValue(output, QStringLiteral("Started   :"));
+
+    const QString completed =
+        extractReportValue(output, QStringLiteral("Completed :"));
+
+    const QString duration =
+        extractReportValue(output, QStringLiteral("Duration  :"));
+
+    const bool completedSuccessfully =
+        exitCode == 0 &&
+        output.contains(
+            QStringLiteral("EXTRACT COMPLETE"),
+            Qt::CaseInsensitive
+        );
+
+    QString report;
+
+    report += QStringLiteral("EXTRACT Findings\n");
+    report += QStringLiteral("Target: ") + target + QStringLiteral("\n");
+    report += QStringLiteral("Recursive mode: ") +
+              QString(recursiveMode ? QStringLiteral("Yes")
+                                    : QStringLiteral("No")) +
+              QStringLiteral("\n");
+
+    if (!outputDirectory.isEmpty()) {
+        report += QStringLiteral("Output directory: ") +
+                  outputDirectory +
+                  QStringLiteral("\n");
+    }
+
+    if (!recoveredFiles.isEmpty()) {
+        report += QStringLiteral("Files recovered: ") +
+                  recoveredFiles +
+                  QStringLiteral("\n");
+    }
+
+    if (!started.isEmpty()) {
+        report += QStringLiteral("Started: ") +
+                  started +
+                  QStringLiteral("\n");
+    }
+
+    if (!completed.isEmpty()) {
+        report += QStringLiteral("Completed: ") +
+                  completed +
+                  QStringLiteral("\n");
+    }
+
+    if (!duration.isEmpty()) {
+        report += QStringLiteral("Duration: ") +
+                  duration +
+                  QStringLiteral("\n");
+    }
+
+    report += QStringLiteral("\nResult\n");
+
+    if (completedSuccessfully) {
+        report += QStringLiteral(
+            "Extraction completed successfully.\n"
+        );
+    } else if (exitCode == 0) {
+        report += QStringLiteral(
+            "Extraction finished. Review the raw output for details.\n"
+        );
+    } else {
+        report += QStringLiteral(
+            "Extraction did not complete successfully.\n"
+        );
+    }
+
+    report += QStringLiteral("Exit code: ") +
+              QString::number(exitCode);
+
+    return report;
+}
+
 static QString lyzerFriendlySummary(
     const QString &output,
     int exitCode,
@@ -3388,7 +3499,7 @@ void MainWindow::buildExtractTab()
     extractTab = new QWidget(this);
     QVBoxLayout *mainLayout = new QVBoxLayout(extractTab);
 
-    QLabel *title = new QLabel("K1Wi Framework - EXTRACT Prototype", extractTab);
+    QLabel *title = new QLabel("K1Wi Framework - EXTRACT", extractTab);
     mainLayout->addWidget(title);
 
     QHBoxLayout *targetLayout = new QHBoxLayout();
@@ -3410,10 +3521,31 @@ void MainWindow::buildExtractTab()
     buttonLayout->addWidget(clearButton);
     mainLayout->addLayout(buttonLayout);
 
-    extractOutputLog = new QTextEdit(extractTab);
+    extractDetailsTabs = new QTabWidget(extractTab);
+
+    extractFindingsLog = new QTextEdit(extractDetailsTabs);
+    extractFindingsLog->setReadOnly(true);
+    extractFindingsLog->append(
+        QStringLiteral("[GUI] EXTRACT findings will appear here.")
+    );
+
+    extractOutputLog = new QTextEdit(extractDetailsTabs);
     extractOutputLog->setReadOnly(true);
-    extractOutputLog->append("[GUI] EXTRACT panel ready.");
-    mainLayout->addWidget(extractOutputLog);
+    extractOutputLog->append(
+        QStringLiteral("[GUI] EXTRACT panel ready.")
+    );
+
+    extractDetailsTabs->addTab(
+        extractFindingsLog,
+        QStringLiteral("Findings")
+    );
+
+    extractDetailsTabs->addTab(
+        extractOutputLog,
+        QStringLiteral("Raw Output")
+    );
+
+    mainLayout->addWidget(extractDetailsTabs);
 
     connect(targetBrowse, &QPushButton::clicked, this, [this]() {
         QString path = QFileDialog::getOpenFileName(this, "Select EXTRACT Target");
@@ -3424,7 +3556,19 @@ void MainWindow::buildExtractTab()
 
     connect(runButton, &QPushButton::clicked, this, &MainWindow::runExtractCommand);
 
-    connect(clearButton, &QPushButton::clicked, extractOutputLog, &QTextEdit::clear);
+    connect(clearButton, &QPushButton::clicked, this, [this]() {
+        extractDetailsTabs->setCurrentIndex(0);
+        extractFindingsLog->clear();
+        extractOutputLog->clear();
+
+        extractFindingsLog->append(
+            QStringLiteral("[GUI] EXTRACT findings will appear here.")
+        );
+
+        extractOutputLog->append(
+            QStringLiteral("[GUI] EXTRACT panel ready.")
+        );
+    });
 }
 
 void MainWindow::buildDelTab()
@@ -7054,6 +7198,8 @@ void MainWindow::runLyzerCommand()
 }
 void MainWindow::runExtractCommand()
 {
+    extractDetailsTabs->setCurrentIndex(1);
+    extractFindingsLog->clear();
     extractOutputLog->clear();
 
     const QString target = extractTargetPath->text().trimmed();
@@ -7172,6 +7318,19 @@ void MainWindow::runExtractCommand()
             extractOutputLog->append("");
 
             if (exitStatus == QProcess::NormalExit) {
+                extractFindingsLog->setPlainText(
+                    extractStructuredFindings(
+                        *combinedOutput,
+                        exitCode,
+                        target,
+                        recursiveMode
+                    )
+                );
+
+                extractDetailsTabs->setCurrentWidget(
+                    extractFindingsLog
+                );
+
                 const QString summary = extractFriendlySummary(
                     *combinedOutput,
                     exitCode,

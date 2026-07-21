@@ -36,8 +36,10 @@ private:
     QTextEdit *lyzerOutputLog;
 
     QWidget *extractTab;
+    QTabWidget *extractDetailsTabs;
     QLineEdit *extractTargetPath;
     QCheckBox *extractRecursiveCheck;
+    QTextEdit *extractFindingsLog;
     QTextEdit *extractOutputLog;
     
     QWidget *delTab;
