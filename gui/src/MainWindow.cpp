@@ -2828,6 +2828,110 @@ void MainWindow::buildPcapTab()
             );
         };
 
+    const auto suggestedExtractExportPath =
+        [this](const QString &suffix) {
+            const QFileInfo sourceInfo(
+                extractTargetPath->text().trimmed()
+            );
+
+            QString baseName = sourceInfo.completeBaseName();
+
+            if (baseName.isEmpty()) {
+                baseName = QStringLiteral("k1wi_extract");
+            }
+
+            QString directory = QDir::currentPath();
+
+            if (
+                !sourceInfo.absolutePath().isEmpty() &&
+                sourceInfo.absoluteDir().exists()
+            ) {
+                directory = sourceInfo.absolutePath();
+            }
+
+            return QDir(directory).absoluteFilePath(
+                QStringLiteral("%1_extract_%2.txt")
+                    .arg(baseName, suffix)
+            );
+        };
+
+    const auto saveExtractText =
+        [this](
+            const QString &textToSave,
+            const QString &dialogTitle,
+            const QString &suggestedPath
+        ) {
+            if (textToSave.trimmed().isEmpty()) {
+                QMessageBox::warning(
+                    this,
+                    QStringLiteral("K1Wi EXTRACT"),
+                    QStringLiteral(
+                        "There is no EXTRACT report content to save."
+                    )
+                );
+                return;
+            }
+
+            const QString destination =
+                QFileDialog::getSaveFileName(
+                    this,
+                    dialogTitle,
+                    suggestedPath,
+                    QStringLiteral(
+                        "Text reports (*.txt);;All files (*)"
+                    )
+                );
+
+            if (destination.isEmpty()) {
+                return;
+            }
+
+            QSaveFile outputFile(destination);
+
+            if (!outputFile.open(
+                    QIODevice::WriteOnly |
+                    QIODevice::Text
+                )) {
+                QMessageBox::critical(
+                    this,
+                    QStringLiteral("K1Wi EXTRACT"),
+                    QStringLiteral(
+                        "Unable to open the selected report file.\n\n%1"
+                    ).arg(outputFile.errorString())
+                );
+                return;
+            }
+
+            QTextStream stream(&outputFile);
+            stream << textToSave;
+
+            if (!textToSave.endsWith(QChar('\n'))) {
+                stream << QChar('\n');
+            }
+
+            if (
+                stream.status() != QTextStream::Ok ||
+                !outputFile.commit()
+            ) {
+                QMessageBox::critical(
+                    this,
+                    QStringLiteral("K1Wi EXTRACT"),
+                    QStringLiteral(
+                        "The EXTRACT report could not be saved completely.\n\n%1"
+                    ).arg(outputFile.errorString())
+                );
+                return;
+            }
+
+            QMessageBox::information(
+                this,
+                QStringLiteral("K1Wi EXTRACT"),
+                QStringLiteral(
+                    "EXTRACT report saved successfully.\n\n%1"
+                ).arg(destination)
+            );
+        };
+
     const auto suggestedLyzerExportPath =
         [this](const QString &suffix) {
             const QFileInfo sourceInfo(
@@ -3061,7 +3165,10 @@ void MainWindow::buildPcapTab()
             QTabWidget *detailsTabs = nullptr;
             QString moduleName;
 
-            if (selectedModule == lyzerTab) {
+            if (selectedModule == extractTab) {
+                detailsTabs = extractDetailsTabs;
+                moduleName = QStringLiteral("EXTRACT");
+            } else if (selectedModule == lyzerTab) {
                 detailsTabs = lyzerDetailsTabs;
                 moduleName = QStringLiteral("LYZER");
             } else if (selectedModule == hashTab) {
@@ -3134,6 +3241,8 @@ void MainWindow::buildPcapTab()
             suggestedEntropyExportPath,
             saveHashText,
             suggestedHashExportPath,
+            saveExtractText,
+            suggestedExtractExportPath,
             saveLyzerText,
             suggestedLyzerExportPath
         ]() {
@@ -3143,7 +3252,10 @@ void MainWindow::buildPcapTab()
             QTabWidget *detailsTabs = nullptr;
             QString moduleName;
 
-            if (selectedModule == lyzerTab) {
+            if (selectedModule == extractTab) {
+                detailsTabs = extractDetailsTabs;
+                moduleName = QStringLiteral("EXTRACT");
+            } else if (selectedModule == lyzerTab) {
                 detailsTabs = lyzerDetailsTabs;
                 moduleName = QStringLiteral("LYZER");
             } else if (selectedModule == hashTab) {
@@ -3190,7 +3302,13 @@ void MainWindow::buildPcapTab()
 
             tabName.replace(QChar(' '), QChar('_'));
 
-            if (selectedModule == lyzerTab) {
+            if (selectedModule == extractTab) {
+                saveExtractText(
+                    currentLog->toPlainText(),
+                    QStringLiteral("Save Current EXTRACT View"),
+                    suggestedExtractExportPath(tabName)
+                );
+            } else if (selectedModule == lyzerTab) {
                 saveLyzerText(
                     currentLog->toPlainText(),
                     QStringLiteral("Save Current LYZER View"),
@@ -3246,13 +3364,23 @@ void MainWindow::buildPcapTab()
             suggestedEntropyExportPath,
             saveHashText,
             suggestedHashExportPath,
+            saveExtractText,
+            suggestedExtractExportPath,
             saveLyzerText,
             suggestedLyzerExportPath
         ]() {
             const QWidget *selectedModule =
                 tabs->currentWidget();
 
-            if (selectedModule == lyzerTab) {
+            if (selectedModule == extractTab) {
+                saveExtractText(
+                    extractOutputLog->toPlainText(),
+                    QStringLiteral("Save Complete EXTRACT Raw Report"),
+                    suggestedExtractExportPath(
+                        QStringLiteral("raw_report")
+                    )
+                );
+            } else if (selectedModule == lyzerTab) {
                 saveLyzerText(
                     lyzerOutputLog->toPlainText(),
                     QStringLiteral("Save Complete LYZER Raw Report"),
@@ -3312,6 +3440,7 @@ void MainWindow::buildPcapTab()
 
             const bool reportTabSelected =
                 selectedTab == pcapTab ||
+                selectedTab == extractTab ||
                 selectedTab == lyzerTab ||
                 selectedTab == hashTab ||
                 selectedTab == stringTab ||
@@ -3328,7 +3457,7 @@ void MainWindow::buildPcapTab()
                         "Copy the currently selected results view"
                     )
                     : QStringLiteral(
-                        "Available in LYZER, HASH, STRING, MAGIC, ENTROPY, and PCAP"
+                        "Available in EXTRACT, LYZER, HASH, STRING, MAGIC, ENTROPY, and PCAP"
                     )
             );
 
@@ -3338,7 +3467,7 @@ void MainWindow::buildPcapTab()
                         "Save the currently selected results view"
                     )
                     : QStringLiteral(
-                        "Available in LYZER, HASH, STRING, MAGIC, ENTROPY, and PCAP"
+                        "Available in EXTRACT, LYZER, HASH, STRING, MAGIC, ENTROPY, and PCAP"
                     )
             );
 
@@ -3348,7 +3477,7 @@ void MainWindow::buildPcapTab()
                         "Save the complete raw analysis report"
                     )
                     : QStringLiteral(
-                        "Available in LYZER, HASH, STRING, MAGIC, ENTROPY, and PCAP"
+                        "Available in EXTRACT, LYZER, HASH, STRING, MAGIC, ENTROPY, and PCAP"
                     )
             );
         };
