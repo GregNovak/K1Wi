@@ -43,9 +43,11 @@ private:
     QTextEdit *extractOutputLog;
     
     QWidget *delTab;
+    QTabWidget *delDetailsTabs;
     QLineEdit *delTargetPath;
     QComboBox *delStandardCombo;
     QLineEdit *delCustomPassCount;
+    QTextEdit *delFindingsLog;
     QTextEdit *delOutputLog;
     
     QWidget *hashTab;

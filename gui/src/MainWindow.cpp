@@ -600,6 +600,68 @@ static QString delFriendlySummary(const QString &output, int exitCode, const QSt
     );
 }
 
+static QString delStructuredFindings(
+    const QString &output,
+    int exitCode,
+    const QString &target,
+    const QString &standardLabel,
+    bool targetStillExists
+)
+{
+    QString findings;
+
+    findings += QStringLiteral("DEL Findings\n");
+    findings += QStringLiteral("Target: ") + target + QChar('\n');
+    findings += QStringLiteral("Deletion method: ") +
+                standardLabel + QChar('\n');
+
+    const bool cliReportedSuccess =
+        output.contains(
+            QStringLiteral("Secure deletion complete"),
+            Qt::CaseInsensitive
+        );
+
+    findings += QStringLiteral("Exit code: ") +
+                QString::number(exitCode) + QChar('\n');
+
+    findings += QStringLiteral("Path still exists: ") +
+                (
+                    targetStillExists
+                        ? QStringLiteral("Yes")
+                        : QStringLiteral("No")
+                );
+
+    findings += QStringLiteral("\n\nResult\n");
+
+    if (
+        exitCode == 0 &&
+        cliReportedSuccess &&
+        !targetStillExists
+    ) {
+        findings += QStringLiteral(
+            "Secure deletion completed successfully.\n"
+            "The selected pathname no longer exists."
+        );
+    } else if (
+        exitCode == 0 &&
+        cliReportedSuccess &&
+        targetStillExists
+    ) {
+        findings += QStringLiteral(
+            "K1Wi reported completion, but the selected pathname "
+            "still exists.\n"
+            "Treat the deletion as unverified."
+        );
+    } else {
+        findings += QStringLiteral(
+            "Secure deletion did not complete successfully.\n"
+            "Review Raw Output before assuming the file was deleted."
+        );
+    }
+
+    return findings;
+}
+
 static QString extractFriendlySummary(
     const QString &output,
     int exitCode,
@@ -3705,7 +3767,7 @@ void MainWindow::buildDelTab()
     delTab = new QWidget(this);
     QVBoxLayout *mainLayout = new QVBoxLayout(delTab);
 
-    QLabel *title = new QLabel("K1Wi Framework - DEL Prototype", delTab);
+    QLabel *title = new QLabel("K1Wi Framework - DEL", delTab);
     mainLayout->addWidget(title);
 
     QLabel *warning = new QLabel(
@@ -3716,6 +3778,17 @@ void MainWindow::buildDelTab()
 );
     warning->setWordWrap(true);
     mainLayout->addWidget(warning);
+
+    QLabel *storageWarning = new QLabel(
+        QStringLiteral(
+            "Storage note: overwrite deletion is most dependable on "
+            "traditional magnetic disks. SSDs, flash storage, snapshots, "
+            "backups, and synchronized copies may retain other data copies."
+        ),
+        delTab
+    );
+    storageWarning->setWordWrap(true);
+    mainLayout->addWidget(storageWarning);
 
     QHBoxLayout *targetLayout = new QHBoxLayout();
     delTargetPath = new QLineEdit(delTab);
@@ -3753,11 +3826,29 @@ void MainWindow::buildDelTab()
     buttonLayout->addWidget(clearButton);
     mainLayout->addLayout(buttonLayout);
 
-    delOutputLog = new QTextEdit(delTab);
+    delDetailsTabs = new QTabWidget(delTab);
+
+    delFindingsLog = new QTextEdit(delDetailsTabs);
+    delFindingsLog->setReadOnly(true);
+    delFindingsLog->append(
+        QStringLiteral("[GUI] DEL findings will appear here.")
+    );
+
+    delOutputLog = new QTextEdit(delDetailsTabs);
     delOutputLog->setReadOnly(true);
-    delOutputLog->append("[GUI] DEL panel ready.");
-    delOutputLog->append("[GUI] DEL command wiring will be added after safety controls are verified.");
-    mainLayout->addWidget(delOutputLog);
+    delOutputLog->append(
+        QStringLiteral("[GUI] DEL panel ready.")
+    );
+    delOutputLog->append(
+        QStringLiteral(
+            "[GUI] Select one file and choose a secure deletion method."
+        )
+    );
+
+    delDetailsTabs->addTab(delFindingsLog, QStringLiteral("Findings"));
+    delDetailsTabs->addTab(delOutputLog, QStringLiteral("Raw Output"));
+
+    mainLayout->addWidget(delDetailsTabs);
 
     connect(targetBrowse, &QPushButton::clicked, this, [this]() {
         QString path = QFileDialog::getOpenFileName(this, "Select DEL Target");
@@ -3781,7 +3872,24 @@ void MainWindow::buildDelTab()
 
     connect(runButton, &QPushButton::clicked, this, &MainWindow::runDelCommand);
 
-    connect(clearButton, &QPushButton::clicked, delOutputLog, &QTextEdit::clear);
+    connect(clearButton, &QPushButton::clicked, this, [this]() {
+        delDetailsTabs->setCurrentIndex(0);
+        delFindingsLog->clear();
+        delOutputLog->clear();
+
+        delFindingsLog->append(
+            QStringLiteral("[GUI] DEL findings will appear here.")
+        );
+
+        delOutputLog->append(
+            QStringLiteral("[GUI] DEL panel ready.")
+        );
+        delOutputLog->append(
+            QStringLiteral(
+                "[GUI] Select one file and choose a secure deletion method."
+            )
+        );
+    });
 }
 
 void MainWindow::buildHashTab()
@@ -7563,7 +7671,13 @@ void MainWindow::runExtractCommand()
 
 void MainWindow::runDelCommand()
 {
+    delDetailsTabs->setCurrentIndex(0);
+    delFindingsLog->clear();
     delOutputLog->clear();
+
+    delFindingsLog->append(
+        QStringLiteral("[GUI] DEL findings will appear after completion.")
+    );
 
     const QString target = delTargetPath->text().trimmed();
     const QString standard = delStandardCombo->currentData().toString();
@@ -7739,6 +7853,25 @@ void MainWindow::runDelCommand()
                     standardLabel
                 );
 
+                const bool targetStillExists =
+                    QFileInfo::exists(
+                        targetInfo.absoluteFilePath()
+                    );
+
+                delFindingsLog->setPlainText(
+                    delStructuredFindings(
+                        *combinedOutput,
+                        exitCode,
+                        targetInfo.absoluteFilePath(),
+                        standardLabel,
+                        targetStillExists
+                    )
+                );
+
+                delDetailsTabs->setCurrentWidget(
+                    delFindingsLog
+                );
+
                 if (!summary.isEmpty()) {
                     appendStyledLine(delOutputLog, "Summary", "#0057b8", true);
                     appendStyledLine(delOutputLog, "-------", "#0057b8", true);
@@ -7755,6 +7888,19 @@ void MainWindow::runDelCommand()
                     QString("Process finished with exit code %1").arg(exitCode)
                 );
             } else {
+                delFindingsLog->setPlainText(
+                    QStringLiteral(
+                        "DEL Findings\n\n"
+                        "Result\n"
+                        "DEL process crashed or was terminated.\n"
+                        "Do not assume the selected file was deleted."
+                    )
+                );
+
+                delDetailsTabs->setCurrentWidget(
+                    delFindingsLog
+                );
+
                 appendStyledLine(
                     delOutputLog,
                     "[RESULT] DEL process crashed or was terminated.",
