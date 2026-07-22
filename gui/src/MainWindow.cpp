@@ -556,7 +556,7 @@ static QString copyFriendlySummary(
     output.contains(QStringLiteral("error:"), Qt::CaseInsensitive) ||
     output.contains(QStringLiteral("[ERROR]"), Qt::CaseInsensitive)) {
     return QStringLiteral(
-        "[RESULT] LYZER did not complete successfully.\n"
+        "[RESULT] COPY did not complete successfully.\n"
         "[RESULT] K1Wi reported an error or failure. Check the detailed output above."
     );
 }
@@ -565,6 +565,187 @@ static QString copyFriendlySummary(
         "[RESULT] COPY finished with a non-zero exit code.\n"
         "[RESULT] Check the detailed K1Wi output above before trusting the destination."
     );
+}
+
+static QString copyReportValue(
+    const QString &output,
+    const QString &wantedLabel
+)
+{
+    const QStringList lines = output.split(QChar(10));
+
+    for (const QString &line : lines) {
+        const QString trimmed = line.trimmed();
+        const int colonIndex = trimmed.indexOf(QChar(':'));
+
+        if (colonIndex < 0) {
+            continue;
+        }
+
+        const QString label = trimmed.left(colonIndex).trimmed();
+
+        if (label.compare(wantedLabel, Qt::CaseInsensitive) == 0) {
+            return trimmed.mid(colonIndex + 1).trimmed();
+        }
+    }
+
+    return QString();
+}
+
+static QString copyStructuredFindings(
+    const QString &output,
+    int exitCode,
+    const QString &source,
+    const QString &destination,
+    const QString &modeLabel,
+    bool forceEnabled,
+    bool recursiveMode
+)
+{
+    QString findings;
+
+    QString bytesCopied = copyReportValue(
+        output,
+        QStringLiteral("Bytes copied")
+    );
+
+    QString sourceSize = copyReportValue(
+        output,
+        QStringLiteral("Source size")
+    );
+
+    QString destinationSize = copyReportValue(
+        output,
+        QStringLiteral("Dest size")
+    );
+
+    QString sizeMatch = copyReportValue(
+        output,
+        QStringLiteral("Size match")
+    );
+
+    QString sha256Match = copyReportValue(
+        output,
+        QStringLiteral("SHA256 match")
+    );
+
+    QString md5Match = copyReportValue(
+        output,
+        QStringLiteral("MD5 match")
+    );
+
+    QString verification = copyReportValue(
+        output,
+        QStringLiteral("Verification")
+    );
+
+    if (verification.isEmpty()) {
+        verification = copyReportValue(
+            output,
+            QStringLiteral("Result")
+        );
+    }
+
+    QString manifest = copyReportValue(
+        output,
+        QStringLiteral("Manifest")
+    );
+
+    const bool verificationPassed =
+        exitCode == 0 &&
+        (
+            verification.compare(
+                QStringLiteral("PASS"),
+                Qt::CaseInsensitive
+            ) == 0 ||
+            output.contains(
+                QStringLiteral("copy verified successfully"),
+                Qt::CaseInsensitive
+            )
+        );
+
+    const auto shownValue = [](const QString &value) {
+        return value.isEmpty()
+            ? QStringLiteral("Not reported")
+            : value;
+    };
+
+    findings += QStringLiteral("COPY Findings\n");
+    findings += QStringLiteral("Source: ") + source + QChar(10);
+    findings += QStringLiteral("Destination: ") + destination + QChar(10);
+    findings += QStringLiteral("Mode: ") + modeLabel + QChar(10);
+    findings += QStringLiteral("Force overwrite / merge: ") +
+                (
+                    forceEnabled
+                        ? QStringLiteral("Enabled")
+                        : QStringLiteral("Disabled")
+                ) +
+                QChar(10);
+
+    findings += QStringLiteral("Bytes copied: ") +
+                shownValue(bytesCopied) +
+                QChar(10);
+
+    findings += QStringLiteral("Source size: ") +
+                shownValue(sourceSize) +
+                QChar(10);
+
+    findings += QStringLiteral("Destination size: ") +
+                shownValue(destinationSize) +
+                QChar(10);
+
+    findings += QStringLiteral("Size match: ") +
+                shownValue(sizeMatch) +
+                QChar(10);
+
+    findings += QStringLiteral("SHA-256 match: ") +
+                shownValue(sha256Match) +
+                QChar(10);
+
+    findings += QStringLiteral("MD5 match: ") +
+                shownValue(md5Match) +
+                QChar(10);
+
+    findings += QStringLiteral("Overall verification: ") +
+                (
+                    verificationPassed
+                        ? QStringLiteral("PASS")
+                        : QStringLiteral("UNVERIFIED")
+                ) +
+                QChar(10);
+
+    if (recursiveMode) {
+        findings += QStringLiteral("Manifest: ") +
+                    shownValue(manifest) +
+                    QChar(10);
+    } else {
+        findings += QStringLiteral(
+            "Manifest: Not reported for this file-copy operation\n"
+        );
+    }
+
+    findings += QStringLiteral("Exit code: ") +
+                QString::number(exitCode);
+
+    findings += QStringLiteral("\n\nResult\n");
+
+    if (verificationPassed) {
+        findings += recursiveMode
+            ? QStringLiteral(
+                "Verified recursive directory copy completed successfully."
+            )
+            : QStringLiteral(
+                "Verified forensic file copy completed successfully.\n"
+                "Source and destination size, SHA-256, and MD5 values match."
+            );
+    } else {
+        findings += QStringLiteral(
+            "COPY verification was not confirmed.\n"
+            "Review Raw Output before trusting the destination."
+        );
+    }
+
+    return findings;
 }
 
 static QString delFriendlySummary(const QString &output, int exitCode, const QString &target, const QString &standardLabel)
@@ -1563,7 +1744,7 @@ void MainWindow::buildCopyTab()
     copyTab = new QWidget(this);
     QVBoxLayout *mainLayout = new QVBoxLayout(copyTab);
 
-    QLabel *title = new QLabel("K1Wi Framework - COPY Prototype", copyTab);
+    QLabel *title = new QLabel("K1Wi Framework - COPY", copyTab);
     mainLayout->addWidget(title);
 
     QHBoxLayout *sourceLayout = new QHBoxLayout();
@@ -1601,9 +1782,31 @@ void MainWindow::buildCopyTab()
     buttonLayout->addWidget(clearButton);
     mainLayout->addLayout(buttonLayout);
 
-    outputLog = new QTextEdit(copyTab);
+    copyDetailsTabs = new QTabWidget(copyTab);
+
+    copyFindingsLog = new QTextEdit(copyDetailsTabs);
+    copyFindingsLog->setReadOnly(true);
+    copyFindingsLog->append(
+        QStringLiteral("[GUI] COPY verification findings will appear here.")
+    );
+
+    outputLog = new QTextEdit(copyDetailsTabs);
     outputLog->setReadOnly(true);
-    mainLayout->addWidget(outputLog);
+    outputLog->append(
+        QStringLiteral("[GUI] COPY panel ready.")
+    );
+
+    copyDetailsTabs->addTab(
+        copyFindingsLog,
+        QStringLiteral("Findings")
+    );
+
+    copyDetailsTabs->addTab(
+        outputLog,
+        QStringLiteral("Raw Output")
+    );
+
+    mainLayout->addWidget(copyDetailsTabs);
 
     connect(sourceBrowse, &QPushButton::clicked, this, [this]() {
         QString path;
@@ -1637,7 +1840,21 @@ void MainWindow::buildCopyTab()
     });
 
     connect(runButton, &QPushButton::clicked, this, &MainWindow::runCopyCommand);
-    connect(clearButton, &QPushButton::clicked, outputLog, &QTextEdit::clear);
+    connect(clearButton, &QPushButton::clicked, this, [this]() {
+        copyDetailsTabs->setCurrentIndex(0);
+        copyFindingsLog->clear();
+        outputLog->clear();
+
+        copyFindingsLog->append(
+            QStringLiteral(
+                "[GUI] COPY verification findings will appear here."
+            )
+        );
+
+        outputLog->append(
+            QStringLiteral("[GUI] COPY panel ready.")
+        );
+    });
 }
 
 void MainWindow::buildStringTab()
@@ -7111,7 +7328,14 @@ void MainWindow::runPcapCommand()
 
 void MainWindow::runCopyCommand()
 {
+    copyFindingsLog->clear();
     outputLog->clear();
+
+    copyFindingsLog->append(
+        QStringLiteral("[GUI] Waiting for COPY verification results.")
+    );
+
+    copyDetailsTabs->setCurrentWidget(copyFindingsLog);
 
     const QString source = sourcePath->text().trimmed();
     const QString destination = destPath->text().trimmed();
@@ -7145,6 +7369,9 @@ void MainWindow::runCopyCommand()
     const QFileInfo sourceInfo(source);
     const bool recursiveMode =
         copyModeCombo->currentData().toString() == QStringLiteral("recursive");
+
+    const QString modeLabel = copyModeCombo->currentText();
+    const bool forceEnabled = forceCheck->isChecked();
 
     if (recursiveMode && !sourceInfo.isDir()) {
         QMessageBox::warning(
@@ -7205,7 +7432,7 @@ void MainWindow::runCopyCommand()
     args << source;
     args << destination;
 
-    if (forceCheck->isChecked()) {
+    if (forceEnabled) {
         args << "--force";
     }
 
@@ -7261,13 +7488,30 @@ void MainWindow::runCopyCommand()
         process,
         QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
         this,
-        [this, process, combinedOutput, destination, recursiveMode](
+        [this, process, combinedOutput, source, destination,
+         modeLabel, forceEnabled, recursiveMode](
             int exitCode,
             QProcess::ExitStatus exitStatus
         ) {
             outputLog->append("");
 
             if (exitStatus == QProcess::NormalExit) {
+                copyFindingsLog->setPlainText(
+                    copyStructuredFindings(
+                        *combinedOutput,
+                        exitCode,
+                        source,
+                        destination,
+                        modeLabel,
+                        forceEnabled,
+                        recursiveMode
+                    )
+                );
+
+                copyDetailsTabs->setCurrentWidget(
+                    copyFindingsLog
+                );
+
                 const QString summary = copyFriendlySummary(
                     *combinedOutput,
                     exitCode,
@@ -7286,7 +7530,21 @@ void MainWindow::runCopyCommand()
                     QString("Process finished with exit code %1").arg(exitCode)
                 );
             } else {
-                outputLog->append("[GUI] COPY process crashed or was terminated.");
+                copyFindingsLog->setPlainText(
+                    QStringLiteral(
+                        "COPY Findings\n"
+                        "Result: COPY process crashed or was terminated.\n"
+                        "Verification: UNVERIFIED"
+                    )
+                );
+
+                copyDetailsTabs->setCurrentWidget(
+                    copyFindingsLog
+                );
+
+                outputLog->append(
+                    "[GUI] COPY process crashed or was terminated."
+                );
             }
 
             delete combinedOutput;
@@ -7297,6 +7555,18 @@ void MainWindow::runCopyCommand()
     process->start(cliInfo.absoluteFilePath(), args);
 
     if (!process->waitForStarted()) {
+        copyFindingsLog->setPlainText(
+            QStringLiteral(
+                "COPY Findings\n"
+                "Result: Failed to start COPY process.\n"
+                "Verification: UNVERIFIED"
+            )
+        );
+
+        copyDetailsTabs->setCurrentWidget(
+            copyFindingsLog
+        );
+
         outputLog->append("[GUI] Failed to start COPY process.");
         delete combinedOutput;
         process->deleteLater();

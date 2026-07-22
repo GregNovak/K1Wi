@@ -22,10 +22,12 @@ private:
     QTabWidget *tabs;
 
     QWidget *copyTab;
+    QTabWidget *copyDetailsTabs;
     QLineEdit *sourcePath;
     QLineEdit *destPath;
     QComboBox *copyModeCombo;
     QCheckBox *forceCheck;
+    QTextEdit *copyFindingsLog;
     QTextEdit *outputLog;
 
     QWidget *lyzerTab;
