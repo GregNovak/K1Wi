@@ -81,6 +81,12 @@ private:
     QTextEdit *magicFindingsLog;
     QTextEdit *magicOutputLog;
     
+    QWidget *elfInfoTab;
+    QTabWidget *elfInfoDetailsTabs;
+    QLineEdit *elfInfoTargetPath;
+    QTextEdit *elfInfoFindingsLog;
+    QTextEdit *elfInfoOutputLog;
+
     QWidget *entropyTab;
     QTabWidget *entropyDetailsTabs;
     QComboBox *entropyModeCombo;
@@ -105,6 +111,7 @@ private:
     void buildHashTab();
     void buildStringTab();
     void buildMagicTab();
+    void buildElfInfoTab();
     void buildEntropyTab();
     void buildPcapTab();
     
@@ -115,6 +122,7 @@ private:
     void runHashCommand();
     void runStringCommand();
     void runMagicCommand();
+    void runElfInfoCommand();
     void runEntropyCommand();
     void runPcapCommand();
 };

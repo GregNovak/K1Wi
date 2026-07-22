@@ -13,6 +13,7 @@
 #include <QProcess>
 #include <QPushButton>
 #include <QTextEdit>
+#include <QTextCursor>
 #include <QVBoxLayout>
 #include <QWidget>
 #include <QDir>
@@ -446,6 +447,287 @@ static QString resultColorForSummary(const QString &summary, int exitCode)
     return QStringLiteral("#0b7a0b");
 }
 
+\
+static QString elfInfoReportValue(
+    const QString &output,
+    const QString &label
+)
+{
+    const QStringList lines = output.split(QChar(10));
+
+    for (const QString &line : lines) {
+        const QString trimmed = line.trimmed();
+
+        if (!trimmed.startsWith(label)) {
+            continue;
+        }
+
+        const int colonIndex = trimmed.indexOf(QChar(':'));
+
+        if (colonIndex < 0) {
+            continue;
+        }
+
+        return trimmed.mid(colonIndex + 1).trimmed();
+    }
+
+    return QString();
+}
+
+
+static QString elfInfoClass(const QString &output)
+{
+    const QRegularExpression expression(
+        QStringLiteral(R"(ELFINFO:\s+.+\s+\(([^)]+)\))")
+    );
+
+    const QRegularExpressionMatch match =
+        expression.match(output);
+
+    return match.hasMatch()
+        ? match.captured(1).trimmed()
+        : QString();
+}
+
+
+static QString elfInfoSymbolCount(
+    const QString &output,
+    const QString &tableName
+)
+{
+    const QRegularExpression expression(
+        QStringLiteral(R"(\b)") +
+        QRegularExpression::escape(tableName) +
+        QStringLiteral(R"(\s+\(([0-9]+)\s+symbols?\))")
+    );
+
+    const QRegularExpressionMatch match =
+        expression.match(output);
+
+    return match.hasMatch()
+        ? match.captured(1)
+        : QString();
+}
+
+
+static QStringList elfInfoNeededLibraries(
+    const QString &output
+)
+{
+    QStringList libraries;
+    const QStringList lines = output.split(QChar(10));
+
+    for (const QString &line : lines) {
+        const QString trimmed = line.trimmed();
+
+        if (!trimmed.startsWith(QStringLiteral("NEEDED:"))) {
+            continue;
+        }
+
+        const QString library =
+            trimmed.mid(QStringLiteral("NEEDED:").size()).trimmed();
+
+        if (!library.isEmpty()) {
+            libraries.append(library);
+        }
+    }
+
+    libraries.removeDuplicates();
+    return libraries;
+}
+
+
+static QString elfInfoTypeDescription(
+    const QString &rawType
+)
+{
+    if (rawType.compare(
+            QStringLiteral("0x0002"),
+            Qt::CaseInsensitive
+        ) == 0) {
+        return QStringLiteral(
+            "Executable file (ET_EXEC, normally non-PIE)"
+        );
+    }
+
+    if (rawType.compare(
+            QStringLiteral("0x0003"),
+            Qt::CaseInsensitive
+        ) == 0) {
+        return QStringLiteral(
+            "Dynamic object (ET_DYN, PIE executable or shared object)"
+        );
+    }
+
+    if (rawType.isEmpty()) {
+        return QStringLiteral("Not reported");
+    }
+
+    return QStringLiteral("Unknown or unsupported type (") +
+           rawType +
+           QStringLiteral(")");
+}
+
+
+static QString elfInfoMachineDescription(
+    const QString &rawMachine
+)
+{
+    if (rawMachine.compare(
+            QStringLiteral("0x003e"),
+            Qt::CaseInsensitive
+        ) == 0) {
+        return QStringLiteral("AMD64 / x86-64");
+    }
+
+    if (rawMachine.compare(
+            QStringLiteral("0x0003"),
+            Qt::CaseInsensitive
+        ) == 0) {
+        return QStringLiteral("Intel 80386 / x86");
+    }
+
+    if (rawMachine.compare(
+            QStringLiteral("0x00b7"),
+            Qt::CaseInsensitive
+        ) == 0) {
+        return QStringLiteral("AArch64 / ARM64");
+    }
+
+    if (rawMachine.compare(
+            QStringLiteral("0x0028"),
+            Qt::CaseInsensitive
+        ) == 0) {
+        return QStringLiteral("ARM");
+    }
+
+    if (rawMachine.isEmpty()) {
+        return QStringLiteral("Not reported");
+    }
+
+    return QStringLiteral("Unknown architecture (") +
+           rawMachine +
+           QStringLiteral(")");
+}
+
+
+static QString elfInfoFindingsReport(
+    const QString &output,
+    const QFileInfo &targetInfo,
+    int exitCode
+)
+{
+    const QString elfClass = elfInfoClass(output);
+    const QString entry =
+        elfInfoReportValue(output, QStringLiteral("Entry:"));
+    const QString rawType =
+        elfInfoReportValue(output, QStringLiteral("Type:"));
+    const QString rawMachine =
+        elfInfoReportValue(output, QStringLiteral("Machine:"));
+    const QString sections =
+        elfInfoReportValue(output, QStringLiteral("Sections:"));
+    const QString segments =
+        elfInfoReportValue(output, QStringLiteral("Segments:"));
+
+    const QString dynamicSymbols =
+        elfInfoSymbolCount(output, QStringLiteral("DYNSYM"));
+    const QString staticSymbols =
+        elfInfoSymbolCount(output, QStringLiteral("SYMTAB"));
+
+    const QStringList libraries =
+        elfInfoNeededLibraries(output);
+
+    const auto shownValue = [](const QString &value) {
+        return value.isEmpty()
+            ? QStringLiteral("Not reported")
+            : value;
+    };
+
+    QString findings;
+
+    findings += QStringLiteral("ELFINFO Findings") + QChar(10);
+    findings += QChar(10);
+
+    findings += QStringLiteral("Target") + QChar(10);
+    findings += QStringLiteral("File: ") +
+                targetInfo.absoluteFilePath() +
+                QChar(10);
+    findings += QStringLiteral("File size: ") +
+                QString::number(targetInfo.size()) +
+                QStringLiteral(" bytes") +
+                QChar(10);
+
+    findings += QChar(10);
+    findings += QStringLiteral("ELF Header") + QChar(10);
+    findings += QStringLiteral("ELF class: ") +
+                shownValue(elfClass) +
+                QChar(10);
+    findings += QStringLiteral("Entry point: ") +
+                shownValue(entry) +
+                QChar(10);
+    findings += QStringLiteral("Type: ") +
+                elfInfoTypeDescription(rawType) +
+                QChar(10);
+    findings += QStringLiteral("Raw type: ") +
+                shownValue(rawType) +
+                QChar(10);
+    findings += QStringLiteral("Machine: ") +
+                elfInfoMachineDescription(rawMachine) +
+                QChar(10);
+    findings += QStringLiteral("Raw machine: ") +
+                shownValue(rawMachine) +
+                QChar(10);
+    findings += QStringLiteral("Sections: ") +
+                shownValue(sections) +
+                QChar(10);
+    findings += QStringLiteral("Segments: ") +
+                shownValue(segments) +
+                QChar(10);
+
+    findings += QChar(10);
+    findings += QStringLiteral("Dynamic Linking") + QChar(10);
+
+    if (libraries.isEmpty()) {
+        findings += QStringLiteral(
+            "Needed libraries: None reported"
+        ) + QChar(10);
+    } else {
+        findings += QStringLiteral("Needed libraries: ") +
+                    libraries.join(QStringLiteral(", ")) +
+                    QChar(10);
+    }
+
+    findings += QChar(10);
+    findings += QStringLiteral("Symbols") + QChar(10);
+    findings += QStringLiteral("Dynamic symbols: ") +
+                shownValue(dynamicSymbols) +
+                QChar(10);
+    findings += QStringLiteral("Static symbols: ") +
+                shownValue(staticSymbols) +
+                QChar(10);
+
+    findings += QChar(10);
+    findings += QStringLiteral("Result") + QChar(10);
+
+    if (exitCode == 0 &&
+        output.contains(QStringLiteral("ELFINFO:"))) {
+        findings += QStringLiteral(
+            "ELF analysis completed successfully."
+        ) + QChar(10);
+    } else {
+        findings += QStringLiteral(
+            "ELF analysis did not complete successfully."
+        ) + QChar(10);
+    }
+
+    findings += QStringLiteral("Exit code: ") +
+                QString::number(exitCode) +
+                QChar(10);
+
+    return findings;
+}
+
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -461,6 +743,7 @@ MainWindow::MainWindow(QWidget *parent)
     buildHashTab();
     buildStringTab();
     buildMagicTab();
+    buildElfInfoTab();
     buildEntropyTab();
     buildPcapTab();
     
@@ -472,6 +755,7 @@ MainWindow::MainWindow(QWidget *parent)
     tabs->addTab(hashTab, "HASH");
     tabs->addTab(stringTab, "STRING");
     tabs->addTab(magicTab, "MAGIC");
+    tabs->addTab(elfInfoTab, "ELFINFO");
     tabs->addTab(entropyTab, "ENTROPY");
     tabs->addTab(pcapTab, "PCAP");
     
@@ -2315,6 +2599,163 @@ void MainWindow::buildMagicTab()
 
     updateRecoveryControls();
 }
+
+\
+void MainWindow::buildElfInfoTab()
+{
+    elfInfoTab = new QWidget(this);
+    QVBoxLayout *mainLayout = new QVBoxLayout(elfInfoTab);
+
+    QLabel *title = new QLabel(
+        QStringLiteral("K1Wi Framework - ELFINFO Analyzer"),
+        elfInfoTab
+    );
+    mainLayout->addWidget(title);
+
+    QLabel *description = new QLabel(
+        QStringLiteral(
+            "ELFINFO examines Linux ELF executables and shared objects. "
+            "It reports header properties, entry point, architecture, "
+            "program headers, dynamic dependencies, and symbol tables."
+        ),
+        elfInfoTab
+    );
+    description->setWordWrap(true);
+    mainLayout->addWidget(description);
+
+    QHBoxLayout *targetLayout = new QHBoxLayout();
+
+    elfInfoTargetPath = new QLineEdit(elfInfoTab);
+    elfInfoTargetPath->setPlaceholderText(
+        QStringLiteral("Select an ELF executable or shared object")
+    );
+
+    QPushButton *browseButton = new QPushButton(
+        QStringLiteral("Browse ELF"),
+        elfInfoTab
+    );
+
+    targetLayout->addWidget(
+        new QLabel(QStringLiteral("Target file:"), elfInfoTab)
+    );
+    targetLayout->addWidget(elfInfoTargetPath);
+    targetLayout->addWidget(browseButton);
+
+    mainLayout->addLayout(targetLayout);
+
+    QPushButton *runButton = new QPushButton(
+        QStringLiteral("Run ELFINFO"),
+        elfInfoTab
+    );
+
+    QPushButton *clearButton = new QPushButton(
+        QStringLiteral("Clear Results"),
+        elfInfoTab
+    );
+
+    QHBoxLayout *buttonLayout = new QHBoxLayout();
+    buttonLayout->addWidget(runButton);
+    buttonLayout->addWidget(clearButton);
+    buttonLayout->addStretch();
+
+    mainLayout->addLayout(buttonLayout);
+
+    elfInfoDetailsTabs = new QTabWidget(elfInfoTab);
+
+    elfInfoFindingsLog = new QTextEdit(elfInfoDetailsTabs);
+    elfInfoFindingsLog->setReadOnly(true);
+    elfInfoFindingsLog->append(
+        QStringLiteral(
+            "[GUI] Structured ELFINFO findings will appear here."
+        )
+    );
+
+    elfInfoDetailsTabs->addTab(
+        elfInfoFindingsLog,
+        QStringLiteral("Findings")
+    );
+
+    elfInfoOutputLog = new QTextEdit(elfInfoDetailsTabs);
+    elfInfoOutputLog->setReadOnly(true);
+    elfInfoOutputLog->append(
+        QStringLiteral("[GUI] ELFINFO panel ready.")
+    );
+    elfInfoOutputLog->append(
+        QStringLiteral(
+            "[GUI] Select an ELF executable or shared object to inspect."
+        )
+    );
+
+    elfInfoDetailsTabs->addTab(
+        elfInfoOutputLog,
+        QStringLiteral("Raw Output")
+    );
+
+    mainLayout->addWidget(elfInfoDetailsTabs, 1);
+
+    connect(
+        browseButton,
+        &QPushButton::clicked,
+        this,
+        [this]() {
+            const QString path = QFileDialog::getOpenFileName(
+                this,
+                QStringLiteral("Select ELFINFO Target"),
+                QString(),
+                QStringLiteral(
+                    "ELF files and executables (*)"
+                )
+            );
+
+            if (!path.isEmpty()) {
+                elfInfoTargetPath->setText(path);
+            }
+        }
+    );
+
+    connect(
+        elfInfoTargetPath,
+        &QLineEdit::returnPressed,
+        this,
+        &MainWindow::runElfInfoCommand
+    );
+
+    connect(
+        runButton,
+        &QPushButton::clicked,
+        this,
+        &MainWindow::runElfInfoCommand
+    );
+
+    connect(
+        clearButton,
+        &QPushButton::clicked,
+        this,
+        [this]() {
+            elfInfoDetailsTabs->setCurrentIndex(0);
+
+            elfInfoFindingsLog->clear();
+            elfInfoOutputLog->clear();
+
+            elfInfoFindingsLog->append(
+                QStringLiteral(
+                    "[GUI] Structured ELFINFO findings will appear here."
+                )
+            );
+
+            elfInfoOutputLog->append(
+                QStringLiteral("[GUI] ELFINFO panel ready.")
+            );
+            elfInfoOutputLog->append(
+                QStringLiteral(
+                    "[GUI] Select an ELF executable or shared object "
+                    "to inspect."
+                )
+            );
+        }
+    );
+}
+
 
 void MainWindow::buildEntropyTab()
 {
@@ -5776,6 +6217,271 @@ void MainWindow::runMagicCommand()
         process->deleteLater();
     }
 }
+
+\
+void MainWindow::runElfInfoCommand()
+{
+    elfInfoDetailsTabs->setCurrentWidget(elfInfoOutputLog);
+    elfInfoFindingsLog->clear();
+    elfInfoOutputLog->clear();
+
+    elfInfoFindingsLog->append(
+        QStringLiteral("[GUI] ELFINFO analysis in progress...")
+    );
+
+    const QString target =
+        elfInfoTargetPath->text().trimmed();
+
+    if (target.isEmpty()) {
+        QMessageBox::warning(
+            this,
+            QStringLiteral("K1Wi ELFINFO"),
+            QStringLiteral("Please select a target file.")
+        );
+
+        elfInfoFindingsLog->setPlainText(
+            QStringLiteral(
+                "ELFINFO Findings\n\n"
+                "Result\n"
+                "Analysis was not started because no target was selected."
+            )
+        );
+
+        elfInfoOutputLog->append(
+            QStringLiteral(
+                "[GUI] ELFINFO cancelled: no target file selected."
+            )
+        );
+        return;
+    }
+
+    const QFileInfo targetInfo(target);
+
+    if (!targetInfo.exists() || !targetInfo.isFile()) {
+        QMessageBox::warning(
+            this,
+            QStringLiteral("K1Wi ELFINFO"),
+            QStringLiteral(
+                "The selected target does not exist or is not "
+                "a regular file."
+            )
+        );
+
+        elfInfoFindingsLog->setPlainText(
+            QStringLiteral(
+                "ELFINFO Findings\n\n"
+                "Result\n"
+                "Analysis was not started because the target is invalid."
+            )
+        );
+
+        elfInfoOutputLog->append(
+            QStringLiteral(
+                "[GUI] ELFINFO cancelled: invalid target file."
+            )
+        );
+        elfInfoOutputLog->append(
+            QStringLiteral("[GUI] Target: ") + target
+        );
+        return;
+    }
+
+    const QFileInfo cliInfo(resolveK1wiBinary());
+
+    if (!cliInfo.exists() ||
+        !cliInfo.isFile() ||
+        !cliInfo.isExecutable()) {
+        QMessageBox::critical(
+            this,
+            QStringLiteral("K1Wi ELFINFO"),
+            QStringLiteral(
+                "K1Wi CLI binary was not found or is not executable.\n\n"
+                "Build the CLI first from the project root."
+            )
+        );
+
+        elfInfoFindingsLog->setPlainText(
+            QStringLiteral(
+                "ELFINFO Findings\n\n"
+                "Result\n"
+                "Analysis was not started because the K1Wi CLI "
+                "binary was unavailable."
+            )
+        );
+
+        elfInfoOutputLog->append(
+            QStringLiteral(
+                "[GUI] ELFINFO cancelled: K1Wi CLI binary unavailable."
+            )
+        );
+        elfInfoOutputLog->append(
+            QStringLiteral("[GUI] Expected: ") +
+            cliInfo.absoluteFilePath()
+        );
+        return;
+    }
+
+    QStringList arguments;
+    arguments << QStringLiteral("ELFINFO");
+    arguments << targetInfo.absoluteFilePath();
+
+    elfInfoOutputLog->append(
+        QStringLiteral("[GUI] ELFINFO run summary")
+    );
+    elfInfoOutputLog->append(
+        QStringLiteral("[GUI] Target: ") +
+        targetInfo.absoluteFilePath()
+    );
+    elfInfoOutputLog->append(
+        QStringLiteral("[GUI] File size: ") +
+        QString::number(targetInfo.size()) +
+        QStringLiteral(" bytes")
+    );
+    elfInfoOutputLog->append(QString());
+    elfInfoOutputLog->append(
+        QStringLiteral("Running: ") +
+        cliInfo.absoluteFilePath() +
+        QStringLiteral(" ") +
+        arguments.join(QStringLiteral(" "))
+    );
+    elfInfoOutputLog->append(QString());
+
+    QProcess *process = new QProcess(this);
+    QString *combinedOutput = new QString();
+
+    connect(
+        process,
+        &QProcess::readyReadStandardOutput,
+        this,
+        [this, process, combinedOutput]() {
+            const QString output = stripAnsiCodes(
+                QString::fromLocal8Bit(
+                    process->readAllStandardOutput()
+                )
+            );
+
+            combinedOutput->append(output);
+            elfInfoOutputLog->moveCursor(QTextCursor::End);
+            elfInfoOutputLog->insertPlainText(output);
+        }
+    );
+
+    connect(
+        process,
+        &QProcess::readyReadStandardError,
+        this,
+        [this, process, combinedOutput]() {
+            const QString output = stripAnsiCodes(
+                QString::fromLocal8Bit(
+                    process->readAllStandardError()
+                )
+            );
+
+            combinedOutput->append(output);
+            elfInfoOutputLog->moveCursor(QTextCursor::End);
+            elfInfoOutputLog->insertPlainText(output);
+        }
+    );
+
+    connect(
+        process,
+        QOverload<int, QProcess::ExitStatus>::of(
+            &QProcess::finished
+        ),
+        this,
+        [
+            this,
+            process,
+            combinedOutput,
+            targetInfo
+        ](
+            int exitCode,
+            QProcess::ExitStatus exitStatus
+        ) {
+            elfInfoOutputLog->append(QString());
+
+            if (exitStatus == QProcess::NormalExit) {
+                elfInfoFindingsLog->setPlainText(
+                    elfInfoFindingsReport(
+                        *combinedOutput,
+                        targetInfo,
+                        exitCode
+                    )
+                );
+
+                if (exitCode == 0) {
+                    appendStyledLine(
+                        elfInfoOutputLog,
+                        "[RESULT] ELFINFO analysis completed successfully.",
+                        "#0b7a0b",
+                        true
+                    );
+                } else {
+                    appendStyledLine(
+                        elfInfoOutputLog,
+                        "[RESULT] ELFINFO analysis failed.",
+                        "#b00020",
+                        true
+                    );
+                }
+
+                elfInfoOutputLog->append(
+                    QStringLiteral(
+                        "Process finished with exit code %1"
+                    ).arg(exitCode)
+                );
+            } else {
+                elfInfoFindingsLog->setPlainText(
+                    QStringLiteral(
+                        "ELFINFO Findings\n\n"
+                        "Result\n"
+                        "ELFINFO process crashed or was terminated."
+                    )
+                );
+
+                appendStyledLine(
+                    elfInfoOutputLog,
+                    "[RESULT] ELFINFO process crashed or was terminated.",
+                    "#b00020",
+                    true
+                );
+            }
+
+            elfInfoDetailsTabs->setCurrentWidget(
+                elfInfoFindingsLog
+            );
+
+            delete combinedOutput;
+            process->deleteLater();
+        }
+    );
+
+    process->start(
+        cliInfo.absoluteFilePath(),
+        arguments
+    );
+
+    if (!process->waitForStarted()) {
+        elfInfoFindingsLog->setPlainText(
+            QStringLiteral(
+                "ELFINFO Findings\n\n"
+                "Result\n"
+                "Failed to start the ELFINFO process."
+            )
+        );
+
+        appendStyledLine(
+            elfInfoOutputLog,
+            "[RESULT] Failed to start ELFINFO process.",
+            "#b00020",
+            true
+        );
+
+        delete combinedOutput;
+        process->deleteLater();
+    }
+}
+
 
 void MainWindow::runEntropyCommand()
 {
