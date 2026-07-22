@@ -4135,12 +4135,12 @@ void MainWindow::buildHashTab()
 
     hashAlgorithmCombo = new QComboBox(hashTab);
     hashAlgorithmCombo->addItem(
-        QStringLiteral("MD5"),
-        QStringLiteral("MD5")
-    );
-    hashAlgorithmCombo->addItem(
         QStringLiteral("SHA-256"),
         QStringLiteral("SHA256")
+    );
+    hashAlgorithmCombo->addItem(
+        QStringLiteral("MD5"),
+        QStringLiteral("MD5")
     );
 
     algorithmLayout->addWidget(
@@ -4342,9 +4342,23 @@ void MainWindow::buildHashTab()
         &QPushButton::clicked,
         this,
         [this]() {
+            hashDetailsTabs->setCurrentIndex(0);
             hashFindingsLog->clear();
             hashOutputLog->clear();
-            hashDetailsTabs->setCurrentIndex(0);
+
+            hashFindingsLog->append(
+                QStringLiteral("[GUI] HASH findings will appear here.")
+            );
+
+            hashOutputLog->append(
+                QStringLiteral("[GUI] HASH panel ready.")
+            );
+            hashOutputLog->append(
+                QStringLiteral(
+                    "[GUI] Select MD5 or SHA-256, then choose "
+                    "Compute, Verify, or Compare."
+                )
+            );
         }
     );
 
@@ -4405,6 +4419,46 @@ void MainWindow::runHashCommand()
         hashOutputLog->append("[GUI] HASH cancelled: selected path is not a regular file.");
         hashOutputLog->append("[GUI] File: " + filePath);
         return;
+    }
+
+    if (mode == QStringLiteral("verify") && !expectedHash.isEmpty()) {
+        const int requiredLength =
+            algorithm == QStringLiteral("SHA256") ? 64 : 32;
+
+        const QRegularExpression hexPattern(
+            QStringLiteral("^[0-9A-Fa-f]{%1}$").arg(requiredLength)
+        );
+
+        if (!hexPattern.match(expectedHash).hasMatch()) {
+            QMessageBox::warning(
+                this,
+                QStringLiteral("K1Wi HASH"),
+                QStringLiteral(
+                    "%1 verification requires exactly %2 hexadecimal characters."
+                ).arg(algorithmLabel).arg(requiredLength)
+            );
+
+            hashFindingsLog->setPlainText(
+                QStringLiteral("HASH Findings") +
+                QChar(10) +
+                QStringLiteral(
+                    "Result: Verification was not started."
+                ) +
+                QChar(10) +
+                QStringLiteral(
+                    "Reason: Invalid expected-hash format."
+                )
+            );
+
+            hashOutputLog->append(
+                QStringLiteral(
+                    "[GUI] HASH cancelled: invalid expected-hash format."
+                )
+            );
+
+            hashDetailsTabs->setCurrentWidget(hashFindingsLog);
+            return;
+        }
     }
 
     if (mode == QStringLiteral("verify") && expectedHash.isEmpty()) {
